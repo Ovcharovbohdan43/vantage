@@ -6,8 +6,11 @@ const apiInternalUrl = process.env.API_INTERNAL_URL ?? 'http://localhost:8000'
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   outputFileTracingRoot: path.join(__dirname, '../../'),
-  // Keep production builds out of the dev `.next` dir to avoid cache corruption
-  distDir: process.env.NODE_ENV === 'production' ? '.next-build' : '.next',
+  // Local `next build` uses .next-build so it doesn't clash with `next dev` cache.
+  // Vercel must use default `.next` or the platform fails looking for output.
+  ...(process.env.VERCEL
+    ? {}
+    : { distDir: process.env.NODE_ENV === 'production' ? '.next-build' : '.next' }),
   async rewrites() {
     return [
       {
