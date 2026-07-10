@@ -1,7 +1,16 @@
 import type { NextConfig } from 'next'
 import path from 'node:path'
 
-const apiInternalUrl = process.env.API_INTERNAL_URL ?? 'http://localhost:8000'
+function resolveApiRewriteDestination(): string | null {
+  const raw = (process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || '').trim()
+  // Local default only when not building on Vercel.
+  const base = raw || (process.env.VERCEL ? '' : 'http://localhost:8000')
+  if (!base) return null
+  if (!/^https?:\/\//i.test(base)) return null
+  return `${base.replace(/\/$/, '')}/api/v1/:path*`
+}
+
+const apiRewriteDestination = resolveApiRewriteDestination()
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
@@ -12,10 +21,11 @@ const nextConfig: NextConfig = {
     ? {}
     : { distDir: process.env.NODE_ENV === 'production' ? '.next-build' : '.next' }),
   async rewrites() {
+    if (!apiRewriteDestination) return []
     return [
       {
         source: '/api/v1/:path*',
-        destination: `${apiInternalUrl}/api/v1/:path*`,
+        destination: apiRewriteDestination,
       },
     ]
   },
