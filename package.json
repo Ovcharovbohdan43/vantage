@@ -1,0 +1,19 @@
+{
+  "name": "reserchmarket",
+  "private": true,
+  "version": "0.1.0",
+  "description": "AI Market Pain Research Platform",
+  "scripts": {
+    "dev": "node scripts/run-dev.mjs",
+    "dev:inner": "concurrently -k -n web,api,worker -c cyan,magenta,yellow \"node scripts/run-web.mjs\" \"node scripts/run-api.mjs\" \"node scripts/run-worker.mjs\"",
+    "dev:web": "node scripts/run-web.mjs",
+    "dev:api": "node scripts/run-api.mjs",
+    "dev:worker": "node scripts/run-worker.mjs",
+    "setup": "node scripts/setup.mjs",
+    "setup:api": "node scripts/setup.mjs",
+    "build": "npm run build --prefix apps/web"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.0"
+  }
+}

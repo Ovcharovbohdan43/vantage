@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build
+dist/
+.next/
+.next-build/
+out/
+build/
+*.tsbuildinfo
+
+# Env
+.env
+.env.*
+!.env.example
+!.env.*.example
+!.env.local.example
+
+# Python (future backend/workers)
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# IDE / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# Logs
+*.log
+npm-debug.log*
+
+# Sentry
+.sentryclirc
+
+# Playwright
+test-results/
+playwright-report/

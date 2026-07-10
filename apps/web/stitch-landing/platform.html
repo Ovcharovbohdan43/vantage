@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Vantage | Market Intelligence for High-Growth Founders</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&amp;family=Geist:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-surface {
+            background: rgba(24, 24, 27, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .card-top-light {
+            position: relative;
+        }
+        .card-top-light::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.05), transparent);
+        }
+        .primary-glow:hover {
+            box-shadow: 0 0 20px rgba(139, 92, 246, 0.3);
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        .animate-float {
+            animation: float 6s ease-in-out infinite;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-error-container": "#ffdad6",
+                      "inverse-on-surface": "#313032",
+                      "error-container": "#93000a",
+                      "surface-tint": "#d0bcff",
+                      "on-tertiary": "#003824",
+                      "on-tertiary-fixed": "#002113",
+                      "tertiary-fixed-dim": "#4edea3",
+                      "on-surface-variant": "#cbc3d7",
+                      "inverse-primary": "#6d3bd7",
+                      "surface-container-low": "#1c1b1d",
+                      "tertiary-fixed": "#6ffbbe",
+                      "on-surface": "#e5e1e4",
+                      "on-secondary-container": "#00424e",
+                      "surface-container": "#201f22",
+                      "on-secondary-fixed-variant": "#004e5c",
+                      "secondary-container": "#03b5d3",
+                      "surface-container-high": "#2a2a2c",
+                      "tertiary-container": "#00a572",
+                      "on-tertiary-fixed-variant": "#005236",
+                      "on-error": "#690005",
+                      "inverse-surface": "#e5e1e4",
+                      "secondary-fixed": "#acedff",
+                      "primary-container": "#a078ff",
+                      "surface-dim": "#131315",
+                      "outline-variant": "#494454",
+                      "on-tertiary-container": "#00311f",
+                      "on-secondary": "#003640",
+                      "primary-fixed-dim": "#d0bcff",
+                      "surface-variant": "#353437",
+                      "background": "#131315",
+                      "surface-container-highest": "#353437",
+                      "tertiary": "#4edea3",
+                      "outline": "#958ea0",
+                      "surface": "#131315",
+                      "surface-bright": "#39393b",
+                      "on-primary-container": "#340080",
+                      "on-primary-fixed-variant": "#5516be",
+                      "secondary-fixed-dim": "#4cd7f6",
+                      "primary": "#d0bcff",
+                      "primary-fixed": "#e9ddff",
+                      "on-background": "#e5e1e4",
+                      "on-primary-fixed": "#23005c",
+                      "error": "#ffb4ab",
+                      "on-primary": "#3c0091",
+                      "surface-container-lowest": "#0e0e10",
+                      "on-secondary-fixed": "#001f26",
+                      "secondary": "#4cd7f6"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "stack-sm": "0.5rem",
+                      "stack-lg": "4rem",
+                      "stack-md": "1.5rem",
+                      "section-padding": "8rem",
+                      "gutter": "2rem",
+                      "container-max": "1200px",
+                      "margin-mobile": "1.25rem"
+              },
+              "fontFamily": {
+                      "body-md": ["Geist"],
+                      "mono-label": ["JetBrains Mono"],
+                      "body-lg": ["Geist"],
+                      "headline-xl": ["Geist"],
+                      "headline-lg-mobile": ["Geist"],
+                      "headline-md": ["Geist"],
+                      "headline-lg": ["Geist"]
+              },
+              "fontSize": {
+                      "body-md": ["16px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                      "mono-label": ["12px", {"lineHeight": "1.0", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                      "body-lg": ["18px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                      "headline-xl": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.04em", "fontWeight": "700"}],
+                      "headline-lg-mobile": ["28px", {"lineHeight": "1.2", "fontWeight": "700"}],
+                      "headline-md": ["24px", {"lineHeight": "1.3", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+                      "headline-lg": ["32px", {"lineHeight": "1.2", "letterSpacing": "-0.03em", "fontWeight": "600"}]
+              }
+            },
+          },
+        }
+    </script>
+</head>
+<body class="bg-background text-on-background font-body-md selection:bg-primary/30">
+<!-- Top Navigation Bar -->
+<header class="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-outline-variant/10">
+<nav class="flex justify-between items-center px-gutter py-4 w-full max-w-container-max mx-auto">
+<div class="font-headline-md text-headline-md font-bold text-on-background">Vantage</div>
+<div class="hidden md:flex items-center gap-stack-md">
+<a class="text-on-surface-variant hover:text-primary transition-colors duration-200 font-body-md text-body-md" href="#">Research Library</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors duration-200 font-body-md text-body-md" href="#">Pricing</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors duration-200 font-body-md text-body-md" href="#">Sign In</a>
+</div>
+<button class="bg-primary text-on-primary font-bold px-6 py-2.5 rounded-lg scale-95 active:scale-90 transition-transform primary-glow">
+                Start free preview
+            </button>
+</nav>
+</header>
+<main class="relative overflow-hidden pt-32 pb-section-padding">
+<!-- Background Animation Overlay -->
+<div class="absolute inset-0 -z-10 opacity-20 pointer-events-none">
+
+</div>
+<!-- Hero Content Section -->
+<div class="max-w-container-max mx-auto px-gutter grid lg:grid-cols-2 gap-stack-lg items-center">
+<!-- Left: Typography & CTAs -->
+<div class="space-y-stack-md">
+<div class="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 border border-primary/20 rounded-full">
+<span class="font-mono-label text-mono-label text-primary uppercase">v2.0 Beta Now Live</span>
+</div>
+<h1 class="font-headline-xl text-headline-xl tracking-tight max-w-xl">
+                    Find out if your idea is worth the next <span class="text-primary">3 months</span>
+</h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant max-w-lg">
+                    Before you write code, see what customers actually complain about in your market. Evidence from real reviews — not a generic AI essay.
+                </p>
+<div class="flex flex-col sm:flex-row gap-4 pt-4">
+<button class="bg-primary text-on-primary px-8 py-4 rounded-lg font-bold transition-all primary-glow hover:-translate-y-0.5">
+                        Start free preview
+                    </button>
+<button class="bg-transparent border border-outline-variant/30 text-on-surface hover:border-primary/50 transition-all px-8 py-4 rounded-lg font-bold flex items-center justify-center gap-2">
+                        Browse research library
+                        <span class="material-symbols-outlined text-[20px]">arrow_forward</span>
+</button>
+</div>
+<div class="flex items-center gap-4 pt-8 border-t border-outline-variant/10">
+<div class="flex -space-x-3">
+<div class="w-8 h-8 rounded-full border-2 border-background overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A portrait of a tech founder in high-fidelity 3D rendering style, wearing a minimalist black turtleneck, soft cinematic lighting, deep zinc background tones to match the Vantage UI brand aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD5gCSSWSSxNTSFRY1lDooDNyn4kJ-Dh88DFizt-617OZLs5UQO3C_m9qQ06KE8PmEaILh6HsBbByPV8oacA3kzTEr0qpgEJXyOUkdOYTy8kyNglnH2xERomI9erlYu7lBwfAoGGHCAfeiEMks2_9oTCFxUJDI5-CB9_lnWSvN41X8FasaByr51RGjVyDcwKoB9UJCN2rF8rgJG5iRWI_ULxDm8T0kJ_4vNB5QOoppKcusliBSn6x6N"/>
+</div>
+<div class="w-8 h-8 rounded-full border-2 border-background overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A high-end professional headshot of a software developer with neon-tinted lighting accents, sharp features, minimalist aesthetic, using the primary purple and secondary cyan colors of the Vantage design system." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDpYlArDV9gXjC7bsp2B_iDtMFsUn0ii6tYrStawg3RJVPO1ldJok-QbaM0s24Wtc0Hmp0sOnNsknSXaBmiMGT0DFsw8Q558YIRVuiOL46WOcNsZ1Ul_dsd5gwIMdLxV2KbbSP8y4cVnY_8ysS-VT0p-LFwRMRD_k9y3P2_F1UNjjgAq-RP-B5p0a445Af3QapXsZulS-y3LPnr5xg16mlkv8g6pFjCOR0WYcWDcpAUniMK6uq1gZBP"/>
+</div>
+<div class="w-8 h-8 rounded-full border-2 border-background overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Close-up profile of a female analyst in a high-tech office environment, cool lighting, soft bokeh, deep blacks and vibrant purple accents in the lighting to ensure brand consistency." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBV9XAjlYx2wwwXa-HGVo-LuQoulgBAK_ULMkLh4zDfuU3ajZ58n5LJkDgq0aVqQJWglj26CM8QjtHvU7oU0Uefq9oui8k0s4sC_vBwFMc4ax5kbE3bqK50Pzhu39ft51DXgDwFYaWq43ncww1dYjs2BJM_dfBdqwl1JRvOSiRZKOoSMqxDOIkNBq0aQVyWpFmSaDK_1o5IUqU01NEnYliIIwobT6Us0aEQ9iFfFaYChDibAlL-1-4z"/>
+</div>
+</div>
+<span class="font-mono-label text-mono-label text-on-surface-variant">Trusted by 2,400+ technical founders</span>
+</div>
+</div>
+<!-- Right: Product Visualization (Bento/Card Mesh) -->
+<div class="relative">
+<!-- Main Interface Mockup Card -->
+<div class="glass-surface p-6 rounded-xl card-top-light shadow-2xl relative z-10 animate-float">
+<div class="flex items-center justify-between mb-8 border-b border-outline-variant/10 pb-4">
+<div class="flex items-center gap-3">
+<div class="w-3 h-3 rounded-full bg-red-500/50"></div>
+<div class="w-3 h-3 rounded-full bg-yellow-500/50"></div>
+<div class="w-3 h-3 rounded-full bg-green-500/50"></div>
+</div>
+<div class="font-mono-label text-mono-label px-3 py-1 bg-surface-container-high rounded text-on-surface-variant">
+                            vantage.io/analysis/pain-points
+                        </div>
+</div>
+<div class="space-y-6">
+<div class="flex items-center justify-between">
+<h3 class="font-headline-md text-headline-md">Pain Point Analysis</h3>
+<span class="text-secondary font-mono-label">89.4% Confidence Score</span>
+</div>
+<!-- Data Visualization Simulation -->
+<div class="grid grid-cols-4 gap-4 h-48 items-end border-b border-outline-variant/10 pb-4">
+<div class="bg-primary/40 h-[40%] rounded-t-sm relative group">
+<div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-primary text-on-primary text-[10px] px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">Integration</div>
+</div>
+<div class="bg-secondary/40 h-[90%] rounded-t-sm relative group">
+<div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-secondary text-on-secondary text-[10px] px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">Latency</div>
+</div>
+<div class="bg-tertiary/40 h-[65%] rounded-t-sm relative group">
+<div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-tertiary text-on-tertiary text-[10px] px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">Cost</div>
+</div>
+<div class="bg-primary/60 h-[80%] rounded-t-sm relative group">
+<div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-primary text-on-primary text-[10px] px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">Security</div>
+</div>
+</div>
+<!-- Insight Feed -->
+<div class="space-y-3">
+<div class="p-3 bg-surface-container-low border border-outline-variant/10 rounded-lg flex items-start gap-3">
+<span class="material-symbols-outlined text-error" style="font-variation-settings: 'FILL' 1;">warning</span>
+<div>
+<p class="font-mono-label text-mono-label text-on-surface mb-1">CRITICAL FRICTION POINT</p>
+<p class="text-body-md text-on-surface-variant italic">"Current tools take over 4 hours to set up initial environment. Most developers drop off after 15 minutes."</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Decorative elements for depth -->
+<div class="absolute -top-12 -right-12 w-48 h-48 bg-primary/20 rounded-full blur-[80px]"></div>
+<div class="absolute -bottom-12 -left-12 w-64 h-64 bg-secondary/10 rounded-full blur-[100px]"></div>
+<!-- Floating Accent Cards -->
+<div class="absolute -right-8 bottom-12 glass-surface p-4 rounded-lg hidden md:block shadow-xl z-20 border-primary/20">
+<div class="flex items-center gap-2 mb-2">
+<span class="w-2 h-2 rounded-full bg-tertiary animate-pulse"></span>
+<span class="font-mono-label text-[10px] uppercase text-on-surface-variant">Real-time Sentiment</span>
+</div>
+<div class="text-headline-md font-bold text-tertiary">Strong Negative</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Footer Component -->
+<footer class="bg-surface-container-lowest border-t border-outline-variant/10">
+<div class="grid grid-cols-2 md:grid-cols-4 gap-stack-md px-gutter py-section-padding w-full max-w-container-max mx-auto">
+<div class="col-span-2 md:col-span-1 space-y-4">
+<div class="font-headline-md text-headline-md font-bold text-on-background">Vantage</div>
+<p class="text-on-surface-variant text-body-md max-w-xs">Industrial-grade intelligence for the modern technical founder.</p>
+</div>
+<div class="space-y-4">
+<h4 class="font-mono-label text-mono-label uppercase text-primary">Company</h4>
+<ul class="space-y-2">
+<li><a class="text-on-surface-variant hover:text-primary transition-colors duration-200 text-body-md underline-offset-4 hover:underline" href="#">About Us</a></li>
+<li><a class="text-on-surface-variant hover:text-primary transition-colors duration-200 text-body-md underline-offset-4 hover:underline" href="#">Twitter</a></li>
+<li><a class="text-on-surface-variant hover:text-primary transition-colors duration-200 text-body-md underline-offset-4 hover:underline" href="#">LinkedIn</a></li>
+</ul>
+</div>
+<div class="space-y-4">
+<h4 class="font-mono-label text-mono-label uppercase text-primary">Resources</h4>
+<ul class="space-y-2">
+<li><a class="text-on-surface-variant hover:text-primary transition-colors duration-200 text-body-md underline-offset-4 hover:underline" href="#">Research Library</a></li>
+<li><a class="text-on-surface-variant hover:text-primary transition-colors duration-200 text-body-md underline-offset-4 hover:underline" href="#">Pricing</a></li>
+</ul>
+</div>
+<div class="space-y-4">
+<h4 class="font-mono-label text-mono-label uppercase text-primary">Legal</h4>
+<ul class="space-y-2">
+<li><a class="text-on-surface-variant hover:text-primary transition-colors duration-200 text-body-md underline-offset-4 hover:underline" href="#">Terms</a></li>
+<li><a class="text-on-surface-variant hover:text-primary transition-colors duration-200 text-body-md underline-offset-4 hover:underline" href="#">Privacy</a></li>
+</ul>
+</div>
+</div>
+<div class="max-w-container-max mx-auto px-gutter py-8 border-t border-outline-variant/5 text-on-surface-variant/60 text-[12px] flex flex-col md:flex-row justify-between items-center gap-4">
+<div>© 2024 Vantage Research. All rights reserved.</div>
+<div class="flex gap-4">
+<span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-green-500"></span> System Operational</span>
+</div>
+</div>
+</footer>
+<script>
+        // Micro-interactions
+        document.querySelectorAll('button').forEach(button => {
+            button.addEventListener('mousedown', () => {
+                button.style.transform = 'scale(0.95)';
+            });
+            button.addEventListener('mouseup', () => {
+                button.style.transform = 'scale(1)';
+            });
+            button.addEventListener('mouseleave', () => {
+                button.style.transform = 'scale(1)';
+            });
+        });
+
+        // Simple parallax for the hero mock-up
+        window.addEventListener('mousemove', (e) => {
+            const mockup = document.querySelector('.animate-float');
+            if (mockup) {
+                const moveX = (e.clientX - window.innerWidth / 2) * 0.01;
+                const moveY = (e.clientY - window.innerHeight / 2) * 0.01;
+                mockup.style.transform = `translate(${moveX}px, ${moveY}px)`;
+            }
+        });
+    </script>
+</body></html>

@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Vantage | How It Works</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        @font-face {
+            font-family: 'Geist';
+            src: url('https://cdn.jsdelivr.net/npm/geist@1.0.3/dist/fonts/geist-sans/Geist-Regular.woff2') format('woff2');
+        }
+        @font-face {
+            font-family: 'Geist';
+            font-weight: 700;
+            src: url('https://cdn.jsdelivr.net/npm/geist@1.0.3/dist/fonts/geist-sans/Geist-Bold.woff2') format('woff2');
+        }
+        body {
+            font-family: 'Geist', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        .glass-panel {
+            background: rgba(24, 24, 27, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .glow-accent {
+            box-shadow: 0 0 20px rgba(208, 188, 255, 0.15);
+        }
+        .step-number {
+            -webkit-text-stroke: 1px rgba(208, 188, 255, 0.3);
+            color: transparent;
+        }
+        .data-grid-pattern {
+            background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+            background-size: 24px 24px;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-error-container": "#ffdad6",
+                      "inverse-on-surface": "#313032",
+                      "error-container": "#93000a",
+                      "surface-tint": "#d0bcff",
+                      "on-tertiary": "#003824",
+                      "on-tertiary-fixed": "#002113",
+                      "tertiary-fixed-dim": "#4edea3",
+                      "on-surface-variant": "#cbc3d7",
+                      "inverse-primary": "#6d3bd7",
+                      "surface-container-low": "#1c1b1d",
+                      "tertiary-fixed": "#6ffbbe",
+                      "on-surface": "#e5e1e4",
+                      "on-secondary-container": "#00424e",
+                      "surface-container": "#201f22",
+                      "on-secondary-fixed-variant": "#004e5c",
+                      "secondary-container": "#03b5d3",
+                      "surface-container-high": "#2a2a2c",
+                      "tertiary-container": "#00a572",
+                      "on-tertiary-fixed-variant": "#005236",
+                      "on-error": "#690005",
+                      "inverse-surface": "#e5e1e4",
+                      "secondary-fixed": "#acedff",
+                      "primary-container": "#a078ff",
+                      "surface-dim": "#131315",
+                      "outline-variant": "#494454",
+                      "on-tertiary-container": "#00311f",
+                      "on-secondary": "#003640",
+                      "primary-fixed-dim": "#d0bcff",
+                      "surface-variant": "#353437",
+                      "background": "#131315",
+                      "surface-container-highest": "#353437",
+                      "tertiary": "#4edea3",
+                      "outline": "#958ea0",
+                      "surface": "#131315",
+                      "surface-bright": "#39393b",
+                      "on-primary-container": "#340080",
+                      "on-primary-fixed-variant": "#5516be",
+                      "secondary-fixed-dim": "#4cd7f6",
+                      "primary": "#d0bcff",
+                      "primary-fixed": "#e9ddff",
+                      "on-background": "#e5e1e4",
+                      "on-primary-fixed": "#23005c",
+                      "error": "#ffb4ab",
+                      "on-primary": "#3c0091",
+                      "surface-container-lowest": "#0e0e10",
+                      "on-secondary-fixed": "#001f26",
+                      "secondary": "#4cd7f6"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "stack-sm": "0.5rem",
+                      "stack-lg": "4rem",
+                      "stack-md": "1.5rem",
+                      "section-padding": "8rem",
+                      "gutter": "2rem",
+                      "container-max": "1200px",
+                      "margin-mobile": "1.25rem"
+              },
+              "fontFamily": {
+                      "body-md": ["Geist"],
+                      "mono-label": ["JetBrains Mono"],
+                      "body-lg": ["Geist"],
+                      "headline-xl": ["Geist"],
+                      "headline-lg-mobile": ["Geist"],
+                      "headline-md": ["Geist"],
+                      "headline-lg": ["Geist"]
+              },
+              "fontSize": {
+                      "body-md": ["16px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                      "mono-label": ["12px", {"lineHeight": "1.0", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                      "body-lg": ["18px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                      "headline-xl": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.04em", "fontWeight": "700"}],
+                      "headline-lg-mobile": ["28px", {"lineHeight": "1.2", "fontWeight": "700"}],
+                      "headline-md": ["24px", {"lineHeight": "1.3", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+                      "headline-lg": ["32px", {"lineHeight": "1.2", "letterSpacing": "-0.03em", "fontWeight": "600"}]
+              }
+            },
+          },
+        }
+      </script>
+</head>
+<body class="bg-background text-on-background selection:bg-primary/30 selection:text-primary min-h-screen">
+<!-- TopNavBar -->
+<nav class="fixed top-0 w-full z-50 bg-background border-b border-outline-variant/10">
+<div class="flex justify-between items-center px-gutter py-4 w-full max-w-container-max mx-auto">
+<span class="font-headline-md text-headline-md font-bold text-on-background">Vantage</span>
+<div class="hidden md:flex gap-8 items-center">
+<a class="font-body-md text-body-md text-on-surface-variant hover:text-primary transition-colors duration-200" href="#">Research Library</a>
+<a class="font-body-md text-body-md text-on-surface-variant hover:text-primary transition-colors duration-200" href="#">Pricing</a>
+<a class="font-body-md text-body-md text-on-surface-variant hover:text-primary transition-colors duration-200" href="#">Sign In</a>
+<button class="bg-primary text-on-primary font-bold py-2 px-6 rounded hover:opacity-90 transition-transform active:scale-95">Start free preview</button>
+</div>
+<!-- Mobile Menu Icon (Visual Only) -->
+<div class="md:hidden">
+<span class="material-symbols-outlined text-on-background">menu</span>
+</div>
+</div>
+</nav>
+<main class="pt-24 data-grid-pattern">
+<!-- Hero Context -->
+<section class="max-w-container-max mx-auto px-gutter pt-20 pb-12 text-center">
+<span class="font-mono-label text-mono-label uppercase text-primary tracking-widest mb-4 inline-block">The Methodology</span>
+<h1 class="font-headline-xl text-headline-xl mb-6 max-w-2xl mx-auto">Turn raw ideas into <span class="text-primary">validated conviction</span>.</h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant max-w-xl mx-auto">Stop guessing. We use deep-web sentiment analysis to map real market frustration before you write a single line of code.</p>
+</section>
+<!-- Steps Section (3-Column Layout) -->
+<section class="max-w-container-max mx-auto px-gutter py-12">
+<div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+<!-- Step 1 -->
+<div class="glass-panel p-8 relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="font-headline-xl text-[120px] step-number select-none">1</span>
+</div>
+<div class="w-12 h-12 rounded bg-primary/10 flex items-center justify-center mb-6 glow-accent border border-primary/20">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">lightbulb</span>
+</div>
+<h3 class="font-headline-md text-headline-md mb-4">Describe your idea</h3>
+<p class="font-body-md text-body-md text-on-surface-variant leading-relaxed">
+                        Tell us the problem you want to solve. Your first run is a free market teaser, generating immediate surface-level insights into your niche.
+                    </p>
+<div class="mt-8 pt-6 border-t border-outline-variant/10">
+<div class="flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
+<span class="font-mono-label text-[10px] text-primary uppercase">System Ready</span>
+</div>
+</div>
+</div>
+<!-- Step 2 -->
+<div class="glass-panel p-8 relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="font-headline-xl text-[120px] step-number select-none">2</span>
+</div>
+<div class="w-12 h-12 rounded bg-secondary/10 flex items-center justify-center mb-6 glow-accent border border-secondary/20">
+<span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 1;">dataset</span>
+</div>
+<h3 class="font-headline-md text-headline-md mb-4">We read real complaints</h3>
+<p class="font-body-md text-body-md text-on-surface-variant leading-relaxed">
+                        Vantage maps competitors and collects negative reviews from G2 and Capterra. We ingest thousands of data points to find where the market is failing.
+                    </p>
+<div class="mt-8 pt-6 border-t border-outline-variant/10 flex gap-4">
+<span class="font-mono-label text-[10px] text-secondary opacity-60">G2 API</span>
+<span class="font-mono-label text-[10px] text-secondary opacity-60">TRUSTRADIUS</span>
+<span class="font-mono-label text-[10px] text-secondary opacity-60">APP STORE</span>
+</div>
+</div>
+<!-- Step 3 -->
+<div class="glass-panel p-8 relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="font-headline-xl text-[120px] step-number select-none">3</span>
+</div>
+<div class="w-12 h-12 rounded bg-tertiary/10 flex items-center justify-center mb-6 glow-accent border border-tertiary/20">
+<span class="material-symbols-outlined text-tertiary" style="font-variation-settings: 'FILL' 1;">verified</span>
+</div>
+<h3 class="font-headline-md text-headline-md mb-4">Get a verdict you can trust</h3>
+<p class="font-body-md text-body-md text-on-surface-variant leading-relaxed">
+                        Pain clusters with quotes, market saturation, risks, and a build/pivot recommendation. A comprehensive roadmap backed by empirical evidence.
+                    </p>
+<div class="mt-8 pt-6 border-t border-outline-variant/10">
+<span class="inline-flex items-center gap-1 font-mono-label text-tertiary bg-tertiary/10 px-2 py-1 rounded">
+<span class="material-symbols-outlined text-[14px]">check_circle</span>
+                            DECISION READY
+                        </span>
+</div>
+</div>
+</div>
+</section>
+<!-- Comparison Section -->
+<section class="max-w-container-max mx-auto px-gutter py-stack-lg">
+<div class="text-center mb-12">
+<h2 class="font-headline-lg text-headline-lg mb-4">Free Preview vs Full Report</h2>
+<p class="font-body-md text-body-md text-on-surface-variant">Choose the level of depth your vision requires.</p>
+</div>
+<div class="max-w-4xl mx-auto flex flex-col md:flex-row gap-0 rounded-xl overflow-hidden border border-outline-variant/20 shadow-2xl">
+<!-- Free Preview -->
+<div class="flex-1 bg-surface-container-low p-10 border-b md:border-b-0 md:border-r border-outline-variant/10">
+<span class="font-mono-label text-on-surface-variant uppercase tracking-tighter mb-4 block">Lite Analysis</span>
+<h4 class="font-headline-md text-headline-md mb-6">Free Preview</h4>
+<ul class="space-y-4 mb-8">
+<li class="flex items-center gap-3 font-body-md text-on-surface-variant">
+<span class="material-symbols-outlined text-primary text-[18px]">check</span>
+                            High-level pain summary
+                        </li>
+<li class="flex items-center gap-3 font-body-md text-on-surface-variant">
+<span class="material-symbols-outlined text-primary text-[18px]">check</span>
+                            Top 3 competitors listed
+                        </li>
+<li class="flex items-center gap-3 font-body-md opacity-40">
+<span class="material-symbols-outlined text-[18px]">lock</span>
+                            Raw customer quotes
+                        </li>
+<li class="flex items-center gap-3 font-body-md opacity-40">
+<span class="material-symbols-outlined text-[18px]">lock</span>
+                            Build/Pivot Score
+                        </li>
+</ul>
+<button class="w-full py-3 px-6 rounded border border-white/10 text-on-surface font-bold hover:bg-white/5 transition-colors">Generate Teaser</button>
+</div>
+<!-- Full Report -->
+<div class="flex-1 bg-white dark:bg-primary-container p-10 relative overflow-hidden">
+<!-- Subtle Glow Ornament -->
+<div class="absolute -right-20 -top-20 w-64 h-64 bg-white/20 rounded-full blur-3xl"></div>
+<span class="font-mono-label text-on-primary-container uppercase tracking-tighter mb-4 block">Strategic Depth</span>
+<h4 class="font-headline-md text-headline-md text-on-primary-container mb-6">Full Report</h4>
+<ul class="space-y-4 mb-8 relative z-10">
+<li class="flex items-center gap-3 font-body-md text-on-primary-container font-semibold">
+<span class="material-symbols-outlined text-[20px]">verified</span>
+                            Deep-dive pain clustering
+                        </li>
+<li class="flex items-center gap-3 font-body-md text-on-primary-container font-semibold">
+<span class="material-symbols-outlined text-[20px]">verified</span>
+                            Full competitive landscape map
+                        </li>
+<li class="flex items-center gap-3 font-body-md text-on-primary-container font-semibold">
+<span class="material-symbols-outlined text-[20px]">verified</span>
+                            Direct G2/Capterra quote bank
+                        </li>
+<li class="flex items-center gap-3 font-body-md text-on-primary-container font-semibold">
+<span class="material-symbols-outlined text-[20px]">verified</span>
+                            Validated Build/Pivot verdict
+                        </li>
+<li class="flex items-center gap-3 font-body-md text-on-primary-container font-semibold">
+<span class="material-symbols-outlined text-[20px]">verified</span>
+                            Go-to-market strategy guide
+                        </li>
+</ul>
+<button class="w-full py-3 px-6 rounded bg-on-primary-container text-white font-bold hover:opacity-90 transition-transform active:scale-[0.98] shadow-lg">Get Full Report</button>
+<p class="text-center font-mono-label text-[10px] text-on-primary-container/60 mt-4 uppercase">Unlimited access available</p>
+</div>
+</div>
+</section>
+<!-- Dynamic Visualization (Mockup) -->
+<section class="max-w-container-max mx-auto px-gutter py-section-padding">
+<div class="glass-panel rounded-2xl overflow-hidden flex flex-col md:flex-row">
+<div class="md:w-1/2 p-12 flex flex-col justify-center">
+<h3 class="font-headline-lg text-headline-lg mb-6">Visualizing the <span class="text-secondary">Frustration Gap</span></h3>
+<p class="font-body-md text-body-md text-on-surface-variant mb-8 leading-relaxed">
+                        Our engine doesn't just find keywords; it maps the emotional intensity of user complaints. We identify the "unmet promise" of existing solutions so you can build exactly what they're begging for.
+                    </p>
+<div class="space-y-6">
+<div class="w-full bg-surface-container-high h-2 rounded-full overflow-hidden">
+<div class="bg-primary h-full w-[78%]" style="box-shadow: 0 0 10px rgba(208, 188, 255, 0.5)"></div>
+</div>
+<div class="flex justify-between font-mono-label text-[12px]">
+<span class="text-on-surface-variant">Competitor Feature Saturation</span>
+<span class="text-primary">78% High</span>
+</div>
+</div>
+</div>
+<div class="md:w-1/2 bg-surface-container-highest/50 relative min-h-[400px] flex items-center justify-center p-8">
+<!-- Placeholder for Image/Visualization -->
+<div class="w-full h-full glass-panel rounded-xl border border-white/5 shadow-inner overflow-hidden flex items-center justify-center">
+<img class="w-full h-full object-cover opacity-60" data-alt="A sophisticated data visualization dashboard showing a complex network graph of market sentiment clusters. The nodes are connected by glowing purple and cyan lines, representing relationships between different software competitors and user complaints. The aesthetic is ultra-modern, dark-themed, and technical, resembling a high-end SaaS analytics interface with minimal typography and sharp geometric shapes." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDmRU_DBFpyNW_bH2pX66374mP4wbaZxQWQA3XkZg5cJEPUb4rbyFkGZYKby0d9mjJAWqeH90LYmNPTjonjr8Bs4aiEMobVogh1v44KO6puwfHi0VOBlDX72Qa8GaZUrsDkDVA-RYkJMs79D3AGw5-TK7XMOlaxJM7w7rEclZp0C5QXs6mZCUH0kYxwM0hebakRd-g682VbO1tfrSaghGyWvHYNXY8wo1QfNLFeEH8YFVUf2SS8ix1n"/>
+<div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+<span class="material-symbols-outlined text-[64px] text-primary/30">analytics</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="bg-surface-container-lowest border-t border-outline-variant/10">
+<div class="grid grid-cols-2 md:grid-cols-4 gap-stack-md px-gutter py-section-padding w-full max-w-container-max mx-auto">
+<div class="col-span-2 md:col-span-1">
+<span class="font-headline-md text-headline-md font-bold text-on-background block mb-4">Vantage</span>
+<p class="font-body-md text-body-md text-on-surface-variant max-w-[240px]">High-precision market intelligence for high-growth founders.</p>
+</div>
+<div>
+<h5 class="font-mono-label text-mono-label text-primary uppercase mb-6">Product</h5>
+<ul class="space-y-3">
+<li><a class="font-body-md text-on-surface-variant hover:text-primary transition-opacity" href="#">Research Library</a></li>
+<li><a class="font-body-md text-on-surface-variant hover:text-primary transition-opacity" href="#">Pricing</a></li>
+<li><a class="font-body-md text-on-surface-variant hover:text-primary transition-opacity" href="#">API</a></li>
+</ul>
+</div>
+<div>
+<h5 class="font-mono-label text-mono-label text-primary uppercase mb-6">Company</h5>
+<ul class="space-y-3">
+<li><a class="font-body-md text-on-surface-variant hover:text-primary transition-opacity" href="#">Resources</a></li>
+<li><a class="font-body-md text-on-surface-variant hover:text-primary transition-opacity" href="#">Privacy</a></li>
+<li><a class="font-body-md text-on-surface-variant hover:text-primary transition-opacity" href="#">Terms</a></li>
+</ul>
+</div>
+<div>
+<h5 class="font-mono-label text-mono-label text-primary uppercase mb-6">Connect</h5>
+<ul class="space-y-3">
+<li><a class="font-body-md text-on-surface-variant hover:text-primary transition-opacity" href="#">Twitter</a></li>
+<li><a class="font-body-md text-on-surface-variant hover:text-primary transition-opacity" href="#">LinkedIn</a></li>
+</ul>
+</div>
+</div>
+<div class="px-gutter py-8 border-t border-outline-variant/5 text-center">
+<p class="font-body-md text-body-md text-on-surface-variant/60">© 2024 Vantage Research. All rights reserved.</p>
+</div>
+</footer>
+<script>
+        // Micro-interactions for glass panels
+        document.querySelectorAll('.glass-panel').forEach(card => {
+            card.addEventListener('mousemove', (e) => {
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                card.style.setProperty('--mouse-x', `${x}px`);
+                card.style.setProperty('--mouse-y', `${y}px`);
+            });
+        });
+    </script>
+</body></html>

@@ -1,0 +1,25 @@
+{
+  "props": {
+    "pageProps": {
+      "product": {
+        "name": "FreshBooks",
+        "reviews": [
+          {
+            "title": "Great for freelancers",
+            "review_text": "Invoicing is simple and clients pay faster than with my old spreadsheet workflow.",
+            "rating": 5,
+            "author_name": "Alex M.",
+            "review_date": "2024-11-12T00:00:00Z"
+          },
+          {
+            "title": "Expensive as you grow",
+            "review_text": "Pricing jumps quickly when you add team members and the reporting feels limited.",
+            "rating": 2,
+            "author_name": "Jamie R.",
+            "review_date": "2024-08-03T00:00:00Z"
+          }
+        ]
+      }
+    }
+  }
+}
