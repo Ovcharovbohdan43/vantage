@@ -75,3 +75,12 @@ def test_credits_snapshot() -> None:
     profile.free_preview_used = True
     snap = get_credits_snapshot(profile)  # type: ignore[arg-type]
     assert snap.can_run_preview is False
+
+
+def test_consume_exact_depth_costs() -> None:
+    profile = FakeProfile()
+    profile.starter_credits = 3
+    consume_credits(profile, credit_cost_for_depth("deep"))  # type: ignore[arg-type]
+    assert profile.starter_credits == 0
+    with pytest.raises(CreditError):
+        consume_credits(profile, 1)  # type: ignore[arg-type]

@@ -7,6 +7,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import { ChartLineUp, Quotes, UsersThree } from '@phosphor-icons/react'
 import { listCompetitors } from '@/lib/api/competitors'
+import { ApiError } from '@/lib/api/client'
 import { cancelProject, getProjectStatus, retryProject } from '@/lib/api/projects'
 import { STAGE_DESCRIPTIONS, STAGE_LABELS } from '@/lib/api/types'
 import { AnalysisTheater } from '@/components/analysis-theater'
@@ -22,6 +23,7 @@ export function ResearchProgressView({ projectId }: ResearchProgressViewProps) {
   const router = useRouter()
   const queryClient = useQueryClient()
   const [cancelRequested, setCancelRequested] = useState(false)
+  const [retryError, setRetryError] = useState<string | null>(null)
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['project-status', projectId],
@@ -123,8 +125,19 @@ export function ResearchProgressView({ projectId }: ResearchProgressViewProps) {
   const scraperBlocked = warnings.includes('scraper_blocked')
 
   async function handleRetry() {
-    await retryProject(projectId)
-    refetch()
+    setRetryError(null)
+    try {
+      await retryProject(projectId)
+      await queryClient.invalidateQueries({ queryKey: ['billing-credits'] })
+      refetch()
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 402) {
+        await queryClient.invalidateQueries({ queryKey: ['billing-credits'] })
+        setRetryError(err.message || 'Not enough credits to re-run this research.')
+        return
+      }
+      setRetryError(err instanceof ApiError ? err.message : 'Failed to restart analysis')
+    }
   }
 
   if (isRunning && !isStuckQueued) {
@@ -264,6 +277,7 @@ export function ResearchProgressView({ projectId }: ResearchProgressViewProps) {
               <p className="text-sm text-[#ffcc80]">
                 The analysis did not start on its own. Tap below to run it again.
               </p>
+              {retryError && <p className="text-sm text-[#ffb4ab]">{retryError}</p>}
               <button
                 type="button"
                 onClick={handleRetry}
@@ -279,13 +293,16 @@ export function ResearchProgressView({ projectId }: ResearchProgressViewProps) {
           )}
 
           {isFailed && (
-            <button
-              type="button"
-              onClick={handleRetry}
-              className="landing-primary-glow inline-flex rounded-lg bg-[#d0bcff] px-5 py-2.5 text-sm font-semibold text-[#3c0091]"
-            >
-              Retry analysis
-            </button>
+            <div className="space-y-3">
+              {retryError && <p className="text-sm text-[#ffb4ab]">{retryError}</p>}
+              <button
+                type="button"
+                onClick={handleRetry}
+                className="landing-primary-glow inline-flex rounded-lg bg-[#d0bcff] px-5 py-2.5 text-sm font-semibold text-[#3c0091]"
+              >
+                Retry analysis
+              </button>
+            </div>
           )}
 
           {isComplete && (

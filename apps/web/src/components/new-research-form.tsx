@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createProject } from '@/lib/api/projects'
 import { getCredits } from '@/lib/api/billing'
 import { ApiError } from '@/lib/api/client'
@@ -93,12 +93,14 @@ function canAffordDepth(
 
 export function NewResearchForm() {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [pricingOpen, setPricingOpen] = useState(false)
 
   const { data: credits } = useQuery({
     queryKey: ['billing-credits'],
     queryFn: getCredits,
+    staleTime: 0,
   })
 
   const isFirstResearch = credits?.free_preview_available ?? false
@@ -178,9 +180,11 @@ export function NewResearchForm() {
         research_depth: isFirstResearch ? undefined : data.depth,
         sources: data.sources,
       })
+      await queryClient.invalidateQueries({ queryKey: ['billing-credits'] })
       router.push(`/research/${project.id}`)
     } catch (err) {
       if (err instanceof ApiError && err.status === 402) {
+        await queryClient.invalidateQueries({ queryKey: ['billing-credits'] })
         setPricingOpen(true)
         return
       }

@@ -103,6 +103,7 @@ export function AppShell({ children, userEmail }: AppShellProps) {
   const { data: credits } = useQuery({
     queryKey: ['billing-credits'],
     queryFn: getCredits,
+    staleTime: 0,
   })
 
   useEffect(() => {

@@ -23,6 +23,7 @@ from app.services.credits import (
     assert_can_start_preview,
     credit_cost_for_depth,
     get_or_create_profile,
+    mark_preview_used,
     refund_credits,
 )
 from app.services.research_cancel import cancel_research_job
@@ -92,7 +93,9 @@ async def create_project(
 
     try:
         if research_mode == "preview":
-            await assert_can_start_preview(db, user.id, user.email)
+            profile = await assert_can_start_preview(db, user.id, user.email)
+            # Reserve the free preview at start so failed/cancelled runs cannot loop forever.
+            mark_preview_used(profile)
             research_depth = "shallow"
         else:
             await assert_can_start_full(db, user.id, user.email, research_depth)
@@ -283,9 +286,11 @@ async def cancel_project(
             detail="This analysis is not running and cannot be cancelled.",
         )
 
+    # Only refund if the job never started — cancelling a running job still burns worker/API spend.
+    should_refund = project.research_mode == "full" and latest.status == "queued"
     cancel_research_job(db, latest, project)
 
-    if project.research_mode == "full":
+    if should_refund:
         profile = await get_or_create_profile(db, user.id, user.email)
         refund_credits(profile, credit_cost_for_depth(project.research_depth))
 
@@ -316,6 +321,16 @@ async def retry_project(
     latest = project.jobs[0] if project.jobs else None
     if latest and latest.status == "running":
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Research already running")
+
+    # Full re-runs cost the same as a new full research. Preview retries stay free once reserved.
+    if project.research_mode == "full":
+        try:
+            await assert_can_start_full(db, user.id, user.email, project.research_depth)
+        except CreditError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_402_PAYMENT_REQUIRED,
+                detail={"code": exc.code, "message": exc.message},
+            ) from exc
 
     job = ResearchJob(
         project_id=project.id,

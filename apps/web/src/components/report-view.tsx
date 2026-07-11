@@ -3,11 +3,12 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import { Download, RotateCcw } from 'lucide-react'
 import { AnalysisLoadingView } from '@/components/analysis-loading-view'
 import { FullReportCta } from '@/components/full-report-cta'
+import { PricingModal } from '@/components/pricing-modal'
 import { ProjectEvidence } from '@/components/project-evidence'
 import {
   ReportCompetitorsSection,
@@ -23,6 +24,7 @@ import {
 import { ReportPainDistribution, ReportPainMap } from '@/components/report/report-pain-map'
 import { getProjectReport } from '@/lib/api/report'
 import { getCredits } from '@/lib/api/billing'
+import { ApiError } from '@/lib/api/client'
 import { retryProject } from '@/lib/api/projects'
 import { downloadReportMarkdown } from '@/lib/report-export'
 import type { MarketSaturation } from '@/lib/api/types'
@@ -43,8 +45,10 @@ const ghostBtn =
 
 export function ReportView({ projectId }: ReportViewProps) {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const [tab, setTab] = useState<'report' | 'evidence'>('report')
   const [evidenceClusterId, setEvidenceClusterId] = useState<string | null>(null)
+  const [pricingOpen, setPricingOpen] = useState(false)
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['project-report', projectId],
@@ -54,11 +58,21 @@ export function ReportView({ projectId }: ReportViewProps) {
   const { data: credits } = useQuery({
     queryKey: ['billing-credits'],
     queryFn: getCredits,
+    staleTime: 0,
   })
 
   const rerunMutation = useMutation({
     mutationFn: () => retryProject(projectId),
-    onSuccess: () => router.push(`/research/${projectId}`),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['billing-credits'] })
+      router.push(`/research/${projectId}`)
+    },
+    onError: async (err) => {
+      if (err instanceof ApiError && err.status === 402) {
+        await queryClient.invalidateQueries({ queryKey: ['billing-credits'] })
+        setPricingOpen(true)
+      }
+    },
   })
 
   function openEvidence(clusterId?: string) {
@@ -215,6 +229,8 @@ export function ReportView({ projectId }: ReportViewProps) {
           {isPreview && credits && <FullReportCta projectId={projectId} credits={credits} />}
         </>
       )}
+
+      <PricingModal open={pricingOpen} onClose={() => setPricingOpen(false)} highlightPack="starter" />
     </div>
   )
 }
