@@ -4,11 +4,11 @@ import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import { ArrowUpRight, Lock } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 import { PricingModal } from '@/components/pricing-modal'
 import { unlockProject } from '@/lib/api/billing'
 import { ApiError } from '@/lib/api/client'
 import type { CreditsBalance, ResearchDepth } from '@/lib/api/types'
+import { cn } from '@/lib/utils'
 
 const DEPTH_OPTIONS: {
   id: ResearchDepth
@@ -72,25 +72,25 @@ export function FullReportCta({ projectId, credits }: FullReportCtaProps) {
         initial={{ opacity: 0, y: 6 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35 }}
-        className="border border-zinc-200 bg-zinc-950 text-white p-6 mb-8"
+        className="mb-8 rounded-xl border border-[#d0bcff]/30 bg-gradient-to-br from-[#201f22] via-[#1c1b1d] to-[#2a1a28] p-6"
       >
-        <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-start justify-between gap-4">
-          <div className="max-w-xl min-w-0">
-            <p className="text-xs font-mono uppercase tracking-widest text-zinc-400 mb-2">
+        <div className="flex flex-col items-stretch justify-between gap-4 sm:flex-row sm:flex-wrap sm:items-start">
+          <div className="min-w-0 max-w-xl">
+            <p className="mb-2 font-mono text-xs uppercase tracking-widest text-[#958ea0]">
               Worth building?
             </p>
-            <h3 className="text-base font-semibold mb-2">
+            <h3 className="mb-2 text-base font-semibold text-[#e5e1e4]">
               Find out if your idea is worth the next 3 months
             </h3>
-            <p className="text-sm text-zinc-300 leading-relaxed mb-4">
-              Full report: user quotes, pain map with severity scores, opportunity direction,
-              and a build / pivot / don&apos;t-build recommendation.
+            <p className="mb-4 text-sm leading-relaxed text-[#cbc3d7]">
+              Full report: user quotes, pain map with severity scores, opportunity direction, and a
+              build / pivot / don&apos;t-build recommendation.
             </p>
 
-            <p className="text-xs font-mono uppercase tracking-widest text-zinc-500 mb-2">
+            <p className="mb-2 font-mono text-xs uppercase tracking-widest text-[#958ea0]">
               Choose depth
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-2">
+            <div className="mb-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
               {DEPTH_OPTIONS.map((option) => {
                 const optionCost = depthCost(credits, option.id)
                 const selected = depth === option.id
@@ -99,14 +99,15 @@ export function FullReportCta({ projectId, credits }: FullReportCtaProps) {
                     key={option.id}
                     type="button"
                     onClick={() => setDepth(option.id)}
-                    className={`text-left p-2.5 border transition-colors ${
+                    className={cn(
+                      'rounded-lg border p-2.5 text-left transition-colors',
                       selected
-                        ? 'border-white bg-white/10'
-                        : 'border-zinc-700 hover:border-zinc-500'
-                    }`}
+                        ? 'border-[#d0bcff]/45 bg-[#d0bcff]/15'
+                        : 'border-white/10 hover:border-[#d0bcff]/30',
+                    )}
                   >
-                    <div className="text-xs font-medium">{option.label}</div>
-                    <div className="text-[10px] font-mono text-zinc-400 mt-0.5">
+                    <div className="text-xs font-medium text-[#e5e1e4]">{option.label}</div>
+                    <div className="mt-0.5 font-mono text-[10px] text-[#958ea0]">
                       {optionCost} cr · {option.competitors}×{option.reviews}
                     </div>
                   </button>
@@ -114,12 +115,13 @@ export function FullReportCta({ projectId, credits }: FullReportCtaProps) {
               })}
             </div>
 
-            {error && <p className="text-sm text-red-300 mt-2">{error}</p>}
+            {error && <p className="mt-2 text-sm text-[#ff8adf]">{error}</p>}
           </div>
-          <Button
+          <button
+            type="button"
             onClick={handleUnlock}
             disabled={unlockMutation.isPending}
-            className="gap-1.5 w-full sm:w-auto shrink-0 bg-white text-zinc-950 hover:bg-zinc-100"
+            className="landing-primary-glow inline-flex w-full shrink-0 items-center justify-center gap-1.5 rounded-lg bg-[#d0bcff] px-4 py-2.5 text-sm font-semibold text-[#3c0091] transition-transform hover:-translate-y-0.5 disabled:opacity-60 sm:w-auto"
           >
             <Lock size={14} />
             {unlockMutation.isPending
@@ -128,7 +130,7 @@ export function FullReportCta({ projectId, credits }: FullReportCtaProps) {
                 ? `Use ${cost} credit${cost === 1 ? '' : 's'} — full report`
                 : 'Get credits — from $9'}
             {!unlockMutation.isPending && <ArrowUpRight size={14} />}
-          </Button>
+          </button>
         </div>
       </motion.section>
 

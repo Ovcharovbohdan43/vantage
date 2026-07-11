@@ -13,52 +13,55 @@ export function ReportCompetitorsSection({ competitors, isPreview }: ReportCompe
 
   return (
     <section className="mb-8">
-      <h2 className="text-xs font-mono uppercase tracking-widest text-zinc-400 mb-3">
+      <h2 className="mb-3 font-mono text-xs uppercase tracking-widest text-[#958ea0]">
         Competitors ({competitors.length})
       </h2>
       <div className="grid gap-3 sm:grid-cols-2">
         {competitors.map((competitor) => (
-          <div key={competitor.id} className="border border-zinc-200 bg-white p-4">
-            <div className="flex items-start justify-between gap-2 mb-3">
-              <h3 className="text-sm font-semibold text-zinc-950">{competitor.name}</h3>
+          <div
+            key={competitor.id}
+            className="rounded-xl border border-white/10 bg-[#1c1b1d]/60 p-4 transition-colors hover:border-[#d0bcff]/25"
+          >
+            <div className="mb-3 flex items-start justify-between gap-2">
+              <h3 className="text-sm font-semibold text-[#e5e1e4]">{competitor.name}</h3>
               <a
                 href={competitor.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-zinc-400 hover:text-zinc-700 shrink-0"
+                className="shrink-0 text-[#958ea0] transition-colors hover:text-[#d0bcff]"
                 aria-label={`Open ${competitor.name}`}
               >
                 <ExternalLink size={14} />
               </a>
             </div>
-            <dl className="grid grid-cols-2 gap-2 text-xs mb-3">
+            <dl className="mb-3 grid grid-cols-2 gap-2 text-xs">
               <div>
-                <dt className="text-zinc-400 font-mono uppercase text-[10px]">Rating</dt>
-                <dd className="font-medium tabular-nums">
+                <dt className="font-mono text-[10px] uppercase text-[#958ea0]">Rating</dt>
+                <dd className="font-medium tabular-nums text-[#e5e1e4]">
                   {competitor.rating != null ? `${competitor.rating.toFixed(1)} ★` : '—'}
                 </dd>
               </div>
               <div>
-                <dt className="text-zinc-400 font-mono uppercase text-[10px]">Reviews</dt>
-                <dd className="font-medium tabular-nums">
+                <dt className="font-mono text-[10px] uppercase text-[#958ea0]">Reviews</dt>
+                <dd className="font-medium tabular-nums text-[#e5e1e4]">
                   {competitor.reviews_count?.toLocaleString() ?? '—'}
                 </dd>
               </div>
               {!isPreview && competitor.negative_reviews_count != null && (
                 <div className="col-span-2">
-                  <dt className="text-zinc-400 font-mono uppercase text-[10px]">Negative reviews</dt>
-                  <dd className="font-medium tabular-nums text-red-700">
+                  <dt className="font-mono text-[10px] uppercase text-[#958ea0]">Negative reviews</dt>
+                  <dd className="font-medium tabular-nums text-[#ff8adf]">
                     {competitor.negative_reviews_count.toLocaleString()}
                   </dd>
                 </div>
               )}
             </dl>
             {!isPreview && (competitor.top_complaints?.length ?? 0) > 0 && (
-              <div className="border-t border-zinc-100 pt-3">
-                <p className="text-[10px] font-mono uppercase text-zinc-400 mb-2">Top complaints</p>
+              <div className="border-t border-white/8 pt-3">
+                <p className="mb-2 font-mono text-[10px] uppercase text-[#958ea0]">Top complaints</p>
                 <ul className="space-y-1.5">
                   {competitor.top_complaints!.map((complaint, i) => (
-                    <li key={i} className="text-xs text-zinc-600 leading-relaxed line-clamp-2">
+                    <li key={i} className="line-clamp-2 text-xs leading-relaxed text-[#cbc3d7]">
                       &ldquo;{complaint}&rdquo;
                     </li>
                   ))}
@@ -96,18 +99,18 @@ export function ReportCustomerVoicePreview({
 
   return (
     <section className="mb-8">
-      <div className="flex items-end justify-between gap-4 mb-3">
-        <h2 className="text-xs font-mono uppercase tracking-widest text-zinc-400">Customer voice</h2>
+      <div className="mb-3 flex items-end justify-between gap-4">
+        <h2 className="font-mono text-xs uppercase tracking-widest text-[#958ea0]">Customer voice</h2>
         <button
           type="button"
           onClick={onViewAll}
-          className="text-xs font-medium text-zinc-950 underline underline-offset-2"
+          className="text-xs font-medium text-[#d0bcff] underline underline-offset-2 transition-colors hover:text-[#e5e1e4]"
         >
           View all evidence
         </button>
       </div>
-      <p className="text-sm text-zinc-500 mb-4">Real quotes — AI didn&apos;t invent these.</p>
-      <div className="space-y-0 divide-y divide-zinc-200 border border-zinc-200 bg-white">
+      <p className="mb-4 text-sm text-[#958ea0]">Real quotes — AI didn&apos;t invent these.</p>
+      <div className="divide-y divide-white/8 overflow-hidden rounded-xl border border-white/10 bg-[#1c1b1d]/60">
         {quotes.map((quote, i) => (
           <QuoteCard key={i} quote={quote} />
         ))}
@@ -118,9 +121,9 @@ export function ReportCustomerVoicePreview({
 
 function StarRow({ rating }: { rating: number }) {
   return (
-    <span className="text-amber-500 text-sm tracking-wider" aria-label={`${rating} out of 5 stars`}>
+    <span className="text-sm tracking-wider text-[#ff8adf]" aria-label={`${rating} out of 5 stars`}>
       {'★'.repeat(rating)}
-      <span className="text-zinc-200">{'★'.repeat(Math.max(0, 5 - rating))}</span>
+      <span className="text-white/20">{'★'.repeat(Math.max(0, 5 - rating))}</span>
     </span>
   )
 }
@@ -143,18 +146,18 @@ export function QuoteCard({
           <StarRow rating={quote.rating} />
         </div>
       )}
-      <p className="text-sm text-zinc-800 leading-relaxed italic">&ldquo;{quote.text}&rdquo;</p>
-      <dl className="mt-4 grid grid-cols-2 gap-2 text-[10px] font-mono uppercase text-zinc-400">
+      <p className="text-sm leading-relaxed text-[#e5e1e4] italic">&ldquo;{quote.text}&rdquo;</p>
+      <dl className="mt-4 grid grid-cols-2 gap-2 font-mono text-[10px] uppercase text-[#958ea0]">
         {quote.category && (
           <div>
             <dt className="mb-0.5">Category</dt>
-            <dd className="text-zinc-700 normal-case text-xs">{quote.category}</dd>
+            <dd className="text-xs normal-case text-[#cbc3d7]">{quote.category}</dd>
           </div>
         )}
         {quote.competitor && (
           <div>
             <dt className="mb-0.5">Competitor</dt>
-            <dd className="text-zinc-700 normal-case text-xs">{quote.competitor}</dd>
+            <dd className="text-xs normal-case text-[#cbc3d7]">{quote.competitor}</dd>
           </div>
         )}
       </dl>

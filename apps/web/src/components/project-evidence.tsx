@@ -7,6 +7,9 @@ import type { ReportPainCluster } from '@/lib/api/types'
 
 const PAGE_SIZE = 20
 
+const fieldClass =
+  'rounded-lg border border-white/12 bg-[#1c1b1d] px-3 py-2 text-sm text-[#e5e1e4] outline-none transition-colors focus:border-[#d0bcff]/45 placeholder:text-[#958ea0]'
+
 function mergeUniqueReviews(prev: ProjectReview[], next: ProjectReview[]): ProjectReview[] {
   const seen = new Set(prev.map((r) => r.id))
   const merged = [...prev]
@@ -28,10 +31,10 @@ interface ProjectEvidenceProps {
 
 function ReviewSkeleton() {
   return (
-    <div className="border border-zinc-100 p-5 space-y-2">
-      <div className="h-3 w-24 bg-zinc-100 animate-pulse" />
-      <div className="h-3 w-full bg-zinc-100 animate-pulse" />
-      <div className="h-3 w-4/5 bg-zinc-100 animate-pulse" />
+    <div className="space-y-2 border-b border-white/8 p-5 last:border-0">
+      <div className="h-3 w-24 animate-pulse rounded bg-white/10" />
+      <div className="h-3 w-full animate-pulse rounded bg-white/10" />
+      <div className="h-3 w-4/5 animate-pulse rounded bg-white/10" />
     </div>
   )
 }
@@ -95,9 +98,7 @@ export function ProjectEvidence({
         setTotal(data.total)
         nextOffsetRef.current = offset + data.items.length
         setHasMore(nextOffsetRef.current < data.total)
-        setReviews((prev) =>
-          append ? mergeUniqueReviews(prev, data.items) : data.items,
-        )
+        setReviews((prev) => (append ? mergeUniqueReviews(prev, data.items) : data.items))
       } finally {
         if (append) {
           loadingMoreRef.current = false
@@ -143,7 +144,7 @@ export function ProjectEvidence({
 
   if (disabled) {
     return (
-      <div className="border border-zinc-200 bg-zinc-50 p-6 text-sm text-zinc-600 leading-relaxed">
+      <div className="rounded-xl border border-[#d0bcff]/25 bg-[#d0bcff]/8 p-6 text-sm leading-relaxed text-[#cbc3d7]">
         Customer voice is locked in the free preview. Unlock to read every negative review — proof that
         AI didn&apos;t invent the pain points.
       </div>
@@ -154,15 +155,15 @@ export function ProjectEvidence({
 
   return (
     <div>
-      <p className="text-sm text-zinc-500 mb-4 leading-relaxed">
+      <p className="mb-4 text-sm leading-relaxed text-[#958ea0]">
         Real customer complaints from G2 and Capterra. Filter, search, scroll — nothing generated.
       </p>
 
-      <div className="flex flex-wrap gap-2 mb-6">
+      <div className="mb-6 flex flex-wrap gap-2">
         <select
           value={rating}
           onChange={(e) => setRating(e.target.value)}
-          className="text-sm border border-zinc-200 px-3 py-2 bg-white"
+          className={fieldClass}
         >
           <option value="">All ratings</option>
           <option value="1">★1 only</option>
@@ -173,13 +174,13 @@ export function ProjectEvidence({
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search reviews…"
-          className="flex-1 min-w-[180px] text-sm border border-zinc-200 px-3 py-2"
+          className={`min-w-[180px] flex-1 ${fieldClass}`}
         />
         {clusterId && (
           <button
             type="button"
             onClick={() => setClusterId('')}
-            className="text-xs text-zinc-500 underline"
+            className="text-xs text-[#958ea0] underline transition-colors hover:text-[#d0bcff]"
           >
             Clear pain filter
           </button>
@@ -187,12 +188,12 @@ export function ProjectEvidence({
       </div>
 
       {clusterTitle && (
-        <p className="text-xs font-mono text-zinc-500 mb-4">
-          Filtered by pain: <span className="text-zinc-800">{clusterTitle}</span>
+        <p className="mb-4 font-mono text-xs text-[#958ea0]">
+          Filtered by pain: <span className="text-[#e5e1e4]">{clusterTitle}</span>
         </p>
       )}
 
-      <p className="text-xs font-mono text-zinc-400 mb-4">
+      <p className="mb-4 font-mono text-xs text-[#958ea0]">
         {loading && shown === 0
           ? 'Loading…'
           : total > 0
@@ -200,7 +201,7 @@ export function ProjectEvidence({
             : 'No reviews'}
       </p>
 
-      <div className="border border-zinc-200 bg-white divide-y divide-zinc-200">
+      <div className="divide-y divide-white/8 overflow-hidden rounded-xl border border-white/10 bg-[#1c1b1d]/60">
         {reviews.map((review) => (
           <QuoteCard
             key={review.id}
@@ -224,14 +225,14 @@ export function ProjectEvidence({
         {loadingMore && <ReviewSkeleton />}
 
         {!loading && shown === 0 && (
-          <p className="text-sm text-zinc-500 text-center py-12">No reviews match your filters.</p>
+          <p className="py-12 text-center text-sm text-[#958ea0]">No reviews match your filters.</p>
         )}
       </div>
 
       <div ref={sentinelRef} className="h-4" aria-hidden />
 
       {!loading && !hasMore && shown > 0 && (
-        <p className="text-xs text-zinc-400 text-center mt-6 font-mono">All reviews loaded</p>
+        <p className="mt-6 text-center font-mono text-xs text-[#958ea0]">All reviews loaded</p>
       )}
     </div>
   )

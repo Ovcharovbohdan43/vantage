@@ -1,19 +1,20 @@
 'use client'
 
 import type { ReportPainCluster } from '@/lib/api/types'
+import { cn } from '@/lib/utils'
 
 type PainTone = 'good' | 'caution' | 'bad'
 
 const BAR_TONE: Record<PainTone, string> = {
-  good: 'text-emerald-600',
-  caution: 'text-amber-600',
-  bad: 'text-red-600',
+  good: 'text-emerald-400',
+  caution: 'text-[#d0bcff]',
+  bad: 'text-[#ff4ec8]',
 }
 
 const FILL_TONE: Record<PainTone, string> = {
-  good: 'bg-emerald-500',
-  caution: 'bg-amber-500',
-  bad: 'bg-red-500',
+  good: 'bg-emerald-400',
+  caution: 'bg-[#d0bcff]',
+  bad: 'bg-[#ff4ec8]',
 }
 
 function painTone(score: number | null | undefined): PainTone {
@@ -42,17 +43,22 @@ export function ReportPainMap({ clusters, isPreview, onReadEvidence }: ReportPai
 
   if (clusters.length === 0) {
     return (
-      <p className="text-sm text-zinc-500 border border-zinc-200 p-4">No pain patterns identified yet.</p>
+      <p className="rounded-xl border border-white/10 p-4 text-sm text-[#958ea0]">
+        No pain patterns identified yet.
+      </p>
     )
   }
 
   if (isPreview) {
     return (
-      <ul className="space-y-2 border border-zinc-200 p-4">
+      <ul className="space-y-2 rounded-xl border border-white/10 bg-[#1c1b1d]/50 p-4">
         {sorted.map((c) => (
-          <li key={c.id} className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-baseline text-sm">
-            <span className="text-zinc-800 truncate">{c.title}</span>
-            <span className="font-mono text-xs text-zinc-400 shrink-0">{c.frequency} mentions</span>
+          <li
+            key={c.id}
+            className="flex flex-col gap-0.5 text-sm sm:flex-row sm:items-baseline sm:justify-between"
+          >
+            <span className="truncate text-[#e5e1e4]">{c.title}</span>
+            <span className="shrink-0 font-mono text-xs text-[#958ea0]">{c.frequency} mentions</span>
           </li>
         ))}
       </ul>
@@ -68,21 +74,21 @@ export function ReportPainMap({ clusters, isPreview, onReadEvidence }: ReportPai
         return (
           <div
             key={cluster.id}
-            className="border border-zinc-200 bg-white p-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6"
+            className="flex flex-col gap-3 rounded-xl border border-white/10 bg-[#1c1b1d]/60 p-4 sm:flex-row sm:items-center sm:gap-6"
           >
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-zinc-950 mb-1 truncate">{cluster.title}</p>
+            <div className="min-w-0 flex-1">
+              <p className="mb-1 truncate text-sm font-semibold text-[#e5e1e4]">{cluster.title}</p>
               <p className="font-mono text-xs tracking-tight">
                 <span className={BAR_TONE[tone]}>{'█'.repeat(filled)}</span>
-                <span className="text-zinc-200">{'░'.repeat(10 - filled)}</span>
-                <span className="text-zinc-400 ml-1">{score.toFixed(1)}</span>
+                <span className="text-white/15">{'░'.repeat(10 - filled)}</span>
+                <span className="ml-1 text-[#958ea0]">{score.toFixed(1)}</span>
               </p>
-              <p className="text-xs font-mono text-zinc-400 mt-1">{cluster.frequency} mentions</p>
+              <p className="mt-1 font-mono text-xs text-[#958ea0]">{cluster.frequency} mentions</p>
             </div>
             <button
               type="button"
               onClick={() => onReadEvidence(cluster.id)}
-              className="text-xs font-medium text-zinc-950 border border-zinc-200 px-3 py-2 hover:bg-zinc-50 shrink-0 self-start sm:self-center"
+              className="shrink-0 self-start rounded-lg border border-white/12 px-3 py-2 text-xs font-medium text-[#d0bcff] transition-colors hover:border-[#d0bcff]/40 hover:bg-[#d0bcff]/10 sm:self-center"
             >
               Read evidence ↓
             </button>
@@ -100,27 +106,29 @@ export function ReportPainDistribution({ clusters }: { clusters: ReportPainClust
   const maxFreq = Math.max(...sorted.map((c) => c.frequency), 1)
 
   return (
-    <div className="border border-zinc-200 bg-white p-5 mt-4">
-      <p className="text-[10px] font-mono uppercase tracking-widest text-zinc-400 mb-4">Pain distribution</p>
+    <div className="mt-4 rounded-xl border border-white/10 bg-[#1c1b1d]/60 p-5">
+      <p className="mb-4 font-mono text-[10px] uppercase tracking-widest text-[#958ea0]">
+        Pain distribution
+      </p>
       <div className="space-y-3">
         {sorted.map((cluster) => {
           const width = Math.round((cluster.frequency / maxFreq) * 100)
           const score = cluster.severity_score ?? cluster.commercial_opportunity ?? 5
           const tone = painTone(score)
           return (
-            <div key={cluster.id} className="grid grid-cols-[1fr_auto] gap-3 items-center">
+            <div key={cluster.id} className="grid grid-cols-[1fr_auto] items-center gap-3">
               <div className="min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xs text-zinc-700 truncate">{cluster.title}</span>
+                <div className="mb-1 flex items-center gap-2">
+                  <span className="truncate text-xs text-[#cbc3d7]">{cluster.title}</span>
                 </div>
-                <div className="h-2 bg-zinc-100 overflow-hidden">
+                <div className="h-2 overflow-hidden rounded-full bg-white/8">
                   <div
-                    className={`h-full transition-all ${FILL_TONE[tone]}`}
+                    className={cn('h-full transition-all', FILL_TONE[tone])}
                     style={{ width: `${width}%` }}
                   />
                 </div>
               </div>
-              <span className="text-xs font-mono text-zinc-400 tabular-nums">{cluster.frequency}</span>
+              <span className="font-mono text-xs tabular-nums text-[#958ea0]">{cluster.frequency}</span>
             </div>
           )
         })}

@@ -21,16 +21,16 @@ import {
 import type { ReportCompetitor, ReportPainCluster } from '@/lib/api/types'
 
 const COLORS = {
-  market: '#059669',
-  risk: '#dc2626',
-  severity: '#3f3f46',
-  emotion: '#d97706',
-  opportunity: '#2563eb',
-  frequency: '#6366f1',
-  rating: '#0d9488',
-  reviews: '#7c3aed',
-  grid: '#e4e4e7',
-  muted: '#71717a',
+  market: '#d0bcff',
+  risk: '#ff4ec8',
+  severity: '#ff8adf',
+  emotion: '#d0bcff',
+  opportunity: '#a78bfa',
+  frequency: '#ff4ec8',
+  rating: '#d0bcff',
+  reviews: '#ff8adf',
+  grid: 'rgba(255,255,255,0.08)',
+  muted: '#958ea0',
 } as const
 
 function truncate(text: string, max = 28): string {
@@ -49,10 +49,10 @@ function ChartCard({
   className?: string
 }) {
   return (
-    <div className={`border border-zinc-200 bg-white p-5 ${className}`}>
+    <div className={`rounded-xl border border-white/10 bg-[#1c1b1d]/60 p-5 ${className}`}>
       <div className="mb-4">
-        <h3 className="text-xs font-mono uppercase tracking-widest text-zinc-400">{title}</h3>
-        {subtitle && <p className="text-xs text-zinc-500 mt-1">{subtitle}</p>}
+        <h3 className="font-mono text-xs uppercase tracking-widest text-[#958ea0]">{title}</h3>
+        {subtitle && <p className="mt-1 text-xs text-[#958ea0]">{subtitle}</p>}
       </div>
       {children}
     </div>
@@ -78,17 +78,17 @@ function ChartTooltip({
   if (!active || !payload?.length) return null
 
   return (
-    <div className="border border-zinc-200 bg-white px-3 py-2 shadow-sm text-xs">
-      {label && <p className="font-medium text-zinc-950 mb-1.5 max-w-[220px]">{label}</p>}
+    <div className="rounded-lg border border-white/12 bg-[#201f22] px-3 py-2 text-xs shadow-lg">
+      {label && <p className="mb-1.5 max-w-[220px] font-medium text-[#e5e1e4]">{label}</p>}
       <ul className="space-y-1">
         {payload.map((entry) => (
-          <li key={`${entry.name}-${entry.value}`} className="flex items-center gap-2 text-zinc-600">
+          <li key={`${entry.name}-${entry.value}`} className="flex items-center gap-2 text-[#cbc3d7]">
             <span
               className="size-2 shrink-0 rounded-full"
               style={{ backgroundColor: entry.color ?? COLORS.muted }}
             />
             <span>{entry.name}:</span>
-            <span className="font-medium tabular-nums text-zinc-950">
+            <span className="font-medium tabular-nums text-[#e5e1e4]">
               {typeof entry.value === 'number'
                 ? Number.isInteger(entry.value)
                   ? entry.value.toLocaleString()
@@ -140,16 +140,16 @@ export function MarketRiskGaugeChart({
                   <RadialBar
                     dataKey="value"
                     cornerRadius={6}
-                    background={{ fill: '#f4f4f5' }}
+                    background={{ fill: 'rgba(255,255,255,0.06)' }}
                   />
                 </RadialBarChart>
               </ResponsiveContainer>
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                <span className="text-2xl font-semibold tabular-nums text-zinc-950">{item.score}</span>
-                <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400">/ 100</span>
+                <span className="text-2xl font-semibold tabular-nums text-[#e5e1e4]">{item.score}</span>
+                <span className="font-mono text-[10px] uppercase tracking-wider text-[#958ea0]">/ 100</span>
               </div>
             </div>
-            <p className="text-xs font-mono uppercase tracking-wider text-zinc-500 mt-1">{item.name}</p>
+            <p className="mt-1 font-mono text-xs uppercase tracking-wider text-[#958ea0]">{item.name}</p>
           </div>
         ))}
       </div>
@@ -247,7 +247,12 @@ export function PainScoresChart({ clusters }: { clusters: ReportPainCluster[] })
             )}
           />
           <Legend
-            wrapperStyle={{ fontSize: 11, fontFamily: 'var(--font-mono)', textTransform: 'uppercase' }}
+            wrapperStyle={{
+              fontSize: 11,
+              fontFamily: 'var(--font-mono)',
+              textTransform: 'uppercase',
+              color: '#958ea0',
+            }}
             iconType="circle"
             iconSize={8}
           />
@@ -410,7 +415,7 @@ export function CompetitorLandscapeChart({ competitors }: { competitors: ReportC
           <Bar dataKey="rating" name="Rating" fill={COLORS.rating} radius={[0, 4, 4, 0]} maxBarSize={18} />
         </BarChart>
       </ResponsiveContainer>
-      <p className="text-[10px] text-zinc-400 mt-3 font-mono">
+      <p className="mt-3 font-mono text-[10px] text-[#958ea0]">
         Bar length = star rating (0–5). Hover for full review counts.
       </p>
     </ChartCard>
@@ -487,7 +492,7 @@ export function ReportPainCharts({ clusters }: { clusters: ReportPainCluster[] }
       transition={{ duration: 0.35, delay: 0.14 }}
       className="mb-8"
     >
-      <h2 className="text-sm font-mono uppercase tracking-widest text-zinc-400 mb-4">Pain landscape</h2>
+      <h2 className="mb-4 font-mono text-sm uppercase tracking-widest text-[#958ea0]">Pain landscape</h2>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <PainFrequencyChart clusters={clusters} />
         <PainScoresChart clusters={clusters} />
