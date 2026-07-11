@@ -42,8 +42,9 @@ export default async function LibraryPage({ searchParams }: LibraryPageProps) {
     items = data.items
     total = data.total
     categories = data.categories
-  } catch {
-    // API may be unavailable during local setup
+  } catch (err) {
+    // Surface wiring failures in server logs (empty library is usually a missing API URL).
+    console.error('[library] failed to list articles', err)
   }
 
   return (
