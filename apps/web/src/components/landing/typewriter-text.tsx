@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { Fragment, type ReactNode, useEffect, useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
 
 interface TypewriterTextProps {
@@ -12,10 +12,22 @@ interface TypewriterTextProps {
   delay?: number
   className?: string
   showCursor?: boolean
+  /** Animated gradient matching the hero energy animation */
+  energyGradient?: boolean
 }
 
 function easeOutCubic(t: number) {
   return 1 - Math.pow(1 - t, 3)
+}
+
+function renderMultiline(value: string, mapLine?: (line: string, index: number) => ReactNode) {
+  const lines = value.split('\n')
+  return lines.map((line, index) => (
+    <Fragment key={index}>
+      {index > 0 ? <br /> : null}
+      {mapLine ? mapLine(line, index) : line}
+    </Fragment>
+  ))
 }
 
 export function TypewriterText({
@@ -26,6 +38,7 @@ export function TypewriterText({
   delay = 300,
   className,
   showCursor = true,
+  energyGradient = false,
 }: TypewriterTextProps) {
   const [visibleCount, setVisibleCount] = useState(0)
   const [done, setDone] = useState(false)
@@ -69,59 +82,56 @@ export function TypewriterText({
   }, [text, duration, delay])
 
   const visible = text.slice(0, visibleCount)
+  const textTone = energyGradient ? 'landing-energy-text' : undefined
+  const resolvedAccentClass = energyGradient ? undefined : accentClassName
 
-  function renderWithAccent(value: string) {
-    if (!accent || !value.includes(accent.slice(0, Math.min(accent.length, value.length)))) {
-      // Partial accent while typing through the accent phrase
-      if (accent) {
-        const idx = text.indexOf(accent)
-        if (idx >= 0 && visibleCount > idx) {
-          const before = value.slice(0, idx)
-          const mid = value.slice(idx)
-          const accentPart = mid.slice(0, Math.min(mid.length, accent.length))
-          const after = mid.slice(accentPart.length)
-          return (
-            <>
-              {before}
-              <span className={accentClassName}>{accentPart}</span>
-              {after}
-            </>
-          )
-        }
+  function accentize(value: string) {
+    if (energyGradient || !accent) return value
+
+    const idx = value.indexOf(accent)
+    if (idx < 0) {
+      const fullIdx = text.indexOf(accent)
+      if (fullIdx >= 0 && visibleCount > fullIdx) {
+        const before = value.slice(0, fullIdx)
+        const mid = value.slice(fullIdx)
+        const accentPart = mid.slice(0, Math.min(mid.length, accent.length))
+        const after = mid.slice(accentPart.length)
+        return (
+          <>
+            {before}
+            <span className={resolvedAccentClass}>{accentPart}</span>
+            {after}
+          </>
+        )
       }
       return value
     }
 
-    const idx = value.indexOf(accent)
-    if (idx < 0) return value
     return (
       <>
         {value.slice(0, idx)}
-        <span className={accentClassName}>{accent}</span>
+        <span className={resolvedAccentClass}>{accent}</span>
         {value.slice(idx + accent.length)}
       </>
     )
   }
 
+  function renderContent(value: string) {
+    return renderMultiline(value, (line) => accentize(line))
+  }
+
   return (
     <span className={cn('inline-grid', className)}>
-      <span className="col-start-1 row-start-1 invisible" aria-hidden>
-        {accent ? (
-          <>
-            {text.slice(0, text.indexOf(accent))}
-            <span className={accentClassName}>{accent}</span>
-            {text.slice(text.indexOf(accent) + accent.length)}
-          </>
-        ) : (
-          text
-        )}
+      <span className={cn('col-start-1 row-start-1 invisible', textTone)} aria-hidden>
+        {renderContent(text)}
       </span>
       <span className="col-start-1 row-start-1">
-        {renderWithAccent(visible)}
+        <span className={textTone}>{renderContent(visible)}</span>
         {showCursor && (
           <span
             className={cn(
-              'ml-0.5 inline-block h-[0.85em] w-[2px] align-baseline bg-[#d0bcff]',
+              'ml-0.5 inline-block h-[0.85em] w-[2px] align-baseline',
+              energyGradient ? 'bg-[#ff5ec8]' : 'bg-[#d0bcff]',
               done ? 'opacity-0 transition-opacity duration-500' : 'animate-pulse',
             )}
             aria-hidden

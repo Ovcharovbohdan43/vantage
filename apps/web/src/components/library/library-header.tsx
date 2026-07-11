@@ -3,20 +3,22 @@ import { VantageLogo } from '@/components/vantage-logo'
 
 export function LibraryHeader() {
   return (
-    <header className="border-b border-zinc-200 bg-white">
-      <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between gap-4">
+    <header className="border-b border-white/8 bg-[#0e0e10]/90 backdrop-blur-md">
+      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-4">
         <Link href="/library" className="flex items-center gap-2">
           <VantageLogo size={20} />
-          <span className="text-sm font-semibold text-zinc-950 tracking-tight">Vantage</span>
-          <span className="text-xs font-mono uppercase tracking-widest text-zinc-400">Research Library</span>
+          <span className="text-sm font-semibold tracking-tight text-[#e5e1e4]">Vantage</span>
+          <span className="font-mono text-xs uppercase tracking-widest text-[#958ea0]">
+            Research Library
+          </span>
         </Link>
         <nav className="flex items-center gap-4 text-sm">
-          <Link href="/library" className="text-zinc-600 hover:text-zinc-950 transition-colors">
+          <Link href="/library" className="text-[#cbc3d7] transition-colors hover:text-[#d0bcff]">
             Browse
           </Link>
           <Link
             href="/signup"
-            className="text-zinc-950 font-medium border border-zinc-950 px-3 py-1.5 hover:bg-zinc-950 hover:text-white transition-colors"
+            className="landing-primary-glow rounded-lg bg-[#d0bcff] px-3 py-1.5 text-sm font-semibold text-[#3c0091]"
           >
             Validate your idea
           </Link>

@@ -11,6 +11,9 @@ const SORT_OPTIONS = [
   { id: 'reviews', label: 'Most reviews' },
 ] as const
 
+const fieldClass =
+  'rounded-lg border border-white/12 bg-[#1c1b1d] px-3 py-2 text-sm text-[#e5e1e4] outline-none transition-colors focus:border-[#d0bcff]/45'
+
 export interface LibraryFilters {
   q: string
   category: string
@@ -65,23 +68,25 @@ export function LibraryIndexClient({ items, total, categories, filters }: Librar
     router.push('/library')
   }
 
-  const hasFilters = Boolean(filters.q || filters.category || filters.saturation || filters.sort !== 'latest')
+  const hasFilters = Boolean(
+    filters.q || filters.category || filters.saturation || filters.sort !== 'latest',
+  )
 
   return (
     <div>
-      <form onSubmit={handleSubmit} className="flex flex-wrap gap-3 mb-6">
+      <form onSubmit={handleSubmit} className="mb-6 flex flex-wrap gap-3">
         <input
           name="q"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search research…"
-          className="flex-1 min-w-[200px] text-sm border border-zinc-200 px-3 py-2 focus:outline-none focus:border-zinc-400"
+          className={`min-w-[200px] flex-1 ${fieldClass} placeholder:text-[#958ea0]`}
         />
         <select
           name="category"
           value={category}
           onChange={(e) => setCategory(e.target.value)}
-          className="text-sm border border-zinc-200 px-3 py-2 bg-white focus:outline-none focus:border-zinc-400"
+          className={fieldClass}
         >
           <option value="">All categories</option>
           {categories.map((c) => (
@@ -94,7 +99,7 @@ export function LibraryIndexClient({ items, total, categories, filters }: Librar
           name="saturation"
           value={saturation}
           onChange={(e) => setSaturation(e.target.value)}
-          className="text-sm border border-zinc-200 px-3 py-2 bg-white focus:outline-none focus:border-zinc-400"
+          className={fieldClass}
         >
           <option value="">Any competition</option>
           <option value="HIGH">High saturation</option>
@@ -105,7 +110,7 @@ export function LibraryIndexClient({ items, total, categories, filters }: Librar
           name="sort"
           value={sort}
           onChange={(e) => setSort(e.target.value as LibraryFilters['sort'])}
-          className="text-sm border border-zinc-200 px-3 py-2 bg-white focus:outline-none focus:border-zinc-400"
+          className={fieldClass}
         >
           {SORT_OPTIONS.map((o) => (
             <option key={o.id} value={o.id}>
@@ -116,7 +121,7 @@ export function LibraryIndexClient({ items, total, categories, filters }: Librar
         <button
           type="submit"
           disabled={pending}
-          className="text-sm font-medium bg-zinc-950 text-white px-4 py-2 hover:bg-zinc-800 transition-colors disabled:opacity-60"
+          className="landing-primary-glow rounded-lg bg-[#d0bcff] px-4 py-2 text-sm font-semibold text-[#3c0091] transition-transform hover:-translate-y-0.5 disabled:opacity-60"
         >
           {pending ? 'Searching…' : 'Search'}
         </button>
@@ -124,7 +129,7 @@ export function LibraryIndexClient({ items, total, categories, filters }: Librar
           <button
             type="button"
             onClick={handleReset}
-            className="text-sm text-zinc-500 hover:text-zinc-800 px-2"
+            className="px-2 text-sm text-[#958ea0] transition-colors hover:text-[#d0bcff]"
           >
             Clear
           </button>
@@ -132,18 +137,18 @@ export function LibraryIndexClient({ items, total, categories, filters }: Librar
       </form>
 
       {filters.q && (
-        <p className="text-xs text-zinc-500 mb-3">
+        <p className="mb-3 text-xs text-[#cbc3d7]">
           Results for &ldquo;{filters.q}&rdquo;
         </p>
       )}
 
-      <p className="text-xs text-zinc-400 font-mono mb-4">
+      <p className="mb-4 font-mono text-xs text-[#958ea0]">
         {pending ? 'Searching…' : `${total} research${total === 1 ? '' : 'es'}`}
       </p>
 
       {items.length === 0 && !pending ? (
-        <div className="border border-dashed border-zinc-200 p-12 text-center">
-          <p className="text-sm text-zinc-500">
+        <div className="rounded-xl border border-dashed border-white/15 p-12 text-center">
+          <p className="text-sm text-[#cbc3d7]">
             {hasFilters
               ? 'No published research matches your search.'
               : 'No published research yet.'}

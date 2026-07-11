@@ -5,6 +5,9 @@ import { getLibraryReviews, type LibraryReview } from '@/lib/api/library'
 
 const PAGE_SIZE = 20
 
+const fieldClass =
+  'rounded-lg border border-white/12 bg-[#1c1b1d] px-3 py-2 text-sm text-[#e5e1e4] outline-none transition-colors focus:border-[#d0bcff]/45'
+
 function mergeUniqueReviews(prev: LibraryReview[], next: LibraryReview[]): LibraryReview[] {
   const seen = new Set(prev.map((r) => r.id))
   const merged = [...prev]
@@ -24,25 +27,25 @@ interface LibraryEvidenceProps {
 
 function ReviewCard({ review }: { review: LibraryReview }) {
   return (
-    <div className="border border-zinc-200 p-4">
-      <div className="flex flex-wrap items-center gap-2 mb-2 text-[10px] font-mono uppercase text-zinc-400">
+    <div className="rounded-xl border border-white/10 bg-[#1c1b1d]/60 p-4">
+      <div className="mb-2 flex flex-wrap items-center gap-2 font-mono text-[10px] uppercase text-[#958ea0]">
         {review.rating != null && (
-          <span className="text-amber-600">{'★'.repeat(review.rating)}</span>
+          <span className="text-[#ff8adf]">{'★'.repeat(review.rating)}</span>
         )}
         <span>{review.product}</span>
         <span>{review.source.toUpperCase()}</span>
       </div>
-      <p className="text-sm text-zinc-800 leading-relaxed">{review.text}</p>
+      <p className="text-sm leading-relaxed text-[#e5e1e4]">{review.text}</p>
     </div>
   )
 }
 
 function ReviewSkeleton() {
   return (
-    <div className="border border-zinc-100 p-4 space-y-2">
-      <div className="h-3 w-24 bg-zinc-100 animate-pulse" />
-      <div className="h-3 w-full bg-zinc-100 animate-pulse" />
-      <div className="h-3 w-4/5 bg-zinc-100 animate-pulse" />
+    <div className="space-y-2 rounded-xl border border-white/8 p-4">
+      <div className="h-3 w-24 animate-pulse rounded bg-white/10" />
+      <div className="h-3 w-full animate-pulse rounded bg-white/10" />
+      <div className="h-3 w-4/5 animate-pulse rounded bg-white/10" />
     </div>
   )
 }
@@ -97,9 +100,7 @@ export function LibraryEvidence({ slug, initialClusterId }: LibraryEvidenceProps
         setTotal(data.total)
         nextOffsetRef.current = offset + data.items.length
         setHasMore(nextOffsetRef.current < data.total)
-        setReviews((prev) =>
-          append ? mergeUniqueReviews(prev, data.items) : data.items,
-        )
+        setReviews((prev) => (append ? mergeUniqueReviews(prev, data.items) : data.items))
       } finally {
         if (append) {
           loadingMoreRef.current = false
@@ -112,7 +113,6 @@ export function LibraryEvidence({ slug, initialClusterId }: LibraryEvidenceProps
     [slug, buildParams],
   )
 
-  // Reset and load first page when filters change
   useEffect(() => {
     setReviews([])
     setHasMore(false)
@@ -120,7 +120,6 @@ export function LibraryEvidence({ slug, initialClusterId }: LibraryEvidenceProps
     loadPage(0, false)
   }, [loadPage])
 
-  // Infinite scroll sentinel
   useEffect(() => {
     const node = sentinelRef.current
     if (!node || !hasMore || loading || loadingMore) return
@@ -142,17 +141,13 @@ export function LibraryEvidence({ slug, initialClusterId }: LibraryEvidenceProps
 
   return (
     <div>
-      <p className="text-sm text-zinc-500 mb-4 leading-relaxed">
+      <p className="mb-4 text-sm leading-relaxed text-[#cbc3d7]">
         Every negative review collected for this analysis — anonymized, no authors or personal data.
         Reviews load in batches as you scroll.
       </p>
 
-      <div className="flex flex-wrap gap-2 mb-6">
-        <select
-          value={rating}
-          onChange={(e) => setRating(e.target.value)}
-          className="text-sm border border-zinc-200 px-3 py-2 bg-white"
-        >
+      <div className="mb-6 flex flex-wrap gap-2">
+        <select value={rating} onChange={(e) => setRating(e.target.value)} className={fieldClass}>
           <option value="">All ratings</option>
           <option value="1">★1 only</option>
           <option value="2">★2 only</option>
@@ -162,20 +157,20 @@ export function LibraryEvidence({ slug, initialClusterId }: LibraryEvidenceProps
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search reviews…"
-          className="flex-1 min-w-[180px] text-sm border border-zinc-200 px-3 py-2"
+          className={`min-w-[180px] flex-1 ${fieldClass} placeholder:text-[#958ea0]`}
         />
         {clusterId && (
           <button
             type="button"
             onClick={() => setClusterId('')}
-            className="text-xs text-zinc-500 underline"
+            className="text-xs text-[#958ea0] underline transition-colors hover:text-[#d0bcff]"
           >
             Clear pain filter
           </button>
         )}
       </div>
 
-      <p className="text-xs font-mono text-zinc-400 mb-4">
+      <p className="mb-4 font-mono text-xs text-[#958ea0]">
         {loading && shown === 0
           ? 'Loading evidence…'
           : total > 0
@@ -204,14 +199,14 @@ export function LibraryEvidence({ slug, initialClusterId }: LibraryEvidenceProps
         )}
 
         {!loading && shown === 0 && (
-          <p className="text-sm text-zinc-500 text-center py-8">No reviews match your filters.</p>
+          <p className="py-8 text-center text-sm text-[#cbc3d7]">No reviews match your filters.</p>
         )}
       </div>
 
       <div ref={sentinelRef} className="h-4" aria-hidden />
 
       {!loading && !hasMore && shown > 0 && (
-        <p className="text-xs text-zinc-400 text-center mt-6 font-mono">All reviews loaded</p>
+        <p className="mt-6 text-center font-mono text-xs text-[#958ea0]">All reviews loaded</p>
       )}
     </div>
   )

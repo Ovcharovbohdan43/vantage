@@ -13,18 +13,19 @@ export function SkeletonCard({ className }: { className?: string }) {
 
 export function DashboardSkeleton() {
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 md:px-8 py-6 sm:py-8 space-y-8">
+    <div className="mx-auto max-w-5xl space-y-8 px-4 py-6 sm:px-6 sm:py-8 md:px-8">
       <div className="flex items-center justify-between">
         <div className="space-y-2">
-          <Skeleton className="h-6 w-48" />
-          <Skeleton className="h-4 w-64" />
+          <Skeleton className="h-6 w-48 bg-white/10" />
+          <Skeleton className="h-4 w-64 bg-white/10" />
         </div>
-        <Skeleton className="h-9 w-32" />
+        <Skeleton className="h-9 w-32 bg-white/10" />
       </div>
+      <Skeleton className="h-28 w-full rounded-xl bg-white/10" />
       <div className="space-y-2">
-        <Skeleton className="h-3 w-24" />
-        <SkeletonCard />
-        <SkeletonCard />
+        <Skeleton className="h-3 w-24 bg-white/10" />
+        <Skeleton className="h-16 w-full rounded-xl bg-white/10" />
+        <Skeleton className="h-16 w-full rounded-xl bg-white/10" />
       </div>
     </div>
   )

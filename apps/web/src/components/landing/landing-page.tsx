@@ -1,8 +1,9 @@
 import Link from 'next/link'
 import type { LibraryArticleSummary } from '@/lib/api/library'
 import type { ResearchPackInfo } from '@/lib/api/types'
-import { HeroPainChart } from '@/components/landing/hero-pain-chart'
+import { EnergyAnimation } from '@/components/energy-animation'
 import { LandingHeader } from '@/components/landing/landing-header'
+import { LandingReveal } from '@/components/landing/landing-reveal'
 import { TypewriterText } from '@/components/landing/typewriter-text'
 import { VantageLogo } from '@/components/vantage-logo'
 
@@ -57,6 +58,21 @@ const TAG_COLOR = {
   tertiary: 'text-[#4edea3]',
 }
 
+const CARD_HOVER = {
+  primary:
+    'hover:border-[#d0bcff]/45 hover:shadow-[0_8px_32px_rgba(208,188,255,0.14)] focus-visible:border-[#d0bcff]/45 focus-visible:shadow-[0_8px_32px_rgba(208,188,255,0.14)]',
+  secondary:
+    'hover:border-[#4cd7f6]/45 hover:shadow-[0_8px_32px_rgba(76,215,246,0.14)] focus-visible:border-[#4cd7f6]/45 focus-visible:shadow-[0_8px_32px_rgba(76,215,246,0.14)]',
+  tertiary:
+    'hover:border-[#4edea3]/45 hover:shadow-[0_8px_32px_rgba(78,222,163,0.14)] focus-visible:border-[#4edea3]/45 focus-visible:shadow-[0_8px_32px_rgba(78,222,163,0.14)]',
+}
+
+const CARD_GLOW = {
+  primary: 'from-[#d0bcff]/15',
+  secondary: 'from-[#4cd7f6]/15',
+  tertiary: 'from-[#4edea3]/15',
+}
+
 interface LandingPageProps {
   featuredArticles: LibraryArticleSummary[]
   packs: ResearchPackInfo[]
@@ -83,10 +99,10 @@ export function LandingPage({ featuredArticles, packs }: LandingPageProps) {
                 </span>
               </div>
 
-              <h1 className="max-w-xl text-3xl font-bold leading-[1.15] tracking-tight text-[#e5e1e4] md:text-5xl">
+              <h1 className="max-w-xl text-3xl font-bold leading-[1.15] tracking-tight md:text-5xl">
                 <TypewriterText
-                  text="Find out if your idea is worth the next 3 months"
-                  accent="3 months"
+                  text={"Find out if your idea is worth the next\n3 months"}
+                  energyGradient
                 />
               </h1>
 
@@ -116,11 +132,12 @@ export function LandingPage({ featuredArticles, packs }: LandingPageProps) {
               </p>
             </div>
 
-            <div className="relative flex items-center justify-center lg:justify-end">
+            <div className="relative flex min-h-[280px] items-center justify-center lg:min-h-[420px] lg:justify-end">
               <div className="pointer-events-none absolute inset-0 -z-10">
                 <div className="absolute top-1/4 right-1/4 h-56 w-56 rounded-full bg-[#d0bcff]/15 blur-[90px]" />
+                <div className="absolute bottom-1/4 left-1/3 h-40 w-40 rounded-full bg-[#ff5ec8]/10 blur-[80px]" />
               </div>
-              <HeroPainChart />
+              <EnergyAnimation className="h-[280px] w-[280px] sm:h-[340px] sm:w-[340px] lg:h-[420px] lg:w-[420px]" />
             </div>
           </div>
         </section>
@@ -143,22 +160,38 @@ export function LandingPage({ featuredArticles, packs }: LandingPageProps) {
             </p>
 
             <div className="grid gap-4 md:grid-cols-3">
-              {STEPS.map((item) => (
-                <div
-                  key={item.step}
-                  className="rounded-xl border border-white/10 bg-[#201f22] p-5"
-                >
-                  <span className="font-[family-name:var(--font-landing-mono)] text-[11px] text-[#cbc3d7]">
-                    {item.step}
-                  </span>
-                  <h3 className="mt-3 mb-2 text-base font-semibold text-[#e5e1e4]">{item.title}</h3>
-                  <p className="mb-6 text-sm leading-relaxed text-[#cbc3d7]">{item.body}</p>
-                  <span
-                    className={`font-[family-name:var(--font-landing-mono)] text-[10px] uppercase tracking-wider ${TAG_COLOR[item.tagTone]}`}
+              {STEPS.map((item, index) => (
+                <LandingReveal key={item.step} delayMs={index * 90}>
+                  <div
+                    tabIndex={0}
+                    className={`group relative h-full overflow-hidden rounded-xl border border-white/10 bg-[#201f22] p-5 outline-none transition-all duration-300 ease-out hover:-translate-y-1 hover:bg-[#262428] focus-visible:-translate-y-1 focus-visible:bg-[#262428] ${CARD_HOVER[item.tagTone]}`}
                   >
-                    ● {item.tag}
-                  </span>
-                </div>
+                    <div
+                      aria-hidden
+                      className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${CARD_GLOW[item.tagTone]} via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100 group-focus-visible:opacity-100`}
+                    />
+                    <div className="relative">
+                      <span className="font-[family-name:var(--font-landing-mono)] text-[11px] text-[#cbc3d7] transition-colors duration-300 group-hover:text-[#e5e1e4]">
+                        {item.step}
+                      </span>
+                      <h3 className="mt-3 mb-2 text-base font-semibold text-[#e5e1e4] transition-colors duration-300">
+                        {item.title}
+                      </h3>
+                      <p className="mb-6 text-sm leading-relaxed text-[#cbc3d7] transition-colors duration-300 group-hover:text-[#d8d0e4]">
+                        {item.body}
+                      </p>
+                      <span
+                        className={`inline-flex items-center gap-1.5 font-[family-name:var(--font-landing-mono)] text-[10px] uppercase tracking-wider ${TAG_COLOR[item.tagTone]}`}
+                      >
+                        <span
+                          aria-hidden
+                          className="inline-block h-1.5 w-1.5 rounded-full bg-current opacity-80 transition-all duration-300 group-hover:scale-125 group-hover:opacity-100 group-hover:shadow-[0_0_8px_currentColor]"
+                        />
+                        {item.tag}
+                      </span>
+                    </div>
+                  </div>
+                </LandingReveal>
               ))}
             </div>
           </div>
@@ -220,21 +253,31 @@ export function LandingPage({ featuredArticles, packs }: LandingPageProps) {
               but surface stronger patterns.
             </p>
             <div className="grid gap-3 sm:grid-cols-3">
-              {DEPTH_ROWS.map((row) => (
-                <div
-                  key={row.depth}
-                  className="flex min-h-[120px] flex-col justify-between rounded-xl border border-white/10 bg-gradient-to-t from-[#2a2a2c] to-[#201f22] p-4"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-semibold text-[#e5e1e4]">{row.depth}</span>
-                    <span className={`font-[family-name:var(--font-landing-mono)] text-[11px] ${TAG_COLOR[row.tone]}`}>
-                      {row.credits}
-                    </span>
+              {DEPTH_ROWS.map((row, index) => (
+                <LandingReveal key={row.depth} delayMs={index * 100}>
+                  <div
+                    tabIndex={0}
+                    className={`group relative flex h-full min-h-[120px] flex-col justify-between overflow-hidden rounded-xl border border-white/10 bg-gradient-to-t from-[#2a2a2c] to-[#201f22] p-4 outline-none transition-all duration-300 ease-out hover:-translate-y-1 hover:from-[#303033] hover:to-[#262428] focus-visible:-translate-y-1 focus-visible:from-[#303033] focus-visible:to-[#262428] ${CARD_HOVER[row.tone]}`}
+                  >
+                    <div
+                      aria-hidden
+                      className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${CARD_GLOW[row.tone]} via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100 group-focus-visible:opacity-100`}
+                    />
+                    <div className="relative flex items-center justify-between">
+                      <span className="text-sm font-semibold text-[#e5e1e4] transition-colors duration-300">
+                        {row.depth}
+                      </span>
+                      <span
+                        className={`font-[family-name:var(--font-landing-mono)] text-[11px] transition-all duration-300 group-hover:brightness-125 ${TAG_COLOR[row.tone]}`}
+                      >
+                        {row.credits}
+                      </span>
+                    </div>
+                    <p className="relative font-[family-name:var(--font-landing-mono)] text-[11px] text-[#cbc3d7] transition-colors duration-300 group-hover:text-[#d8d0e4]">
+                      {row.scope}
+                    </p>
                   </div>
-                  <p className="font-[family-name:var(--font-landing-mono)] text-[11px] text-[#cbc3d7]">
-                    {row.scope}
-                  </p>
-                </div>
+                </LandingReveal>
               ))}
             </div>
           </div>
@@ -312,42 +355,55 @@ export function LandingPage({ featuredArticles, packs }: LandingPageProps) {
             </p>
 
             <div className="grid gap-4 md:grid-cols-3">
-              {packs.map((pack) => {
+              {packs.map((pack, index) => {
                 const popular = pack.id === 'founder'
+                const tone =
+                  pack.id === 'founder' ? 'primary' : pack.id === 'indie' ? 'tertiary' : 'secondary'
+
                 return (
-                  <div
-                    key={pack.id}
-                    className={`relative rounded-xl border p-5 ${
-                      popular
-                        ? 'border-[#d0bcff] bg-[#201f22]'
-                        : 'border-white/10 bg-[#1c1b1d]'
-                    }`}
-                  >
-                    {popular && (
-                      <span className="absolute -top-2.5 right-4 rounded bg-[#d0bcff] px-2 py-0.5 font-[family-name:var(--font-landing-mono)] text-[10px] font-medium uppercase text-[#3c0091]">
-                        Most popular
-                      </span>
-                    )}
-                    <h3 className="text-sm font-semibold text-[#e5e1e4]">{pack.label}</h3>
-                    <p className="mt-2 text-3xl font-semibold tabular-nums text-[#e5e1e4]">
-                      ${pack.price_usd}
-                      <span className="ml-1 text-sm font-normal text-[#cbc3d7]">one-time</span>
-                    </p>
-                    <p className="mt-2 text-sm leading-relaxed text-[#cbc3d7]">{pack.tagline}</p>
-                    <p className="mt-4 font-[family-name:var(--font-landing-mono)] text-[11px] text-[#cbc3d7]">
-                      {pack.credits} full {pack.credits === 1 ? 'analysis' : 'analyses'}
-                    </p>
-                    <Link
-                      href="/signup"
-                      className={`mt-5 inline-flex w-full items-center justify-center rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors ${
+                  <LandingReveal key={pack.id} delayMs={index * 110}>
+                    <div
+                      className={`group relative h-full overflow-hidden rounded-xl border p-5 transition-all duration-300 ease-out hover:-translate-y-1.5 ${
                         popular
-                          ? 'bg-[#d0bcff] text-[#3c0091] hover:opacity-90'
-                          : 'border border-white/15 text-[#e5e1e4] hover:border-[#d0bcff]/50'
+                          ? 'border-[#d0bcff]/70 bg-[#201f22] shadow-[0_0_36px_rgba(208,188,255,0.12)] hover:border-[#d0bcff] hover:shadow-[0_12px_40px_rgba(208,188,255,0.22)]'
+                          : `border-white/10 bg-[#1c1b1d] hover:bg-[#222124] ${CARD_HOVER[tone]}`
                       }`}
                     >
-                      {popular ? `Buy ${pack.label}` : `Select ${pack.label}`}
-                    </Link>
-                  </div>
+                      <div
+                        aria-hidden
+                        className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${CARD_GLOW[tone]} via-transparent to-transparent transition-opacity duration-300 ${
+                          popular
+                            ? 'opacity-40 group-hover:opacity-100'
+                            : 'opacity-0 group-hover:opacity-100'
+                        }`}
+                      />
+                      <div className="relative">
+                        <h3 className="text-sm font-semibold text-[#e5e1e4]">{pack.label}</h3>
+                        <p className="mt-2 text-3xl font-semibold tabular-nums text-[#e5e1e4] transition-colors duration-300 group-hover:text-white">
+                          ${pack.price_usd}
+                          <span className="ml-1 text-sm font-normal text-[#cbc3d7]">one-time</span>
+                        </p>
+                        <p className="mt-2 text-sm leading-relaxed text-[#cbc3d7] transition-colors duration-300 group-hover:text-[#d8d0e4]">
+                          {pack.tagline}
+                        </p>
+                        <p
+                          className={`mt-4 font-[family-name:var(--font-landing-mono)] text-[11px] transition-all duration-300 group-hover:brightness-125 ${TAG_COLOR[tone]}`}
+                        >
+                          {pack.credits} full {pack.credits === 1 ? 'analysis' : 'analyses'}
+                        </p>
+                        <Link
+                          href="/signup"
+                          className={`mt-5 inline-flex w-full items-center justify-center rounded-lg px-4 py-2.5 text-sm font-semibold transition-all duration-300 ${
+                            popular
+                              ? 'landing-primary-glow bg-[#d0bcff] text-[#3c0091] hover:opacity-90 group-hover:-translate-y-0.5'
+                              : 'border border-white/15 text-[#e5e1e4] hover:border-[#d0bcff]/50 group-hover:border-[#d0bcff]/40'
+                          }`}
+                        >
+                          {popular ? `Buy ${pack.label}` : `Select ${pack.label}`}
+                        </Link>
+                      </div>
+                    </div>
+                  </LandingReveal>
                 )
               })}
             </div>

@@ -74,8 +74,8 @@ export function DashboardView() {
 
   if (isError) {
     return (
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 md:px-8 py-6 sm:py-8">
-        <p className="text-sm text-red-600">
+      <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8 md:px-8">
+        <p className="text-sm text-[#ffb4ab]">
           Could not load projects. Check that the API is running and DATABASE_URL is configured.
         </p>
       </div>
@@ -83,11 +83,11 @@ export function DashboardView() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 md:px-8 py-6 sm:py-8">
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+    <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8 md:px-8">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-zinc-950">Research workspace</h1>
-          <p className="text-sm text-zinc-500 mt-0.5">
+          <h1 className="text-xl font-semibold tracking-tight text-[#e5e1e4]">Research workspace</h1>
+          <p className="mt-0.5 text-sm text-[#cbc3d7]">
             {projects.length === 0
               ? 'No analyses yet'
               : `${projects.length} ${projects.length === 1 ? 'analysis' : 'analyses'}`}
@@ -95,7 +95,7 @@ export function DashboardView() {
         </div>
         <Link
           href="/research/new"
-          className="inline-flex items-center justify-center text-sm bg-zinc-950 text-white px-4 py-2 hover:bg-zinc-800 transition-colors font-medium"
+          className="landing-primary-glow inline-flex items-center justify-center rounded-lg bg-[#d0bcff] px-4 py-2 text-sm font-semibold text-[#3c0091] transition-transform hover:-translate-y-0.5"
         >
           New analysis
         </Link>
@@ -104,17 +104,17 @@ export function DashboardView() {
       {credits && <CreditsMeter credits={credits} className="mb-8" />}
 
       {projects.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-8">
+        <div className="mb-8 flex flex-wrap gap-2">
           {FILTER_OPTIONS.map((option) => (
             <button
               key={option.id}
               type="button"
               onClick={() => setFilter(option.id)}
               className={cn(
-                'text-xs font-mono uppercase tracking-wider px-3 py-1.5 border transition-colors',
+                'rounded-lg border px-3 py-1.5 font-mono text-xs uppercase tracking-wider transition-colors',
                 filter === option.id
-                  ? 'bg-zinc-950 text-white border-zinc-950'
-                  : 'bg-white text-zinc-600 border-zinc-200 hover:border-zinc-400',
+                  ? 'border-[#d0bcff]/50 bg-[#d0bcff]/15 text-[#d0bcff]'
+                  : 'border-white/10 bg-transparent text-[#cbc3d7] hover:border-[#d0bcff]/30 hover:text-[#e5e1e4]',
               )}
             >
               {option.label} ({counts[option.id]})
@@ -124,53 +124,55 @@ export function DashboardView() {
       )}
 
       {projects.length === 0 ? (
-        <div className="border border-dashed border-zinc-200 py-16 px-8 text-center">
-          <ChartLineUp size={40} weight="duotone" className="mx-auto mb-4 text-zinc-300" aria-hidden />
-          <h2 className="text-sm font-medium text-zinc-950 mb-2">Start your first market analysis</h2>
-          <p className="text-sm text-zinc-500 max-w-md mx-auto mb-6 leading-relaxed">
+        <div className="rounded-xl border border-dashed border-white/15 px-8 py-16 text-center">
+          <ChartLineUp size={40} weight="duotone" className="mx-auto mb-4 text-[#d0bcff]/50" aria-hidden />
+          <h2 className="mb-2 text-sm font-medium text-[#e5e1e4]">Start your first market analysis</h2>
+          <p className="mx-auto mb-6 max-w-md text-sm leading-relaxed text-[#cbc3d7]">
             Describe your product idea and we&apos;ll analyze competitor reviews from G2 and Capterra to
             surface real user pain points.
           </p>
           <Link
             href="/research/new"
-            className="inline-flex items-center justify-center text-sm bg-zinc-950 text-white px-4 py-2 hover:bg-zinc-800 transition-colors font-medium"
+            className="landing-primary-glow inline-flex items-center justify-center rounded-lg bg-[#d0bcff] px-4 py-2 text-sm font-semibold text-[#3c0091]"
           >
             New analysis
           </Link>
         </div>
       ) : filtered.length === 0 ? (
-        <p className="text-sm text-zinc-500 border border-zinc-200 p-6 text-center">
+        <p className="rounded-xl border border-white/10 p-6 text-center text-sm text-[#cbc3d7]">
           No analyses match this filter.
         </p>
       ) : (
         <div className="space-y-10">
           {running.length > 0 && (
             <section>
-              <h2 className="text-xs font-mono uppercase tracking-widest text-zinc-400 mb-4">Running</h2>
+              <h2 className="mb-4 font-mono text-[11px] uppercase tracking-[0.18em] text-[#958ea0]">
+                Running
+              </h2>
               <div className="space-y-2">
                 {running.map((p) => (
                   <Link
                     key={p.id}
                     href={`/research/${p.id}`}
-                    className="block border border-zinc-200 p-4 hover:bg-zinc-50 transition-colors"
+                    className="block rounded-xl border border-[#d0bcff]/25 bg-[#201f22]/60 p-4 transition-colors hover:border-[#d0bcff]/45 hover:bg-[#201f22]"
                   >
-                    <div className="flex items-center gap-3 mb-2">
-                      <span className="text-sm font-medium text-zinc-950 truncate">{p.title}</span>
-                      <span className="text-xs text-zinc-400 border border-zinc-200 px-2 py-0.5 shrink-0">
+                    <div className="mb-2 flex items-center gap-3">
+                      <span className="truncate text-sm font-medium text-[#e5e1e4]">{p.title}</span>
+                      <span className="shrink-0 rounded border border-white/10 px-2 py-0.5 text-xs text-[#cbc3d7]">
                         {p.category}
                       </span>
                     </div>
-                    <div className="flex items-center gap-3 flex-wrap">
-                      <div className="flex-1 h-1 bg-zinc-100 max-w-xs min-w-[120px]">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <div className="h-1 min-w-[120px] max-w-xs flex-1 overflow-hidden rounded-full bg-white/10">
                         <div
-                          className="h-1 bg-blue-600 transition-all"
+                          className="h-1 rounded-full bg-gradient-to-r from-[#ff4ec8] to-[#d0bcff] transition-all"
                           style={{ width: `${p.latest_job?.progress_pct ?? 0}%` }}
                         />
                       </div>
-                      <span className="text-xs font-mono text-zinc-500">
+                      <span className="font-mono text-xs text-[#cbc3d7]">
                         {p.latest_job?.progress_pct ?? 0}%
                       </span>
-                      <span className="text-xs text-zinc-400">
+                      <span className="text-xs text-[#ff8adf]">
                         {p.latest_job ? STAGE_LABELS[p.latest_job.stage] : 'Queued'}
                       </span>
                     </div>
@@ -182,46 +184,50 @@ export function DashboardView() {
 
           {history.length > 0 && (
             <section>
-              <h2 className="text-xs font-mono uppercase tracking-widest text-zinc-400 mb-4">History</h2>
-              <div className="border border-zinc-200 overflow-x-auto">
-                <div className="grid grid-cols-[1fr_100px_80px_80px_80px_90px] gap-3 px-4 py-2.5 border-b border-zinc-100 bg-zinc-50 min-w-[640px]">
-                  <span className="text-xs font-mono text-zinc-400 uppercase tracking-wider">Title</span>
-                  <span className="text-xs font-mono text-zinc-400 uppercase tracking-wider">Industry</span>
-                  <span className="text-xs font-mono text-zinc-400 uppercase tracking-wider">Reviews</span>
-                  <span className="text-xs font-mono text-zinc-400 uppercase tracking-wider">Clusters</span>
-                  <span className="text-xs font-mono text-zinc-400 uppercase tracking-wider">Status</span>
-                  <span className="text-xs font-mono text-zinc-400 uppercase tracking-wider text-right">Date</span>
+              <h2 className="mb-4 font-mono text-[11px] uppercase tracking-[0.18em] text-[#958ea0]">
+                History
+              </h2>
+              <div className="overflow-x-auto rounded-xl border border-white/10 bg-[#1c1b1d]/50">
+                <div className="grid min-w-[640px] grid-cols-[1fr_100px_80px_80px_80px_90px] gap-3 border-b border-white/8 bg-white/[0.03] px-4 py-2.5">
+                  <span className="font-mono text-xs uppercase tracking-wider text-[#958ea0]">Title</span>
+                  <span className="font-mono text-xs uppercase tracking-wider text-[#958ea0]">Industry</span>
+                  <span className="font-mono text-xs uppercase tracking-wider text-[#958ea0]">Reviews</span>
+                  <span className="font-mono text-xs uppercase tracking-wider text-[#958ea0]">Clusters</span>
+                  <span className="font-mono text-xs uppercase tracking-wider text-[#958ea0]">Status</span>
+                  <span className="text-right font-mono text-xs uppercase tracking-wider text-[#958ea0]">
+                    Date
+                  </span>
                 </div>
                 {history.map((p, i, arr) => (
                   <Link
                     key={p.id}
                     href={p.status === 'completed' ? `/research/${p.id}/report` : `/research/${p.id}`}
                     className={cn(
-                      'grid grid-cols-[1fr_100px_80px_80px_80px_90px] gap-3 px-4 py-3.5 hover:bg-zinc-50 transition-colors min-w-[640px]',
-                      i < arr.length - 1 && 'border-b border-zinc-100',
+                      'grid min-w-[640px] grid-cols-[1fr_100px_80px_80px_80px_90px] gap-3 px-4 py-3.5 transition-colors hover:bg-[#d0bcff]/5',
+                      i < arr.length - 1 && 'border-b border-white/6',
                     )}
                   >
-                    <span className="text-sm font-medium text-zinc-900 truncate">{p.title}</span>
-                    <span className="text-sm text-zinc-500 truncate">{p.category}</span>
-                    <span className="text-xs font-mono text-zinc-500 tabular-nums">
+                    <span className="truncate text-sm font-medium text-[#e5e1e4]">{p.title}</span>
+                    <span className="truncate text-sm text-[#cbc3d7]">{p.category}</span>
+                    <span className="font-mono text-xs tabular-nums text-[#cbc3d7]">
                       {p.latest_job?.stats.reviews_collected ?? '—'}
                     </span>
-                    <span className="text-xs font-mono text-zinc-500 tabular-nums">
+                    <span className="font-mono text-xs tabular-nums text-[#cbc3d7]">
                       {p.latest_job?.stats.pain_clusters_found ?? '—'}
                     </span>
                     <span
                       className={cn(
-                        'text-xs font-mono w-fit px-2 py-0.5 border h-fit',
+                        'h-fit w-fit rounded border px-2 py-0.5 font-mono text-xs',
                         p.status === 'completed'
-                          ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
+                          ? 'border-[#4edea3]/30 bg-[#4edea3]/10 text-[#4edea3]'
                           : p.status === 'cancelled'
-                            ? 'text-zinc-600 bg-zinc-50 border-zinc-200'
-                          : 'text-red-700 bg-red-50 border-red-200',
+                            ? 'border-white/15 bg-white/5 text-[#cbc3d7]'
+                            : 'border-[#ffb4ab]/30 bg-[#ffb4ab]/10 text-[#ffb4ab]',
                       )}
                     >
                       {p.status}
                     </span>
-                    <span className="text-xs text-zinc-400 text-right">{formatDate(p.created_at)}</span>
+                    <span className="text-right text-xs text-[#958ea0]">{formatDate(p.created_at)}</span>
                   </Link>
                 ))}
               </div>

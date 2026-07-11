@@ -74,3 +74,60 @@
 .landing-primary-glow:hover {
   box-shadow: 0 0 20px rgba(139, 92, 246, 0.3);
 }
+
+.landing-reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  transition:
+    opacity 0.65s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.landing-reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@keyframes landing-energy-flow {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.landing-energy-text {
+  background-image: linear-gradient(
+    115deg,
+    #f4eef8 0%,
+    #ff8adf 16%,
+    #ff4ec8 32%,
+    #e8d4ff 48%,
+    #d0bcff 62%,
+    #fff5fc 76%,
+    #ff5ec8 88%,
+    #f4eef8 100%
+  );
+  background-size: 240% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: landing-energy-flow 7s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .landing-energy-text {
+    animation: none;
+    background-position: 40% 50%;
+  }
+}

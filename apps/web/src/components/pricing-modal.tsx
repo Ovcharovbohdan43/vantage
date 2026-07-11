@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Lock } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 import { getResearchPacks, startPackCheckout } from '@/lib/api/billing'
 import { ApiError } from '@/lib/api/client'
 import type { ResearchPack } from '@/lib/api/types'
@@ -48,23 +47,28 @@ export function PricingModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <button type="button" className="absolute inset-0 bg-zinc-950/40" onClick={onClose} aria-label="Close" />
+      <button
+        type="button"
+        className="absolute inset-0 bg-black/70"
+        onClick={onClose}
+        aria-label="Close"
+      />
       <div
         role="dialog"
         aria-modal="true"
-        className="relative w-full max-w-lg border border-zinc-200 bg-white p-6 shadow-lg max-h-[90vh] overflow-y-auto"
+        className="relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-white/10 bg-[#1c1b1d] p-6 shadow-[0_0_48px_rgba(208,188,255,0.12)]"
       >
-        <div className="flex items-start gap-3 mb-5">
-          <div className="shrink-0 w-9 h-9 border border-zinc-200 flex items-center justify-center">
-            <Lock size={16} className="text-zinc-600" />
+        <div className="mb-5 flex items-start gap-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#d0bcff]/25 bg-[#d0bcff]/10">
+            <Lock size={16} className="text-[#d0bcff]" />
           </div>
           <div>
-            <h2 className="text-base font-semibold text-zinc-950">{title}</h2>
-            <p className="text-sm text-zinc-600 mt-1 leading-relaxed">{message}</p>
+            <h2 className="text-base font-semibold text-[#e5e1e4]">{title}</h2>
+            <p className="mt-1 text-sm leading-relaxed text-[#cbc3d7]">{message}</p>
           </div>
         </div>
 
-        <div className="space-y-2 mb-4">
+        <div className="mb-4 space-y-2">
           {(packs ?? []).map((pack) => (
             <button
               key={pack.id}
@@ -72,37 +76,46 @@ export function PricingModal({
               onClick={() => handleBuy(pack.id)}
               disabled={loadingPack != null}
               className={cn(
-                'w-full text-left border p-4 transition-colors hover:border-zinc-400 disabled:opacity-60',
-                pack.id === highlightPack ? 'border-zinc-950 bg-zinc-50' : 'border-zinc-200',
+                'w-full rounded-xl border p-4 text-left transition-colors disabled:opacity-60',
+                pack.id === highlightPack
+                  ? 'border-[#d0bcff]/45 bg-[#d0bcff]/10'
+                  : 'border-white/10 hover:border-[#d0bcff]/30',
               )}
             >
-              <div className="flex items-center justify-between gap-3 mb-1">
-                <span className="text-sm font-semibold text-zinc-950">
+              <div className="mb-1 flex items-center justify-between gap-3">
+                <span className="text-sm font-semibold text-[#e5e1e4]">
                   {pack.label}
                   {pack.id === 'founder' && (
-                    <span className="ml-2 text-[10px] font-mono uppercase text-amber-800 bg-amber-50 border border-amber-200 px-1.5 py-0.5">
+                    <span className="ml-2 border border-[#d0bcff]/30 bg-[#d0bcff]/15 px-1.5 py-0.5 font-mono text-[10px] uppercase text-[#d0bcff]">
                       Popular
                     </span>
                   )}
                 </span>
-                <span className="text-sm font-semibold tabular-nums">${pack.price_usd}</span>
+                <span className="text-sm font-semibold tabular-nums text-[#d0bcff]">
+                  ${pack.price_usd}
+                </span>
               </div>
-              <p className="text-xs text-zinc-500">{pack.tagline}</p>
-              <p className="text-xs text-zinc-400 mt-1 font-mono">
+              <p className="text-xs text-[#cbc3d7]">{pack.tagline}</p>
+              <p className="mt-1 font-mono text-xs text-[#958ea0]">
                 {pack.credits} full {pack.credits === 1 ? 'analysis' : 'analyses'}
               </p>
               {loadingPack === pack.id && (
-                <p className="text-xs text-zinc-500 mt-2">Redirecting to checkout…</p>
+                <p className="mt-2 text-xs text-[#d0bcff]">Redirecting to checkout…</p>
               )}
             </button>
           ))}
         </div>
 
-        {error && <p className="text-sm text-red-600 mb-3">{error}</p>}
+        {error && <p className="mb-3 text-sm text-[#ffb4ab]">{error}</p>}
 
-        <Button variant="outline" onClick={onClose} disabled={loadingPack != null} className="w-full">
+        <button
+          type="button"
+          onClick={onClose}
+          disabled={loadingPack != null}
+          className="w-full rounded-lg border border-white/15 px-4 py-2.5 text-sm font-medium text-[#cbc3d7] transition-colors hover:border-[#d0bcff]/40 hover:text-[#e5e1e4] disabled:opacity-50"
+        >
           Not now
-        </Button>
+        </button>
       </div>
     </div>
   )

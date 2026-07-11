@@ -16,20 +16,24 @@ export function AuthAlert({ variant, title, description, className }: AuthAlertP
     <div
       role="status"
       className={cn(
-        'flex gap-3 border p-4 text-sm',
+        'flex gap-3 rounded-lg border p-4 text-sm',
         isSuccess
-          ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
-          : 'border-red-200 bg-red-50 text-red-900',
+          ? 'border-[#4edea3]/30 bg-[#4edea3]/10 text-[#4edea3]'
+          : 'border-[#ffb4ab]/30 bg-[#ffb4ab]/10 text-[#ffb4ab]',
         className,
       )}
     >
       <Icon
-        className={cn('size-5 shrink-0 mt-0.5', isSuccess ? 'text-emerald-600' : 'text-red-600')}
+        className={cn('mt-0.5 size-5 shrink-0', isSuccess ? 'text-[#4edea3]' : 'text-[#ffb4ab]')}
         aria-hidden
       />
       <div>
-        <p className="font-medium leading-snug">{title}</p>
-        {description && <p className={cn('mt-1 leading-relaxed', isSuccess ? 'text-emerald-800' : 'text-red-800')}>{description}</p>}
+        <p className="font-medium leading-snug text-[#e5e1e4]">{title}</p>
+        {description && (
+          <p className={cn('mt-1 leading-relaxed', isSuccess ? 'text-[#4edea3]/80' : 'text-[#ffb4ab]/80')}>
+            {description}
+          </p>
+        )}
       </div>
     </div>
   )

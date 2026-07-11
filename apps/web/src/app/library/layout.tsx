@@ -13,7 +13,7 @@ export default async function LibraryLayout({ children }: { children: React.Reac
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="landing-root min-h-screen bg-[#131315]">
       <LibraryHeader />
       <main>{children}</main>
     </div>

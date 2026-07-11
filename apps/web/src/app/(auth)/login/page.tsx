@@ -1,11 +1,22 @@
 import { Suspense } from 'react'
-import { LoadingShell } from '@/components/ui/loading-shell'
 import { LoginForm } from './login-form'
+
+function LoginFallback() {
+  return (
+    <div className="landing-root flex min-h-screen items-center justify-center px-5">
+      <div className="text-center">
+        <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-white/15 border-t-[#d0bcff]" />
+        <p className="text-sm text-[#cbc3d7]">Loading sign in…</p>
+      </div>
+    </div>
+  )
+}
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<LoadingShell title="Loading sign in" />}>
+    <Suspense fallback={<LoginFallback />}>
       <LoginForm />
     </Suspense>
   )
 }
+

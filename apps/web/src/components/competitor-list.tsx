@@ -12,10 +12,10 @@ interface CompetitorListProps {
 export function CompetitorList({ competitors, loading }: CompetitorListProps) {
   if (loading) {
     return (
-      <div className="border border-zinc-200 p-5 space-y-3">
-        <p className="text-xs font-mono uppercase tracking-widest text-zinc-400">Competitors</p>
+      <div className="space-y-3 rounded-xl border border-white/10 bg-[#1c1b1d]/80 p-5">
+        <p className="font-mono text-xs uppercase tracking-widest text-[#958ea0]">Competitors</p>
         {[1, 2, 3].map((row) => (
-          <div key={row} className="h-12 bg-zinc-100 animate-pulse" />
+          <div key={row} className="h-12 animate-pulse rounded-lg bg-white/5" />
         ))}
       </div>
     )
@@ -26,8 +26,8 @@ export function CompetitorList({ competitors, loading }: CompetitorListProps) {
   }
 
   return (
-    <div className="border border-zinc-200 p-5">
-      <p className="text-xs font-mono uppercase tracking-widest text-zinc-400 mb-4">
+    <div className="rounded-xl border border-white/10 bg-[#1c1b1d]/80 p-5">
+      <p className="mb-4 font-mono text-xs uppercase tracking-widest text-[#958ea0]">
         Competitors ({competitors.length})
       </p>
       <ul className="space-y-2">
@@ -37,11 +37,11 @@ export function CompetitorList({ competitors, loading }: CompetitorListProps) {
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.05 }}
-            className="flex items-start justify-between gap-3 border border-zinc-100 p-3"
+            className="flex items-start justify-between gap-3 rounded-lg border border-white/8 px-3 py-3"
           >
             <div className="min-w-0">
-              <p className="text-sm font-medium text-zinc-950 truncate">{competitor.name}</p>
-              <p className="text-xs text-zinc-500 mt-0.5">
+              <p className="truncate text-sm font-medium text-[#e5e1e4]">{competitor.name}</p>
+              <p className="mt-0.5 text-xs text-[#958ea0]">
                 {competitor.source.toUpperCase()}
                 {competitor.rating != null ? ` · ${competitor.rating.toFixed(1)}★` : ''}
                 {competitor.reviews_count != null
@@ -53,7 +53,7 @@ export function CompetitorList({ competitors, loading }: CompetitorListProps) {
               href={competitor.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="shrink-0 text-zinc-400 hover:text-blue-600 transition-colors"
+              className="shrink-0 text-[#958ea0] transition-colors hover:text-[#d0bcff]"
               aria-label={`Open ${competitor.name} on ${competitor.source}`}
             >
               <ExternalLink size={16} />

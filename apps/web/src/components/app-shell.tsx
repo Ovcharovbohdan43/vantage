@@ -7,7 +7,6 @@ import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { List, MagnifyingGlass, X } from '@phosphor-icons/react'
 import { VantageLogo } from '@/components/vantage-logo'
-import { Button } from '@/components/ui/button'
 import { CreditsMeter } from '@/components/credits-meter'
 import { getCredits } from '@/lib/api/billing'
 import type { CreditsBalance } from '@/lib/api/types'
@@ -33,23 +32,28 @@ function NavLinks({
   onNavigate?: () => void
 }) {
   return (
-    <nav className="flex-1 overflow-y-auto py-3 px-2">
-      {NAV.map((item) => (
-        <Link
-          key={item.href}
-          href={item.href}
-          onClick={onNavigate}
-          className={cn(
-            'block w-full text-left text-sm px-3 py-2.5 mb-0.5 transition-colors',
-            pathname === item.href ||
-              (item.href !== '/dashboard' && pathname.startsWith(item.href + '/'))
-              ? 'bg-zinc-100 text-zinc-950 font-medium'
-              : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50',
-          )}
-        >
-          {item.label}
-        </Link>
-      ))}
+    <nav className="flex-1 overflow-y-auto px-2 py-3">
+      {NAV.map((item) => {
+        const active =
+          pathname === item.href ||
+          (item.href !== '/dashboard' && pathname.startsWith(item.href + '/'))
+
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            onClick={onNavigate}
+            className={cn(
+              'mb-0.5 block w-full rounded-lg px-3 py-2.5 text-left text-sm transition-colors',
+              active
+                ? 'bg-[#d0bcff]/15 font-medium text-[#d0bcff]'
+                : 'text-[#cbc3d7] hover:bg-white/5 hover:text-[#e5e1e4]',
+            )}
+          >
+            {item.label}
+          </Link>
+        )
+      })}
     </nav>
   )
 }
@@ -64,28 +68,27 @@ function UserFooter({
   onSignOut: () => void
 }) {
   return (
-    <div className="border-t border-zinc-200 px-4 py-3">
+    <div className="border-t border-white/8 px-4 py-3">
       <div className="flex items-center gap-2.5">
-        <div className="w-6 h-6 rounded-full bg-zinc-200 flex items-center justify-center shrink-0">
-          <span className="text-[10px] font-medium text-zinc-600">{getInitials(userEmail)}</span>
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#d0bcff]/20">
+          <span className="text-[10px] font-medium text-[#d0bcff]">{getInitials(userEmail)}</span>
         </div>
-        <div className="flex-1 min-w-0">
-          <div className="text-xs font-medium text-zinc-900 truncate">{userEmail}</div>
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-xs font-medium text-[#e5e1e4]">{userEmail}</div>
           {credits ? (
             <CreditsMeter credits={credits} compact />
           ) : (
-            <div className="text-[10px] text-zinc-400 truncate">Free preview</div>
+            <div className="truncate text-[10px] text-[#958ea0]">Free preview</div>
           )}
         </div>
       </div>
-      <Button
-        variant="ghost"
-        size="sm"
-        className="w-full mt-2 justify-start px-0 text-zinc-500"
+      <button
+        type="button"
         onClick={onSignOut}
+        className="mt-2 w-full justify-start px-0 text-left text-sm text-[#958ea0] transition-colors hover:text-[#d0bcff]"
       >
         Sign out
-      </Button>
+      </button>
     </div>
   )
 }
@@ -135,12 +138,12 @@ export function AppShell({ children, userEmail }: AppShellProps) {
   }
 
   return (
-    <div className="flex h-dvh bg-white font-sans text-zinc-950 overflow-hidden">
+    <div className="landing-root flex h-dvh overflow-hidden bg-[#131315] font-sans text-[#e5e1e4]">
       {/* Desktop sidebar */}
-      <aside className="hidden md:flex w-56 border-r border-zinc-200 flex-col shrink-0">
-        <div className="h-14 border-b border-zinc-200 flex items-center px-4 gap-2">
+      <aside className="hidden w-56 shrink-0 flex-col border-r border-white/8 bg-[#0e0e10] md:flex">
+        <div className="flex h-14 items-center gap-2 border-b border-white/8 px-4">
           <VantageLogo size={18} />
-          <span className="text-[15px] font-semibold tracking-tight">Vantage</span>
+          <span className="text-[15px] font-semibold tracking-tight text-[#e5e1e4]">Vantage</span>
         </div>
         <NavLinks pathname={pathname} />
         <UserFooter userEmail={userEmail} credits={credits} onSignOut={handleSignOut} />
@@ -151,20 +154,20 @@ export function AppShell({ children, userEmail }: AppShellProps) {
         <div className="fixed inset-0 z-50 md:hidden">
           <button
             type="button"
-            className="absolute inset-0 bg-zinc-950/40"
+            className="absolute inset-0 bg-black/60"
             aria-label="Close menu"
             onClick={() => setMenuOpen(false)}
           />
-          <aside className="absolute inset-y-0 left-0 w-[min(18rem,85vw)] bg-white border-r border-zinc-200 flex flex-col shadow-xl">
-            <div className="h-14 border-b border-zinc-200 flex items-center justify-between px-4">
+          <aside className="absolute inset-y-0 left-0 flex w-[min(18rem,85vw)] flex-col border-r border-white/10 bg-[#0e0e10] shadow-xl">
+            <div className="flex h-14 items-center justify-between border-b border-white/8 px-4">
               <div className="flex items-center gap-2">
                 <VantageLogo size={18} />
-                <span className="text-[15px] font-semibold tracking-tight">Vantage</span>
+                <span className="text-[15px] font-semibold tracking-tight text-[#e5e1e4]">Vantage</span>
               </div>
               <button
                 type="button"
                 onClick={() => setMenuOpen(false)}
-                className="p-2 -mr-2 text-zinc-500 hover:text-zinc-950"
+                className="-mr-2 p-2 text-[#cbc3d7] hover:text-[#e5e1e4]"
                 aria-label="Close menu"
               >
                 <X size={18} weight="bold" />
@@ -176,11 +179,11 @@ export function AppShell({ children, userEmail }: AppShellProps) {
         </div>
       )}
 
-      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-        <header className="h-14 border-b border-zinc-200 flex items-center gap-2 px-3 sm:px-4 md:px-6 shrink-0">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <header className="flex h-14 shrink-0 items-center gap-2 border-b border-white/8 bg-[#131315]/90 px-3 backdrop-blur-md sm:px-4 md:px-6">
           <button
             type="button"
-            className="md:hidden p-2 -ml-1 text-zinc-700 hover:text-zinc-950"
+            className="-ml-1 p-2 text-[#cbc3d7] hover:text-[#e5e1e4] md:hidden"
             aria-label="Open menu"
             aria-expanded={menuOpen}
             onClick={() => setMenuOpen(true)}
@@ -188,28 +191,28 @@ export function AppShell({ children, userEmail }: AppShellProps) {
             <List size={20} weight="bold" />
           </button>
 
-          <Link href="/dashboard" className="md:hidden flex items-center gap-1.5 shrink-0 mr-1">
+          <Link href="/dashboard" className="mr-1 flex shrink-0 items-center gap-1.5 md:hidden">
             <VantageLogo size={18} />
-            <span className="text-sm font-semibold tracking-tight">Vantage</span>
+            <span className="text-sm font-semibold tracking-tight text-[#e5e1e4]">Vantage</span>
           </Link>
 
-          <form onSubmit={handleHeaderSearch} className="hidden sm:flex flex-1 min-w-0">
+          <form onSubmit={handleHeaderSearch} className="hidden min-w-0 flex-1 sm:flex">
             <input
               type="search"
               value={headerQuery}
               onChange={(e) => setHeaderQuery(e.target.value)}
               placeholder="Search library…"
-              className="w-full max-w-xs md:max-w-sm text-sm bg-white border border-zinc-200 px-3 py-1.5 text-zinc-900 placeholder-zinc-400 focus:outline-none focus:border-zinc-400"
+              className="w-full max-w-xs rounded-lg border border-white/10 bg-[#1c1b1d] px-3 py-1.5 text-sm text-[#e5e1e4] placeholder-[#958ea0] outline-none transition-colors focus:border-[#d0bcff]/40 md:max-w-sm"
               aria-label="Search research library"
             />
           </form>
 
-          <div className="ml-auto flex items-center gap-1.5 sm:gap-2 shrink-0">
+          <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
             <button
               type="button"
               className={cn(
-                'sm:hidden p-2 text-zinc-600 hover:text-zinc-950',
-                searchOpen && 'text-zinc-950',
+                'p-2 text-[#cbc3d7] hover:text-[#e5e1e4] sm:hidden',
+                searchOpen && 'text-[#d0bcff]',
               )}
               aria-label="Search library"
               aria-expanded={searchOpen}
@@ -219,7 +222,7 @@ export function AppShell({ children, userEmail }: AppShellProps) {
             </button>
             <Link
               href="/research/new"
-              className="inline-flex items-center justify-center h-8 px-2.5 sm:px-3 text-sm font-medium bg-zinc-950 text-white hover:bg-zinc-800 transition-colors"
+              className="landing-primary-glow inline-flex h-8 items-center justify-center rounded-lg bg-[#d0bcff] px-2.5 text-sm font-semibold text-[#3c0091] transition-transform hover:-translate-y-0.5 sm:px-3"
             >
               <span className="sm:hidden">New</span>
               <span className="hidden sm:inline">New analysis</span>
@@ -228,7 +231,7 @@ export function AppShell({ children, userEmail }: AppShellProps) {
         </header>
 
         {searchOpen && (
-          <div className="sm:hidden border-b border-zinc-200 px-3 py-2">
+          <div className="border-b border-white/8 px-3 py-2 sm:hidden">
             <form onSubmit={handleHeaderSearch}>
               <input
                 type="search"
@@ -236,14 +239,20 @@ export function AppShell({ children, userEmail }: AppShellProps) {
                 onChange={(e) => setHeaderQuery(e.target.value)}
                 placeholder="Search library…"
                 autoFocus
-                className="w-full text-sm bg-white border border-zinc-200 px-3 py-2 text-zinc-900 placeholder-zinc-400 focus:outline-none focus:border-zinc-400"
+                className="w-full rounded-lg border border-white/10 bg-[#1c1b1d] px-3 py-2 text-sm text-[#e5e1e4] placeholder-[#958ea0] outline-none focus:border-[#d0bcff]/40"
                 aria-label="Search research library"
               />
             </form>
           </div>
         )}
 
-        <main className="flex-1 overflow-y-auto bg-white">{children}</main>
+        <main className="relative flex-1 overflow-y-auto bg-[#131315]">
+          <div className="pointer-events-none absolute inset-0 overflow-hidden">
+            <div className="absolute -top-24 right-0 h-64 w-64 rounded-full bg-[#d0bcff]/8 blur-[100px]" />
+            <div className="absolute bottom-0 left-1/4 h-48 w-48 rounded-full bg-[#ff4ec8]/6 blur-[90px]" />
+          </div>
+          <div className="relative">{children}</div>
+        </main>
       </div>
     </div>
   )

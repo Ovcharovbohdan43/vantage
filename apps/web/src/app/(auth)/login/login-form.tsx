@@ -5,10 +5,11 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { AuthAlert } from '@/components/auth-alert'
 import { AuthPageShell } from '@/components/auth-page-shell'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { createClient } from '@/lib/supabase/client'
+
+const fieldClass =
+  'flex h-10 w-full rounded-lg border border-white/12 bg-[#131315] px-3 text-sm text-[#e5e1e4] placeholder:text-[#958ea0] outline-none transition-colors focus:border-[#d0bcff]/50 focus:ring-1 focus:ring-[#d0bcff]/25'
+const labelClass = 'text-sm font-medium text-[#cbc3d7]'
 
 export function LoginForm() {
   const router = useRouter()
@@ -58,63 +59,73 @@ export function LoginForm() {
       title="Sign in"
       subtitle="Access your research workspace"
       footer={
-        <p className="text-sm text-zinc-500 mt-6 text-center">
+        <p className="mt-6 text-center text-sm text-[#cbc3d7]">
           No account?{' '}
-          <Link href="/signup" className="text-zinc-950 font-medium hover:underline">
+          <Link href="/signup" className="font-medium text-[#d0bcff] hover:underline">
             Create one
           </Link>
         </p>
       }
     >
-        {showConfirmedBanner && (
-          <AuthAlert
-            variant="success"
-            title="Email confirmed successfully"
-            description="Your email address has been verified. Sign in with your account credentials to continue."
-            className="mb-6"
+      {showConfirmedBanner && (
+        <AuthAlert
+          variant="success"
+          title="Email confirmed successfully"
+          description="Your email address has been verified. Sign in with your account credentials to continue."
+          className="mb-6"
+        />
+      )}
+
+      {authError === 'confirmation_failed' && (
+        <AuthAlert
+          variant="error"
+          title="Confirmation link invalid or expired"
+          description="Please sign up again or request a new confirmation email."
+          className="mb-6"
+        />
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-2">
+          <label htmlFor="email" className={labelClass}>
+            Email
+          </label>
+          <input
+            id="email"
+            type="email"
+            autoComplete="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="you@company.com"
+            className={fieldClass}
           />
-        )}
-
-        {authError === 'confirmation_failed' && (
-          <AuthAlert
-            variant="error"
-            title="Confirmation link invalid or expired"
-            description="Please sign up again or request a new confirmation email."
-            className="mb-6"
+        </div>
+        <div className="space-y-2">
+          <label htmlFor="password" className={labelClass}>
+            Password
+          </label>
+          <input
+            id="password"
+            type="password"
+            autoComplete="current-password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className={fieldClass}
           />
-        )}
+        </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              autoComplete="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@company.com"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              autoComplete="current-password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </div>
+        {error && <p className="text-sm text-[#ffb4ab]">{error}</p>}
 
-          {error && <p className="text-sm text-red-600">{error}</p>}
-
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? 'Signing in…' : 'Sign in'}
-          </Button>
-        </form>
+        <button
+          type="submit"
+          disabled={loading}
+          className="landing-primary-glow inline-flex h-10 w-full items-center justify-center rounded-lg bg-[#d0bcff] text-sm font-bold text-[#3c0091] transition-transform hover:-translate-y-0.5 disabled:pointer-events-none disabled:opacity-50"
+        >
+          {loading ? 'Signing in…' : 'Sign in'}
+        </button>
+      </form>
     </AuthPageShell>
   )
 }

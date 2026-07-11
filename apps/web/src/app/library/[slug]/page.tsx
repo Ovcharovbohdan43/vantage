@@ -47,8 +47,11 @@ export default async function LibraryArticlePage({ params }: PageProps) {
   const jsonLd = article.seo.json_ld
 
   return (
-    <div className="max-w-3xl mx-auto px-6 py-10">
-      <Link href="/library" className="text-sm text-zinc-400 hover:text-zinc-700 mb-6 inline-block">
+    <div className="mx-auto max-w-3xl px-6 py-10">
+      <Link
+        href="/library"
+        className="mb-6 inline-block text-sm text-[#958ea0] transition-colors hover:text-[#d0bcff]"
+      >
         Research Library
       </Link>
 

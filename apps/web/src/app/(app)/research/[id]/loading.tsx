@@ -1,5 +1,5 @@
-import { AnalysisLoadingView } from '@/components/analysis-loading-view'
+import { AnalysisTheater } from '@/components/analysis-theater'
 
 export default function ResearchLoading() {
-  return <AnalysisLoadingView stage="initial" />
+  return <AnalysisTheater stage="queued" competitors={[]} competitorsLoading />
 }

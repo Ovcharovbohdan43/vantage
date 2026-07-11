@@ -47,16 +47,20 @@ export default async function LibraryPage({ searchParams }: LibraryPageProps) {
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-6 py-10">
+    <div className="relative mx-auto max-w-6xl px-6 py-10">
+      <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+        <div className="absolute top-0 right-1/4 h-56 w-56 rounded-full bg-[#d0bcff]/10 blur-[100px]" />
+      </div>
+
       <div className="mb-10 max-w-2xl">
-        <h1 className="text-2xl font-semibold text-zinc-950 mb-2">Research Library</h1>
-        <p className="text-sm text-zinc-500 leading-relaxed">
+        <h1 className="mb-2 text-2xl font-semibold tracking-tight text-[#e5e1e4]">Research Library</h1>
+        <p className="text-sm leading-relaxed text-[#cbc3d7]">
           A living archive of market pain research — built from real negative reviews on G2 and
           Capterra. Not a blog. Evidence you can verify.
         </p>
       </div>
 
-      <Suspense fallback={<p className="text-sm text-zinc-400">Loading library…</p>}>
+      <Suspense fallback={<p className="text-sm text-[#958ea0]">Loading library…</p>}>
         <LibraryIndexClient
           items={items}
           total={total}
