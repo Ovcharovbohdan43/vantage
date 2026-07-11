@@ -1,12 +1,21 @@
 function getApiBase(): string {
   // Server components cannot use the Next.js rewrite proxy — hit the API directly.
   if (typeof window === 'undefined') {
-    return process.env.API_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'
+    const configured =
+      process.env.API_INTERNAL_URL?.trim() || process.env.NEXT_PUBLIC_API_URL?.trim() || ''
+    if (configured) return configured.replace(/\/$/, '')
+    // On Vercel, localhost makes Research Library silently empty (fetch fails → []).
+    if (process.env.VERCEL) {
+      console.error(
+        '[publicApi] Set API_INTERNAL_URL or NEXT_PUBLIC_API_URL to the Railway API origin',
+      )
+    }
+    return 'http://localhost:8000'
   }
   if (process.env.NEXT_PUBLIC_API_PROXY === '1') {
     return ''
   }
-  return process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'
+  return (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000').replace(/\/$/, '')
 }
 
 const API_URL = getApiBase()
