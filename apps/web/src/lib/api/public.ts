@@ -1,21 +1,7 @@
+import { resolveApiOrigin } from '@/lib/api/origin'
+
 function getApiBase(): string {
-  // Server components cannot use the Next.js rewrite proxy — hit the API directly.
-  if (typeof window === 'undefined') {
-    const configured =
-      process.env.API_INTERNAL_URL?.trim() || process.env.NEXT_PUBLIC_API_URL?.trim() || ''
-    if (configured) return configured.replace(/\/$/, '')
-    // On Vercel, localhost makes Research Library silently empty (fetch fails → []).
-    if (process.env.VERCEL) {
-      console.error(
-        '[publicApi] Set API_INTERNAL_URL or NEXT_PUBLIC_API_URL to the Railway API origin',
-      )
-    }
-    return 'http://localhost:8000'
-  }
-  if (process.env.NEXT_PUBLIC_API_PROXY === '1') {
-    return ''
-  }
-  return (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000').replace(/\/$/, '')
+  return resolveApiOrigin()
 }
 
 const API_URL = getApiBase()
@@ -36,10 +22,12 @@ export async function publicApiFetch<T>(
 ): Promise<T> {
   const { revalidate, ...fetchInit } = init ?? {}
   const isServer = typeof window === 'undefined'
+  // Resolve per-request on the server so Vercel runtime env / fallbacks apply.
+  const base = isServer ? resolveApiOrigin() : API_URL
 
   let response: Response
   try {
-    response = await fetch(`${API_URL}${path}`, {
+    response = await fetch(`${base}${path}`, {
       ...fetchInit,
       headers: {
         'Content-Type': 'application/json',

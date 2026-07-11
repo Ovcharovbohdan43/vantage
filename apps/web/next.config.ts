@@ -1,10 +1,12 @@
 import type { NextConfig } from 'next'
 import path from 'node:path'
 
+/** Keep in sync with `src/lib/api/origin.ts` — next.config cannot import app modules reliably. */
+const PRODUCTION_API_ORIGIN = 'https://vantage-production-83be.up.railway.app'
+
 function resolveApiRewriteDestination(): string | null {
   const raw = (process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || '').trim()
-  // Local default only when not building on Vercel.
-  const base = raw || (process.env.VERCEL ? '' : 'http://localhost:8000')
+  const base = raw || (process.env.VERCEL ? PRODUCTION_API_ORIGIN : 'http://localhost:8000')
   if (!base) return null
   if (!/^https?:\/\//i.test(base)) return null
   return `${base.replace(/\/$/, '')}/api/v1/:path*`

@@ -1,10 +1,8 @@
 import { createClient } from '@/lib/supabase/client'
+import { resolveApiOrigin } from '@/lib/api/origin'
 
-// In local dev, `npm run dev` sets NEXT_PUBLIC_API_PROXY=1 and Next.js rewrites /api/v1/* to the API.
-const API_URL =
-  process.env.NEXT_PUBLIC_API_PROXY === '1'
-    ? ''
-    : (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000')
+// In local/prod with NEXT_PUBLIC_API_PROXY=1, browser uses same-origin /api/v1 rewrites.
+const API_URL = resolveApiOrigin()
 
 export class ApiError extends Error {
   constructor(
