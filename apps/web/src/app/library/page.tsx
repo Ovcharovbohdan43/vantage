@@ -1,5 +1,6 @@
 import { Suspense } from 'react'
 import { LibraryIndexClient } from '@/components/library/library-index-client'
+import { listLibraryArticlesFromSupabase } from '@/lib/api/library-supabase'
 import { listLibraryArticles } from '@/lib/api/library'
 
 export const metadata = {
@@ -31,20 +32,30 @@ export default async function LibraryPage({ searchParams }: LibraryPageProps) {
   let total = 0
   let categories: string[] = []
 
+  const filters = {
+    q: q || undefined,
+    category: category || undefined,
+    saturation: saturation || undefined,
+    sort,
+    limit: 24,
+  }
+
   try {
-    const data = await listLibraryArticles({
-      q: q || undefined,
-      category: category || undefined,
-      saturation: saturation || undefined,
-      sort,
-      limit: 24,
-    })
+    // Prefer Supabase (same prod DB, RLS) so the library does not depend on Railway API URL wiring.
+    const data = await listLibraryArticlesFromSupabase(filters)
     items = data.items
     total = data.total
     categories = data.categories
-  } catch (err) {
-    // Surface wiring failures in server logs (empty library is usually a missing API URL).
-    console.error('[library] failed to list articles', err)
+  } catch (supabaseErr) {
+    console.error('[library] supabase list failed, trying API', supabaseErr)
+    try {
+      const data = await listLibraryArticles(filters)
+      items = data.items
+      total = data.total
+      categories = data.categories
+    } catch (apiErr) {
+      console.error('[library] API list failed', apiErr)
+    }
   }
 
   return (

@@ -2,16 +2,27 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { LibraryArticleView } from '@/components/library/library-article-view'
+import { getLibraryArticleFromSupabase } from '@/lib/api/library-supabase'
 import { getLibraryArticle } from '@/lib/api/library'
 
 interface PageProps {
   params: Promise<{ slug: string }>
 }
 
+async function loadArticle(slug: string) {
+  try {
+    const fromDb = await getLibraryArticleFromSupabase(slug)
+    if (fromDb) return fromDb
+  } catch (err) {
+    console.error('[library] supabase article failed, trying API', err)
+  }
+  return getLibraryArticle(slug)
+}
+
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params
   try {
-    const article = await getLibraryArticle(slug)
+    const article = await loadArticle(slug)
     const seo = article.seo
     return {
       title: seo.title,
@@ -37,9 +48,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function LibraryArticlePage({ params }: PageProps) {
   const { slug } = await params
 
-  let article: Awaited<ReturnType<typeof getLibraryArticle>>
+  let article: Awaited<ReturnType<typeof loadArticle>>
   try {
-    article = await getLibraryArticle(slug)
+    article = await loadArticle(slug)
   } catch {
     notFound()
   }

@@ -1,7 +1,8 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { getLibraryReviews, type LibraryReview } from '@/lib/api/library'
+import { getLibraryReviewsFromBrowser } from '@/lib/api/library-browser'
+import type { LibraryReview } from '@/lib/api/library'
 
 const PAGE_SIZE = 20
 
@@ -96,7 +97,7 @@ export function LibraryEvidence({ slug, initialClusterId }: LibraryEvidenceProps
       }
 
       try {
-        const data = await getLibraryReviews(slug, buildParams(offset))
+        const data = await getLibraryReviewsFromBrowser(slug, buildParams(offset))
         setTotal(data.total)
         nextOffsetRef.current = offset + data.items.length
         setHasMore(nextOffsetRef.current < data.total)
