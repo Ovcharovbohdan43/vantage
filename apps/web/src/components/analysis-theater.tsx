@@ -9,13 +9,13 @@ import { getAnalysisLoadingCopy } from '@/lib/analysis-messages'
 import type { Competitor, ResearchStage } from '@/lib/api/types'
 import { STAGE_LABELS } from '@/lib/api/types'
 
-const ROADMAP: ResearchStage[] = [
+const ROADMAP = [
   'finding_competitors',
   'collecting_reviews',
   'analyzing',
   'generating_report',
   'completed',
-]
+] as const
 
 const ROADMAP_BLURBS: Record<(typeof ROADMAP)[number], string> = {
   finding_competitors: 'Who already serves this market',
@@ -38,7 +38,7 @@ interface AnalysisTheaterProps {
 
 function stageRank(stage: ResearchStage): number {
   if (stage === 'queued') return -0.5
-  const idx = ROADMAP.indexOf(stage)
+  const idx = (ROADMAP as readonly ResearchStage[]).indexOf(stage)
   return idx === -1 ? 0 : idx
 }
 
