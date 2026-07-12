@@ -50,6 +50,26 @@ Variables used (Supabase Go templates):
 
 Account security emails (confirm, reset password) must still be sent regardless of marketing opt-out.
 
+### Support reply bridge (official From)
+
+When a user submits **Support** in the app:
+
+1. API emails `SUPPORT_INBOX_EMAIL` from `RESEND_FROM_EMAIL`.
+2. **Reply-To** is `support+{user_id}@{SUPPORT_REPLY_DOMAIN}` (Resend Receiving).
+3. Reply in Gmail as usual — Resend webhook receives it and relays the body to the user **from** `RESEND_FROM_EMAIL` (official Vantage).
+4. If the user replies again, the same address forwards back to the support inbox.
+
+**Resend setup required**
+
+1. Verify domain `vantageserch.app` (SPF/DKIM) and set:
+   - `RESEND_FROM_EMAIL=Vantage <noreply@vantageserch.app>`
+   - `SUPPORT_INBOX_EMAIL=f62688798@gmail.com`
+   - `SUPPORT_REPLY_DOMAIN=vantageserch.app`
+2. Enable **Receiving** / MX for that domain in Resend.
+3. Webhook URL: `POST {API_URL}/api/v1/email/webhook` — event `email.received` (+ keep `RESEND_WEBHOOK_SECRET`).
+
+Agent tip: always use **Reply** on the ticket email so the `support+…` address is preserved.
+
 ### Send via API (multipart)
 
 ```python
@@ -67,3 +87,4 @@ html = render_supabase_template(
 ### Preview
 
 Open `preview/confirm-signup-preview.html` in a browser (static iframe; replace `{{ .… }}` manually for a full visual check).
+

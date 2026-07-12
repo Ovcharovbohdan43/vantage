@@ -10,6 +10,7 @@ from app.deps.auth import AuthUser, get_current_user
 from app.schemas.support import SupportRequestCreate, SupportRequestOut
 from app.services.credits import get_or_create_profile
 from app.services.resend_email import EmailNotConfiguredError, send_email
+from app.services.support_reply import support_reply_address
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +70,7 @@ async def submit_support_request(
         f"<p style='white-space:pre-wrap'>{safe_message}</p>"
     )
 
-    reply_to = [user_email] if user.email else None
+    reply_to = [support_reply_address(user.id)]
 
     try:
         await send_email(

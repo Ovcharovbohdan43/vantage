@@ -49,11 +49,13 @@ class Settings(BaseSettings):
     stripe_price_indie: str = ""
 
     resend_api_key: str = ""
-    resend_from_email: str = "Vantage <onboarding@resend.dev>"
+    resend_from_email: str = "Vantage <noreply@vantageserch.app>"
     resend_webhook_secret: str = ""
     resend_reply_to: str = ""
     # Server-only inbox for in-app Support form (never exposed to the frontend)
     support_inbox_email: str = "f62688798@gmail.com"
+    # Receiving domain for support+{user_id}@… (must have Resend MX / Receiving enabled)
+    support_reply_domain: str = "vantageserch.app"
     # Preview cap per competitor. None = auto (5 prod, 100 when DEBUG=true for Apify minimum).
     preview_max_reviews_per_competitor: int | None = None
     apify_timeout_seconds: int = 600

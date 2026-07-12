@@ -19,6 +19,7 @@ from app.services.resend_email import (
     store_inbound_email,
     verify_resend_webhook,
 )
+from app.services.support_reply import route_support_inbound
 
 logger = logging.getLogger(__name__)
 
@@ -100,7 +101,11 @@ async def email_webhook(request: Request, db: AsyncSession = Depends(get_db)):
             raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Resend is not configured")
 
         try:
-            await store_inbound_email(db, email_id=str(email_id), event_payload=data)
+            inbound = await store_inbound_email(db, email_id=str(email_id), event_payload=data)
+            try:
+                await route_support_inbound(db, inbound)
+            except Exception:
+                logger.exception("Support inbound routing failed for %s", email_id)
         except RuntimeError as exc:
             raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
 
