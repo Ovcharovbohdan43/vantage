@@ -17,9 +17,20 @@ def _cluster_summary(clusters: list[PainCluster]) -> str:
     lines: list[str] = []
     for cluster in clusters[:12]:
         lines.append(
-            f"- {cluster.title} (freq={cluster.frequency}, severity={cluster.severity_score or 'n/a'}): "
+            f"- {cluster.title} (freq={cluster.frequency}, severity={cluster.severity_score or 'n/a'}, "
+            f"opportunity={cluster.commercial_opportunity or 'n/a'}): "
             f"{cluster.description or cluster.title}"
         )
+        if cluster.solution_direction:
+            lines.append(f"  Existing solution hint: {cluster.solution_direction}")
+        quotes = [
+            (example.get("text") or "").strip()
+            for example in (cluster.examples or [])[:2]
+            if (example.get("text") or "").strip()
+        ]
+        for quote in quotes:
+            clipped = quote if len(quote) <= 220 else f"{quote[:217]}..."
+            lines.append(f'  Customer quote: "{clipped}"')
     return "\n".join(lines)
 
 
@@ -48,15 +59,26 @@ def synthesize_report_with_llm(
     warning_text = ", ".join(warnings) if warnings else "none"
     client = OpenAI(api_key=settings.openai_api_key)
     prompt = (
-        "You are a market research analyst writing a decision-oriented report for an indie founder.\n"
+        "You are a product strategist writing an actionable report for an indie founder who wants to "
+        "beat incumbents by solving real customer complaints.\n"
         "Rules:\n"
-        "- Ground conclusions in the pain clusters and competitor landscape below.\n"
+        "- Ground every conclusion in the pain clusters and competitor landscape below.\n"
         "- If review data is limited, state uncertainty explicitly in summary and reasoning.\n"
         "- Do NOT invent pain points not present in clusters.\n"
         "- market_score: higher = more opportunity for a differentiated entrant (0-100).\n"
         "- risk_score: higher = harder to win (0-100).\n"
-        "- verdict: build | pivot | dont_build with clear reasoning.\n\n"
-        f"Idea: {project.title}\n"
+        "- verdict: build | pivot | dont_build with clear reasoning.\n"
+        "- next_steps: concrete founder actions (interviews, MVP scope, positioning tests) — not vague advice.\n"
+        "- feature_ideas (REQUIRED, 3–6 items): for the strongest pains, invent SPECIFIC product features "
+        "or services the founder can ship. Each idea must include:\n"
+        "  * pain_addressed — which competitor weakness / cluster it attacks\n"
+        "  * feature_name — short productized name (e.g. 'One-click transcript cleanup')\n"
+        "  * how_it_works — how the feature/service works in the founder's product (UI flow, automation, "
+        "pricing wedge, or service delivery — be concrete)\n"
+        "  * why_it_wins — why this beats named competitor patterns from the data\n"
+        "- Avoid generic phrases like 'improve UX', 'add AI', 'listen to customers'. Name the mechanism.\n"
+        "- Tie ideas to the founder's idea description when possible.\n\n"
+        f"Founder idea: {project.title}\n"
         f"Description: {project.description}\n"
         f"Category: {project.category}\n"
         f"Target audience: {project.target_audience or 'not specified'}\n"
@@ -70,11 +92,17 @@ def synthesize_report_with_llm(
         completion = client.beta.chat.completions.parse(
             model=settings.openai_model,
             messages=[
-                {"role": "system", "content": "Return structured market research synthesis."},
+                {
+                    "role": "system",
+                    "content": (
+                        "Return structured market research synthesis with concrete feature/service "
+                        "ideas the founder can build to exploit competitor weaknesses."
+                    ),
+                },
                 {"role": "user", "content": prompt},
             ],
             response_format=ReportSynthesisResult,
-            temperature=0.25,
+            temperature=0.35,
         )
         parsed = completion.choices[0].message.parsed
         if not parsed:

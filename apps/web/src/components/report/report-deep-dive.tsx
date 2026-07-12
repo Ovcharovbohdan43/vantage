@@ -81,6 +81,23 @@ export function ReportDeepDive({ report, isPreview }: { report: ResearchReport; 
                   ))}
                 </ul>
               )}
+              {(recommendations.feature_ideas?.length ?? 0) > 0 && (
+                <div className="mt-5 space-y-3 border-t border-white/8 pt-4">
+                  <p className="font-mono text-[10px] uppercase tracking-widest text-[#958ea0]">
+                    Feature & service ideas
+                  </p>
+                  {recommendations.feature_ideas!.map((idea) => (
+                    <div key={idea.feature_name} className="rounded-lg border border-white/8 bg-[#1c1b1d]/50 p-3">
+                      <p className="text-sm font-medium text-[#e5e1e4]">{idea.feature_name}</p>
+                      <p className="mt-1 font-mono text-[10px] text-[#958ea0]">
+                        Attacks: {idea.pain_addressed}
+                      </p>
+                      <p className="mt-2 text-sm leading-relaxed text-[#cbc3d7]">{idea.how_it_works}</p>
+                      <p className="mt-2 text-sm text-[#d0bcff]/90">{idea.why_it_wins}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 

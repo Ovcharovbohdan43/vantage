@@ -60,6 +60,23 @@ def test_heuristic_report_handles_zero_clusters() -> None:
     )
     assert report.recommendations["verdict"] in {"pivot", "dont_build", "build"}
     assert "0 collected reviews" in report.summary
+    assert isinstance(report.recommendations.get("feature_ideas"), list)
+
+
+def test_heuristic_report_includes_feature_ideas_from_clusters() -> None:
+    report = build_heuristic_report(
+        idea_title="Better editor",
+        clusters=[_cluster("Export fails", 12, 8.0)],
+        competitors=[_competitor("A", 4.2)],
+        reviews_collected=80,
+        warnings=[],
+    )
+    ideas = report.recommendations["feature_ideas"]
+    assert len(ideas) >= 1
+    assert ideas[0]["pain_addressed"]
+    assert ideas[0]["feature_name"]
+    assert len(ideas[0]["how_it_works"]) >= 40
+    assert ideas[0]["why_it_wins"]
 
 
 def test_data_confidence_low_without_reviews() -> None:

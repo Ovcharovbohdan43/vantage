@@ -16,6 +16,7 @@ import {
   ReportCustomerVoicePreview,
 } from '@/components/report/report-competitors'
 import { ReportDeepDive } from '@/components/report/report-deep-dive'
+import { ReportFeatureIdeas } from '@/components/report/report-feature-ideas'
 import {
   ReportAnalysisTimeline,
   ReportExecutiveSummary,
@@ -205,6 +206,7 @@ export function ReportView({ projectId }: ReportViewProps) {
 
           <ReportExecutiveSummary report={data} isPreview={isPreview} />
           <ReportVerdictHero report={data} isPreview={isPreview} />
+          <ReportFeatureIdeas report={data} isPreview={isPreview} />
           <ReportAnalysisTimeline report={data} />
 
           <section className="mb-8">

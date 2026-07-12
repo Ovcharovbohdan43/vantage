@@ -130,11 +130,36 @@ def build_heuristic_report(
     )
 
     next_steps = [
-        "Validate the top pain cluster with 5–10 target-user interviews.",
-        "Compare your differentiation against the highest-rated incumbent.",
+        "Interview 5–10 buyers who mentioned the top pain cluster; ask what they tried instead.",
+        "Ship a thin wedge MVP that only solves the #1 complaint better than the incumbent.",
+        "Position against a named competitor weakness in your landing page headline.",
     ]
     if reviews_collected < 100:
-        next_steps.insert(0, "Collect more negative reviews (target 100+) before committing to build.")
+        next_steps.insert(0, "Collect more negative reviews (target 100+) before locking MVP scope.")
+
+    feature_ideas: list[dict] = []
+    for cluster in clusters[:4]:
+        title = cluster.title or "Recurring complaint"
+        direction = (cluster.solution_direction or "").strip()
+        feature_ideas.append(
+            {
+                "pain_addressed": title,
+                "feature_name": f"Fix for: {title[:60]}",
+                "how_it_works": (
+                    direction
+                    if len(direction) >= 40
+                    else (
+                        f"Build a focused workflow in '{idea_title}' that removes “{title}” from the "
+                        f"critical path — auto-detect the failure, offer a one-click recovery, and "
+                        f"log the outcome so users do not repeat the competitor friction."
+                    )
+                ),
+                "why_it_wins": (
+                    f"Competitors keep generating “{title}” complaints "
+                    f"({cluster.frequency} signals). Owning a cleaner path here is a wedge."
+                ),
+            }
+        )
 
     return HeuristicReport(
         summary=summary.strip(),
@@ -145,6 +170,7 @@ def build_heuristic_report(
             "verdict": verdict,
             "reasoning": reasoning,
             "next_steps": next_steps,
+            "feature_ideas": feature_ideas,
         },
     )
 

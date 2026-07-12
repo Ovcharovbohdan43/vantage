@@ -162,6 +162,12 @@ export interface ResearchReport {
     verdict: ReportVerdict
     reasoning: string
     next_steps: string[]
+    feature_ideas?: Array<{
+      pain_addressed: string
+      feature_name: string
+      how_it_works: string
+      why_it_wins: string
+    }>
   }
   pain_clusters: ReportPainCluster[]
   competitors: ReportCompetitor[]

@@ -44,6 +44,42 @@ def count_project_reviews(db: Session, project_id: UUID) -> int:
     return int(result or 0)
 
 
+def count_competitor_reviews(db: Session, competitor_id: UUID) -> int:
+    result = db.scalar(select(func.count()).select_from(Review).where(Review.competitor_id == competitor_id))
+    return int(result or 0)
+
+
+def average_competitor_rating(db: Session, competitor_id: UUID) -> float | None:
+    result = db.scalar(
+        select(func.avg(Review.rating)).where(
+            Review.competitor_id == competitor_id,
+            Review.rating.is_not(None),
+        )
+    )
+    if result is None:
+        return None
+    return round(float(result), 1)
+
+
+def refresh_competitor_market_stats(db: Session, competitor: Competitor) -> None:
+    """Keep Market Map in sync after soft-accept discovery + review collection."""
+    collected = count_competitor_reviews(db, competitor.id)
+    if collected > 0:
+        # Prefer collected volume when discovery could not scrape page metadata.
+        competitor.reviews_count = max(competitor.reviews_count or 0, collected)
+        avg_rating = average_competitor_rating(db, competitor.id)
+        if avg_rating is not None:
+            # Soft-accept leaves rating null; fill from collected reviews.
+            # If discovery already had a page rating, keep the higher-signal page rating
+            # only when we already have one — otherwise use collected avg.
+            if competitor.rating is None:
+                competitor.rating = avg_rating
+        db.flush()
+    elif competitor.reviews_count is None and competitor.rating is None:
+        # Still waiting — leave null so UI shows "reviews pending".
+        pass
+
+
 def save_reviews_batch(
     db: Session,
     *,
@@ -186,6 +222,10 @@ def collect_reviews_for_project(
             )
             if saved > 0:
                 result.competitors_with_reviews += 1
+            refresh_competitor_market_stats(db, competitor)
+            # Commit per competitor so the Market Map UI (polling listCompetitors)
+            # sees rating/reviews_count while collection is still running.
+            db.commit()
             result.total_reviews = count_project_reviews(db, project.id)
 
             if on_progress:

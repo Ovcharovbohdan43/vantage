@@ -30,14 +30,24 @@ MarketSaturation = Literal["HIGH", "MEDIUM", "LOW"]
 Verdict = Literal["build", "pivot", "dont_build"]
 
 
+class ReportFeatureIdea(BaseModel):
+    """Concrete product/service idea that exploits a competitor weakness."""
+
+    pain_addressed: str = Field(min_length=3, max_length=160)
+    feature_name: str = Field(min_length=3, max_length=100)
+    how_it_works: str = Field(min_length=40, max_length=600)
+    why_it_wins: str = Field(min_length=20, max_length=400)
+
+
 class ReportRecommendations(BaseModel):
     verdict: Verdict
-    reasoning: str = Field(min_length=20, max_length=1200)
-    next_steps: list[str] = Field(min_length=1, max_length=5)
+    reasoning: str = Field(min_length=20, max_length=1600)
+    next_steps: list[str] = Field(min_length=1, max_length=6)
+    feature_ideas: list[ReportFeatureIdea] = Field(min_length=3, max_length=8)
 
 
 class ReportSynthesisResult(BaseModel):
-    summary: str = Field(min_length=40, max_length=2000)
+    summary: str = Field(min_length=40, max_length=2500)
     market_saturation: MarketSaturation
     market_score: float = Field(ge=0, le=100)
     risk_score: float = Field(ge=0, le=100)

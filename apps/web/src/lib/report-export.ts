@@ -36,6 +36,17 @@ export function reportToMarkdown(report: ResearchReport): string {
     lines.push('')
   }
 
+  const featureIdeas = report.recommendations.feature_ideas ?? []
+  if (featureIdeas.length > 0) {
+    lines.push('### Feature & service ideas', '')
+    for (const idea of featureIdeas) {
+      lines.push(`#### ${idea.feature_name}`, '')
+      lines.push(`**Pain addressed:** ${idea.pain_addressed}`, '')
+      lines.push(idea.how_it_works, '')
+      lines.push(`**Why it wins:** ${idea.why_it_wins}`, '')
+    }
+  }
+
   lines.push('## Summary', '', report.summary, '')
 
   lines.push(`## Pain clusters (${report.pain_clusters.length})`, '')

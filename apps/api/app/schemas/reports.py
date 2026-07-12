@@ -46,10 +46,18 @@ class ReportStats(BaseModel):
     time_saved_hours: float
 
 
+class ReportFeatureIdea(BaseModel):
+    pain_addressed: str
+    feature_name: str
+    how_it_works: str
+    why_it_wins: str
+
+
 class ReportRecommendations(BaseModel):
     verdict: Literal["build", "pivot", "dont_build"] = "pivot"
     reasoning: str = ""
     next_steps: list[str] = Field(default_factory=list)
+    feature_ideas: list[ReportFeatureIdea] = Field(default_factory=list)
 
 
 class ReportIdea(BaseModel):
