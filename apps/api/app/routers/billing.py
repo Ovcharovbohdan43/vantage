@@ -13,9 +13,12 @@ from app.schemas.billing import (
     FulfillOut,
     FulfillRequest,
     PackInfo,
+    PromoRedeemOut,
+    PromoRedeemRequest,
 )
 from app.services.billing_fulfillment import fulfill_checkout_session
-from app.services.credits import get_user_credits
+from app.services.credits import CreditError, get_user_credits
+from app.services.promo_codes import redeem_promo_code
 from app.services.stripe_billing import (
     apply_checkout_completed,
     create_checkout_session,
@@ -118,6 +121,34 @@ async def billing_fulfill(
         pack=result.pack,
         credits_added=result.credits_added,
         total_credits=result.total_credits,
+    )
+
+
+@router.post("/promo/redeem", response_model=PromoRedeemOut)
+async def billing_redeem_promo(
+    payload: PromoRedeemRequest,
+    user: AuthUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        result = await redeem_promo_code(
+            db,
+            user_id=user.id,
+            email=user.email,
+            code=payload.code,
+        )
+    except CreditError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": exc.code, "message": exc.message},
+        ) from exc
+
+    await db.commit()
+    return PromoRedeemOut(
+        code=result.code,
+        credits_granted=result.credits_granted,
+        total_credits=result.total_credits,
+        already_redeemed=result.already_redeemed,
     )
 
 

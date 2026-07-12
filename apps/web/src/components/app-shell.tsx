@@ -8,6 +8,7 @@ import { useQuery } from '@tanstack/react-query'
 import { List, MagnifyingGlass, X } from '@phosphor-icons/react'
 import { VantageLogo } from '@/components/vantage-logo'
 import { CreditsMeter } from '@/components/credits-meter'
+import { PendingPromoRedeemer } from '@/components/pending-promo-redeemer'
 import { getCredits } from '@/lib/api/billing'
 import type { CreditsBalance } from '@/lib/api/types'
 import { createClient } from '@/lib/supabase/client'
@@ -164,6 +165,7 @@ export function AppShell({ children, userEmail }: AppShellProps) {
 
   return (
     <div className="landing-root flex h-dvh overflow-hidden bg-[#131315] font-sans text-[#e5e1e4]">
+      <PendingPromoRedeemer />
       {/* Desktop sidebar */}
       <aside className="hidden w-56 shrink-0 flex-col border-r border-white/8 bg-[#0e0e10] md:flex">
         <div className="flex h-14 items-center gap-2 border-b border-white/8 px-4">

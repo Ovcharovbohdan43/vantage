@@ -50,6 +50,17 @@ class FulfillOut(BaseModel):
     total_credits: int = 0
 
 
+class PromoRedeemRequest(BaseModel):
+    code: str = Field(min_length=1, max_length=64)
+
+
+class PromoRedeemOut(BaseModel):
+    code: str
+    credits_granted: int
+    total_credits: int
+    already_redeemed: bool = False
+
+
 class BillingErrorDetail(BaseModel):
     code: str
     message: str

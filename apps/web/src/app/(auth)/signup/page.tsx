@@ -4,6 +4,11 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { AuthPageShell } from '@/components/auth-page-shell'
+import {
+  clearPendingPromo,
+  redeemPromoCode,
+  stashPendingPromo,
+} from '@/lib/api/billing'
 import { createClient } from '@/lib/supabase/client'
 
 const fieldClass =
@@ -14,6 +19,7 @@ export default function SignupPage() {
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [promoCode, setPromoCode] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -26,10 +32,14 @@ export default function SignupPage() {
 
     const supabase = createClient()
     const redirectTo = `${window.location.origin}/auth/callback?flow=confirm`
+    const normalizedPromo = promoCode.trim().toUpperCase()
     const { data, error: authError } = await supabase.auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: redirectTo },
+      options: {
+        emailRedirectTo: redirectTo,
+        data: normalizedPromo ? { promo_code: normalizedPromo } : undefined,
+      },
     })
 
     if (authError) {
@@ -39,12 +49,27 @@ export default function SignupPage() {
     }
 
     if (data.session) {
+      if (normalizedPromo) {
+        try {
+          await redeemPromoCode(normalizedPromo)
+          clearPendingPromo()
+        } catch {
+          stashPendingPromo(normalizedPromo)
+        }
+      }
       router.push('/dashboard')
       router.refresh()
       return
     }
 
-    setMessage('Check your email to confirm your account, then sign in.')
+    if (normalizedPromo) {
+      stashPendingPromo(normalizedPromo)
+      setMessage(
+        'Check your email to confirm your account. Your promo credits will apply after you sign in.',
+      )
+    } else {
+      setMessage('Check your email to confirm your account, then sign in.')
+    }
     setLoading(false)
   }
 
@@ -92,6 +117,21 @@ export default function SignupPage() {
             className={fieldClass}
           />
           <p className="text-xs text-[#958ea0]">Minimum 8 characters</p>
+        </div>
+        <div className="space-y-2">
+          <label htmlFor="promo" className={labelClass}>
+            Promo code <span className="font-normal text-[#958ea0]">(optional)</span>
+          </label>
+          <input
+            id="promo"
+            type="text"
+            autoComplete="off"
+            value={promoCode}
+            onChange={(e) => setPromoCode(e.target.value)}
+            placeholder="TRYIT"
+            className={`${fieldClass} uppercase`}
+          />
+          <p className="text-xs text-[#958ea0]">Have a code? Enter it to get free research credits.</p>
         </div>
 
         {error && <p className="text-sm text-[#ffb4ab]">{error}</p>}

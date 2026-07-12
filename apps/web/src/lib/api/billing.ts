@@ -43,3 +43,43 @@ export function unlockProject(projectId: string, researchDepth: ResearchDepth = 
     body: JSON.stringify({ research_depth: researchDepth }),
   })
 }
+
+export function redeemPromoCode(code: string) {
+  return apiFetch<{
+    code: string
+    credits_granted: number
+    total_credits: number
+    already_redeemed: boolean
+  }>('/api/v1/billing/promo/redeem', {
+    method: 'POST',
+    body: JSON.stringify({ code }),
+  })
+}
+
+export const PENDING_PROMO_KEY = 'vantage_pending_promo'
+
+export function stashPendingPromo(code: string) {
+  const normalized = code.trim().toUpperCase()
+  if (!normalized) return
+  try {
+    localStorage.setItem(PENDING_PROMO_KEY, normalized)
+  } catch {
+    /* ignore quota / private mode */
+  }
+}
+
+export function readPendingPromo(): string | null {
+  try {
+    return localStorage.getItem(PENDING_PROMO_KEY)
+  } catch {
+    return null
+  }
+}
+
+export function clearPendingPromo() {
+  try {
+    localStorage.removeItem(PENDING_PROMO_KEY)
+  } catch {
+    /* ignore */
+  }
+}
