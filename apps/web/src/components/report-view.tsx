@@ -7,6 +7,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import { Download, RotateCcw } from 'lucide-react'
 import { AnalysisLoadingView } from '@/components/analysis-loading-view'
+import { AppFeedbackPrompt } from '@/components/app-feedback-prompt'
 import { FullReportCta } from '@/components/full-report-cta'
 import { PricingModal } from '@/components/pricing-modal'
 import { ProjectEvidence } from '@/components/project-evidence'
@@ -230,6 +231,7 @@ export function ReportView({ projectId }: ReportViewProps) {
         </>
       )}
 
+      <AppFeedbackPrompt projectId={projectId} />
       <PricingModal open={pricingOpen} onClose={() => setPricingOpen(false)} highlightPack="starter" />
     </div>
   )

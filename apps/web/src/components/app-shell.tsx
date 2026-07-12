@@ -61,31 +61,54 @@ function NavLinks({
 function UserFooter({
   userEmail,
   credits,
+  pathname,
   onSignOut,
+  onNavigate,
 }: {
   userEmail: string
   credits?: CreditsBalance
+  pathname: string
   onSignOut: () => void
+  onNavigate?: () => void
 }) {
+  const accountActive = pathname === '/account' || pathname.startsWith('/account/')
+
   return (
-    <div className="border-t border-white/8 px-4 py-3">
-      <div className="flex items-center gap-2.5">
+    <div className="border-t border-white/8 px-2 py-2">
+      <Link
+        href="/account"
+        onClick={onNavigate}
+        className={cn(
+          'flex items-center gap-2.5 rounded-lg px-2 py-2 transition-colors',
+          accountActive
+            ? 'bg-[#d0bcff]/15'
+            : 'hover:bg-white/5',
+        )}
+        aria-current={accountActive ? 'page' : undefined}
+      >
         <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#d0bcff]/20">
           <span className="text-[10px] font-medium text-[#d0bcff]">{getInitials(userEmail)}</span>
         </div>
         <div className="min-w-0 flex-1">
-          <div className="truncate text-xs font-medium text-[#e5e1e4]">{userEmail}</div>
+          <div
+            className={cn(
+              'truncate text-xs font-medium',
+              accountActive ? 'text-[#d0bcff]' : 'text-[#e5e1e4]',
+            )}
+          >
+            {userEmail}
+          </div>
           {credits ? (
             <CreditsMeter credits={credits} compact />
           ) : (
             <div className="truncate text-[10px] text-[#958ea0]">Free preview</div>
           )}
         </div>
-      </div>
+      </Link>
       <button
         type="button"
         onClick={onSignOut}
-        className="mt-2 w-full justify-start px-0 text-left text-sm text-[#958ea0] transition-colors hover:text-[#d0bcff]"
+        className="mt-1 w-full rounded-lg px-2 py-1.5 text-left text-sm text-[#958ea0] transition-colors hover:bg-white/5 hover:text-[#d0bcff]"
       >
         Sign out
       </button>
@@ -147,7 +170,12 @@ export function AppShell({ children, userEmail }: AppShellProps) {
           <span className="text-[15px] font-semibold tracking-tight text-[#e5e1e4]">Vantage</span>
         </div>
         <NavLinks pathname={pathname} />
-        <UserFooter userEmail={userEmail} credits={credits} onSignOut={handleSignOut} />
+        <UserFooter
+          userEmail={userEmail}
+          credits={credits}
+          pathname={pathname}
+          onSignOut={handleSignOut}
+        />
       </aside>
 
       {/* Mobile drawer */}
@@ -175,7 +203,13 @@ export function AppShell({ children, userEmail }: AppShellProps) {
               </button>
             </div>
             <NavLinks pathname={pathname} onNavigate={() => setMenuOpen(false)} />
-            <UserFooter userEmail={userEmail} credits={credits} onSignOut={handleSignOut} />
+            <UserFooter
+              userEmail={userEmail}
+              credits={credits}
+              pathname={pathname}
+              onSignOut={handleSignOut}
+              onNavigate={() => setMenuOpen(false)}
+            />
           </aside>
         </div>
       )}
