@@ -13,12 +13,12 @@ export type CrawlResult = {
 };
 
 function createProxyConfiguration(): ProxyConfiguration | undefined {
-  if (!config.proxyUrl) {
+  if (config.proxyUrls.length === 0) {
     log.warning("No Webshare proxy configured — crawling without proxy (likely blocked)");
     return undefined;
   }
   return new ProxyConfiguration({
-    proxyUrls: [config.proxyUrl],
+    proxyUrls: config.proxyUrls,
   });
 }
 

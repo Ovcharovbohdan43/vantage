@@ -1,8 +1,10 @@
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
-import { config } from "./config.js";
+import { config, resolveProxies } from "./config.js";
 import { closePool } from "./db.js";
 import { collectRoutes } from "./routes/collect.js";
+
+await resolveProxies();
 
 const app = new Hono();
 
@@ -10,7 +12,8 @@ app.get("/health", (c) =>
   c.json({
     ok: true,
     service: "review-collector",
-    proxyConfigured: Boolean(config.proxyUrl),
+    proxyConfigured: config.proxyUrls.length > 0,
+    proxyCount: config.proxyUrls.length,
   }),
 );
 
@@ -36,7 +39,7 @@ app.onError((err, c) => {
 
 const server = serve({ fetch: app.fetch, port: config.port }, (info) => {
   console.log(`review-collector listening on :${info.port}`);
-  console.log(`proxy: ${config.proxyUrl ? "configured" : "NONE"}`);
+  console.log(`proxy: ${config.proxyUrls.length > 0 ? `${config.proxyUrls.length} URL(s)` : "NONE"}`);
 });
 
 async function shutdown() {

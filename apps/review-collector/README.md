@@ -37,16 +37,10 @@ Cache hit requires: `last_scraped_at` within `CACHE_TTL_HOURS` **and** enough ro
 
 ## Webshare
 
-Prefer **Username / Password** auth (Railway egress IPs change). Set:
+Preferred: set `WEBSHARE_API_KEY` — at startup the service calls
+`GET /api/v2/proxy/config/` and builds `http://user:pass@p.webshare.io:80` URLs.
 
-```
-WEBSHARE_PROXY_USERNAME=...
-WEBSHARE_PROXY_PASSWORD=...
-WEBSHARE_PROXY_HOST=p.webshare.io
-WEBSHARE_PROXY_PORT=80
-```
-
-Authorized IP mode only works with a fixed egress IP.
+Fallback: `WEBSHARE_PROXY_USERNAME` / `WEBSHARE_PROXY_PASSWORD`, or Authorized IP mode.
 
 ## Local
 
