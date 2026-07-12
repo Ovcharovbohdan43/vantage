@@ -246,11 +246,12 @@ async function openSession(attempt: number): Promise<Session> {
   console.log(`[camoufox] open session attempt=${attempt} country=${country}`);
   const browser = await launchCamoufox(proxyUrl);
   const context = await browser.newContext({ viewport: null, locale: "en-US" });
-  // Playwright/Camoufox can throw on malformed pageerror payloads — swallow.
-  context.on("pageerror", () => undefined);
   const page = await context.newPage();
-  page.on("pageerror", () => undefined);
-  page.on("crash", () => undefined);
+  // Camoufox typings diverge from Playwright event names; swallow via untyped hook.
+  const sink = () => undefined;
+  (context as unknown as { on(event: string, listener: () => void): void }).on("pageerror", sink);
+  (page as unknown as { on(event: string, listener: () => void): void }).on("pageerror", sink);
+  (page as unknown as { on(event: string, listener: () => void): void }).on("crash", sink);
   return { browser, context, page, country, attempt };
 }
 
