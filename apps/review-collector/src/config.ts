@@ -46,11 +46,11 @@ export const config = {
   /** Filled at startup when WEBSHARE_API_KEY is set, otherwise from static env. */
   proxyUrls: buildStaticProxyUrls() as string[],
   maxNegativeRating: envInt("MAX_NEGATIVE_RATING", 3),
-  /** Base pause between page actions (ms). Soft default to avoid G2 rate signals. */
-  requestDelayMs: envInt("REQUEST_DELAY_MS", 6000),
-  delayJitterMs: envInt("DELAY_JITTER_MS", 4000),
-  maxRequestsPerMinute: envInt("MAX_REQUESTS_PER_MINUTE", 4),
-  maxPagesPerProduct: envInt("MAX_PAGES_PER_PRODUCT", 3),
+  /** Base pause between page actions (ms). Keep modest — Camoufox + filters already slow. */
+  requestDelayMs: envInt("REQUEST_DELAY_MS", 2500),
+  delayJitterMs: envInt("DELAY_JITTER_MS", 1500),
+  maxRequestsPerMinute: envInt("MAX_REQUESTS_PER_MINUTE", 8),
+  maxPagesPerProduct: envInt("MAX_PAGES_PER_PRODUCT", 5),
   pageTimeoutMs: envInt("PAGE_TIMEOUT_MS", 60_000),
   minReviewLength: envInt("MIN_REVIEW_LENGTH", 50),
   cacheTtlHours: envInt("CACHE_TTL_HOURS", 168),

@@ -37,6 +37,14 @@ app.onError((err, c) => {
   return c.json({ error: "internal_error", message: err.message }, 500);
 });
 
+// Keep the HTTP process alive if Camoufox/Playwright emits a bad pageerror.
+process.on("uncaughtException", (err) => {
+  console.error("[uncaughtException]", err);
+});
+process.on("unhandledRejection", (err) => {
+  console.error("[unhandledRejection]", err);
+});
+
 const server = serve({ fetch: app.fetch, port: config.port }, (info) => {
   console.log(`review-collector listening on :${info.port}`);
   console.log(`proxy: ${config.proxyUrls.length > 0 ? `${config.proxyUrls.length} URL(s)` : "NONE"}`);

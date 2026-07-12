@@ -235,6 +235,9 @@ export function extractReviewsFromHtml(html: string, source: Source): ScrapedRev
     }
   }
 
+  // Always merge article Q&A — page 2+ often has no reviewBody in JSON-LD.
+  for (const review of extractG2ArticleReviews(html, source)) add(review);
+
   if (reviews.length > 0) return reviews;
 
   const cardPattern =
@@ -262,18 +265,95 @@ export function extractReviewsFromHtml(html: string, source: Source): ScrapedRev
   return reviews;
 }
 
+/** G2 page 2+ often omits JSON-LD Review bodies — parse article Q&A blocks. */
+function extractG2ArticleReviews(html: string, source: Source): ScrapedReview[] {
+  if (source !== "g2") return [];
+  const found: ScrapedReview[] = [];
+  const seen = new Set<string>();
+  const articleRe =
+    /<article\b[^>]*(?:survey_response|elv-bg-neutral-0)[^>]*>([\s\S]*?)<\/article>/gi;
+  let match: RegExpExecArray | null;
+  while ((match = articleRe.exec(html)) !== null) {
+    const chunk = match[1];
+    if (!/What do you (?:like best|dislike)/i.test(chunk)) continue;
+
+    const parts: string[] = [];
+    const qaRe =
+      /What do you (?:like best|dislike|recommend)[^<]{0,120}<\/[^>]+>\s*<p\b[^>]*>([\s\S]*?)<\/p>/gi;
+    let qa: RegExpExecArray | null;
+    while ((qa = qaRe.exec(chunk)) !== null) {
+      const text = qa[1]
+        .replace(/<[^>]+>/g, " ")
+        .replace(/\s+/g, " ")
+        .replace(/Review collected by and hosted on G2\.com\.?/gi, "")
+        .trim();
+      if (text.length >= 20) parts.push(text);
+    }
+    if (parts.length === 0) continue;
+
+    const titleMatch =
+      /<(?:h[1-6]|div)[^>]*class="[^"]*elv-font-bold[^"]*"[^>]*>([\s\S]*?)<\//i.exec(chunk) ||
+      /itemprop="name"[^>]*>([\s\S]*?)<\//i.exec(chunk);
+    const title = titleMatch
+      ? titleMatch[1].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim()
+      : null;
+
+    const starsMatch = /stars-(\d+)/i.exec(chunk);
+    let rating: number | null = null;
+    if (starsMatch) {
+      const half = Number.parseInt(starsMatch[1], 10);
+      if (Number.isFinite(half)) rating = Math.max(1, Math.min(5, Math.round(half / 2)));
+    }
+
+    const text = parts.join(" ");
+    if (seen.has(text)) continue;
+    seen.add(text);
+    found.push({
+      source,
+      text,
+      rating,
+      title: title && title.length > 3 ? title : null,
+      author: null,
+      reviewDate: null,
+      language: null,
+    });
+  }
+  return found;
+}
+
 export function isHardRestriction(html: string, title: string): boolean {
   const blob = `${title}\n${html}`.toLowerCase();
   return (
     blob.includes("access is temporarily restricted") ||
     blob.includes("unusual activity from your device") ||
     blob.includes("unusual activity from your network") ||
-    blob.includes("automated (bot) activity")
+    blob.includes("automated (bot) activity") ||
+    blob.includes("inspection tools") ||
+    blob.includes("enable javascript and cookies")
+  );
+}
+
+export function isNotFoundPage(html: string, title: string): boolean {
+  const t = title.toLowerCase().trim();
+  if (t === "not found" || t.includes("page not found") || t.includes("404")) return true;
+  const h = html.toLowerCase();
+  return h.includes("error-text-number") && h.includes(">404<");
+}
+
+/** Real review listing markers — missing on soft interstitials / empty shells. */
+export function looksLikeReviewListing(html: string): boolean {
+  return (
+    /survey_response/i.test(html) ||
+    /"reviewBody"\s*:/i.test(html) ||
+    /application\/ld\+json/i.test(html) ||
+    /What do you like best/i.test(html) ||
+    /class="[^"]*review-card/i.test(html)
   );
 }
 
 export function isBlockedContent(html: string, title: string): boolean {
   if (isHardRestriction(html, title)) return true;
+  if (isNotFoundPage(html, title)) return true;
   const t = title.toLowerCase();
   const h = html.toLowerCase();
   if (
@@ -287,5 +367,8 @@ export function isBlockedContent(html: string, title: string): boolean {
     return true;
   }
   if (h.includes("cf-challenge") && html.length < 8000) return true;
-  return html.length < 5000;
+  if (html.length < 5000) return true;
+  // Large enough shell but no review payload → treat as soft block / wrong page.
+  if (html.length < 80_000 && !looksLikeReviewListing(html)) return true;
+  return false;
 }

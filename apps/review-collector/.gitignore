@@ -4,3 +4,5 @@ storage/
 .crawllee/
 .env
 *.log
+tmp-*.html
+tmp-*.json

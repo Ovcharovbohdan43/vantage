@@ -49,6 +49,26 @@ export function getCachedWebshareCredentials(): WebshareCredentials | null {
   return cachedCreds;
 }
 
+/** Rotate exit countries when G2 soft-bans a pool (US residential is hottest). */
+export const WEBSHARE_COUNTRY_ROTATION = (
+  process.env.WEBSHARE_COUNTRY_ROTATION?.trim() || "us,ca,gb,de,nl,fr"
+)
+  .split(",")
+  .map((c) => c.trim().toLowerCase())
+  .filter(Boolean);
+
+export function pickProxyCountry(attempt = 1): string {
+  const preferred = process.env.WEBSHARE_COUNTRY?.trim().toLowerCase();
+  const pool =
+    preferred && !WEBSHARE_COUNTRY_ROTATION.includes(preferred)
+      ? [preferred, ...WEBSHARE_COUNTRY_ROTATION]
+      : WEBSHARE_COUNTRY_ROTATION.length > 0
+        ? WEBSHARE_COUNTRY_ROTATION
+        : ["us"];
+  const idx = Math.max(0, attempt - 1) % pool.length;
+  return pool[idx];
+}
+
 /**
  * Webshare backbone username format (NOT -country- / -session- keywords):
  *   {username}-{cc}-{sessionId}   sticky, e.g. myuser-us-1234
@@ -58,9 +78,14 @@ export function getCachedWebshareCredentials(): WebshareCredentials | null {
 export function buildSessionProxyUrl(
   creds: WebshareCredentials,
   sessionId?: string | number,
-  opts?: { country?: string; rotate?: boolean },
+  opts?: { country?: string; rotate?: boolean; attempt?: number },
 ): string {
-  const cc = (opts?.country ?? process.env.WEBSHARE_COUNTRY?.trim() ?? "US").toLowerCase();
+  const cc = (
+    opts?.country ??
+    (opts?.attempt != null ? pickProxyCountry(opts.attempt) : null) ??
+    process.env.WEBSHARE_COUNTRY?.trim() ??
+    "US"
+  ).toLowerCase();
   let user: string;
   if (opts?.rotate) {
     user = `${creds.username}-${cc}-rotate`;

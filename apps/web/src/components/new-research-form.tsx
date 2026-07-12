@@ -371,6 +371,14 @@ export function NewResearchForm() {
         )}
 
         <div className="border-t border-white/8 pt-6">
+          <div className="mb-5 rounded-xl border border-[#ff8adf]/25 bg-[#ff8adf]/8 px-4 py-3">
+            <p className="text-sm leading-relaxed text-[#e5e1e4]/90">
+              Before you start: you may need to complete a{' '}
+              <span className="font-medium text-[#ff8adf]">captcha once</span> while we reach review
+              sources. After that, collection continues automatically — usually about 10 minutes
+              while we process thousands of real reviews for patterns.
+            </p>
+          </div>
           {submitError && <p className="mb-4 text-sm text-[#ffb4ab]">{submitError}</p>}
           <div className="flex flex-wrap items-center gap-3">
             <button

@@ -152,6 +152,7 @@ export function ResearchProgressView({ projectId }: ResearchProgressViewProps) {
         stage={job.stage}
         competitors={competitors}
         competitorsLoading={competitorsLoading && competitors.length === 0}
+        startedAt={job.started_at ?? job.created_at}
         stats={{
           reviewsCollected: job.stats.reviews_collected ?? 0,
           patternsFound: job.stats.pain_clusters_found ?? 0,

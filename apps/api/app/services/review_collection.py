@@ -1,5 +1,6 @@
 import logging
 import time
+from contextlib import nullcontext
 from dataclasses import dataclass, field
 from math import ceil
 from uuid import UUID
@@ -8,6 +9,7 @@ from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
+from app.collectors.apify_collector import ApifyReviewCollector
 from app.collectors.crawlee_collector import CrawleeReviewCollector
 from app.collectors.extraction import ScrapedReview, compute_content_hash
 from app.config import settings
@@ -30,20 +32,6 @@ class CollectionResult:
     pages_fetched: int
     warnings: list[str] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
-
-
-def build_review_collector():
-    """Use the standalone Crawlee + Webshare review-collector service.
-
-    This branch replaces Apify; there is no Playwright/Apify fallback.
-    """
-    if not settings.use_crawlee:
-        raise RuntimeError(
-            "SCRAPER_PROVIDER=crawlee requires REVIEW_COLLECTOR_URL and "
-            "REVIEW_COLLECTOR_API_KEY (see apps/review-collector/README.md)."
-        )
-    logger.info("Using Crawlee review-collector at %s", settings.review_collector_url)
-    return CrawleeReviewCollector()
 
 
 def count_project_reviews(db: Session, project_id: UUID) -> int:
@@ -102,6 +90,7 @@ def collect_reviews_for_project(
     *,
     on_progress=None,
 ) -> CollectionResult:
+    """Crawlee/Webshare is primary; Apify runs only when a competitor yields no reviews."""
     limits = get_plan_limits(project)
     selected = competitors[: limits.max_competitors]
 
@@ -116,22 +105,78 @@ def collect_reviews_for_project(
         result.errors.append("No competitors available for review collection")
         return result
 
-    with build_review_collector() as collector:
-        # Fail fast if the standalone collector is down (avoids N connection-refused loops).
-        if hasattr(collector, "ping") and not collector.ping():
-            result.errors.append(
-                "review-collector is unreachable at REVIEW_COLLECTOR_URL "
-                f"({settings.review_collector_url}). Start it with: npm run dev:collector"
-            )
-            return result
+    crawlee_ready = settings.crawlee_configured and not settings.use_apify
+    apify_ready = settings.apify_configured
 
-        for index, competitor in enumerate(selected, start=1):
-            scrape_result = collector.collect_competitor(
-                competitor,
-                max_reviews=limits.max_reviews_per_competitor,
+    if not crawlee_ready and not apify_ready:
+        result.errors.append(
+            "No review collector configured. Set REVIEW_COLLECTOR_URL + "
+            "REVIEW_COLLECTOR_API_KEY (primary) and/or APIFY_TOKEN (fallback)."
+        )
+        return result
+
+    # Decide whether Crawlee is reachable before spending N attempts.
+    crawlee_alive = False
+    if crawlee_ready:
+        try:
+            with CrawleeReviewCollector() as probe:
+                crawlee_alive = probe.ping()
+        except Exception as exc:
+            logger.warning("Crawlee probe failed: %s", exc)
+            crawlee_alive = False
+        if not crawlee_alive:
+            result.warnings.append("crawlee_unreachable")
+            logger.warning(
+                "review-collector unreachable at %s — Apify fallback only",
+                settings.review_collector_url,
             )
-            result.pages_fetched += scrape_result.pages_fetched
-            result.errors.extend(scrape_result.errors)
+
+    if not crawlee_alive and not apify_ready:
+        result.errors.append(
+            "review-collector is unreachable and APIFY_TOKEN is not set for fallback."
+        )
+        return result
+
+    primary_ctx = CrawleeReviewCollector() if crawlee_alive else nullcontext()
+    fallback_ctx = ApifyReviewCollector() if apify_ready else nullcontext()
+
+    with primary_ctx as primary, fallback_ctx as fallback:
+        for index, competitor in enumerate(selected, start=1):
+            scrape_result = None
+            used_fallback = False
+
+            if primary is not None:
+                scrape_result = primary.collect_competitor(
+                    competitor,
+                    max_reviews=limits.max_reviews_per_competitor,
+                )
+                result.pages_fetched += scrape_result.pages_fetched
+                result.errors.extend(scrape_result.errors)
+                if (not scrape_result.reviews) and fallback is not None:
+                    logger.info(
+                        "Crawlee returned 0 reviews for %s — trying Apify fallback",
+                        competitor.name,
+                    )
+                    scrape_result = fallback.collect_competitor(
+                        competitor,
+                        max_reviews=limits.max_reviews_per_competitor,
+                    )
+                    used_fallback = True
+                    result.pages_fetched += scrape_result.pages_fetched
+                    result.errors.extend(scrape_result.errors)
+            elif fallback is not None:
+                scrape_result = fallback.collect_competitor(
+                    competitor,
+                    max_reviews=limits.max_reviews_per_competitor,
+                )
+                used_fallback = True
+                result.pages_fetched += scrape_result.pages_fetched
+                result.errors.extend(scrape_result.errors)
+            else:
+                continue
+
+            if used_fallback:
+                result.warnings.append(f"apify_fallback:{competitor.name}")
 
             saved = save_reviews_batch(
                 db,
@@ -141,7 +186,6 @@ def collect_reviews_for_project(
             )
             if saved > 0:
                 result.competitors_with_reviews += 1
-
             result.total_reviews = count_project_reviews(db, project.id)
 
             if on_progress:
@@ -151,9 +195,8 @@ def collect_reviews_for_project(
                     reviews_collected=result.total_reviews,
                 )
 
-            # Soft pacing between products — G2 bans networks that look like rapid bursts.
             if index < len(selected):
-                pause = max(8.0, settings.scraper_request_delay_seconds * 4)
+                pause = max(4.0, settings.scraper_request_delay_seconds * 2)
                 time.sleep(pause)
 
             if scrape_result.blocked and settings.scraper_stop_on_block:

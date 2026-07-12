@@ -35,8 +35,8 @@ class Settings(BaseSettings):
     scraper_max_retries: int = 3
     scraper_stop_on_block: bool = False
 
-    # Review scraping provider. Branch test/crawlee-review-collector uses "crawlee" only
-    # (standalone Railway service). Legacy "apify" / "playwright" are not wired here.
+    # Primary: standalone Crawlee/Camoufox collector. Apify is automatic fallback
+    # when a competitor returns 0 reviews (requires APIFY_TOKEN).
     scraper_provider: str = "crawlee"
     apify_token: str = ""
     apify_reviews_actor: str = "zen-studio/software-review-scraper"
@@ -72,16 +72,22 @@ class Settings(BaseSettings):
         return 5
 
     @property
+    def crawlee_configured(self) -> bool:
+        return bool(self.review_collector_url.strip()) and bool(self.review_collector_api_key.strip())
+
+    @property
+    def apify_configured(self) -> bool:
+        return bool(self.apify_token.strip())
+
+    @property
     def use_apify(self) -> bool:
-        return self.scraper_provider.strip().lower() == "apify" and bool(self.apify_token.strip())
+        """Legacy: force Apify-only when SCRAPER_PROVIDER=apify."""
+        return self.scraper_provider.strip().lower() == "apify" and self.apify_configured
 
     @property
     def use_crawlee(self) -> bool:
-        return (
-            self.scraper_provider.strip().lower() == "crawlee"
-            and bool(self.review_collector_url.strip())
-            and bool(self.review_collector_api_key.strip())
-        )
+        provider = self.scraper_provider.strip().lower()
+        return provider in {"crawlee", "auto", ""} and self.crawlee_configured
 
     @property
     def resend_configured(self) -> bool:
