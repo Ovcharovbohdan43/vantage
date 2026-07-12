@@ -308,13 +308,20 @@ def resolve_competitor_page(
                     return validated
 
     # Live validation blocked (typical on Railway) — still enqueue for review-collector.
-    return soft_accept_competitor_page(
+    soft = soft_accept_competitor_page(
         name=name,
         sources=sources,
         description=description,
         category=category,
         explicit_urls=explicit_urls,
     )
+    if soft:
+        logger.info(
+            "Soft-accepted competitor %s at %s (live G2/Capterra fetch blocked)",
+            soft.name,
+            soft.url,
+        )
+    return soft
 
 
 def validate_manual_competitor_url(
