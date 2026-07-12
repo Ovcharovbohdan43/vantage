@@ -322,15 +322,22 @@ async def retry_project(
     if latest and latest.status == "running":
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Research already running")
 
-    # Full re-runs cost the same as a new full research. Preview retries stay free once reserved.
-    if project.research_mode == "full":
-        try:
-            await assert_can_start_full(db, user.id, user.email, project.research_depth)
-        except CreditError as exc:
-            raise HTTPException(
-                status_code=status.HTTP_402_PAYMENT_REQUIRED,
-                detail={"code": exc.code, "message": exc.message},
-            ) from exc
+    # Every re-run costs credits — including preview projects (previously free forever).
+    depth = project.research_depth if project.research_depth in ("shallow", "standard", "deep") else "shallow"
+    try:
+        await assert_can_start_full(db, user.id, user.email, depth)
+    except CreditError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+            detail={"code": exc.code, "message": exc.message},
+        ) from exc
+
+    # Paid re-run of a preview upgrades to a full research at the charged depth.
+    if project.research_mode == "preview":
+        await _reset_project_data(db, project.id)
+        project.research_mode = "full"
+        project.research_depth = depth
+        project.research_plan = depth
 
     job = ResearchJob(
         project_id=project.id,
