@@ -22,6 +22,7 @@ const NAV = [
   { href: '/dashboard', label: 'Dashboard' },
   { href: '/research/new', label: 'New research' },
   { href: '/library', label: 'Research Library' },
+  { href: '/support', label: 'Support' },
 ]
 
 function NavLinks({

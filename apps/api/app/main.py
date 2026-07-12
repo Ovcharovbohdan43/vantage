@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.routers import billing, competitors, email, feedback, health, library, me, pain_clusters, projects, reports, reviews
+from app.routers import billing, competitors, email, feedback, health, library, me, pain_clusters, projects, reports, reviews, support
 
 
 @asynccontextmanager
@@ -36,3 +36,4 @@ app.include_router(billing.router, prefix="/api/v1")
 app.include_router(email.router, prefix="/api/v1")
 app.include_router(library.router, prefix="/api/v1")
 app.include_router(feedback.router, prefix="/api/v1")
+app.include_router(support.router, prefix="/api/v1")
