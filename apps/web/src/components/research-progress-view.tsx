@@ -83,6 +83,12 @@ export function ResearchProgressView({ projectId }: ResearchProgressViewProps) {
         stage="queued"
         competitors={competitorsData?.items ?? []}
         competitorsLoading
+        stats={{
+          reviewsCollected: 0,
+          patternsFound: 0,
+          competitorsChecked: 0,
+          competitorsTotal: 0,
+        }}
       />
     )
   }
@@ -146,6 +152,12 @@ export function ResearchProgressView({ projectId }: ResearchProgressViewProps) {
         stage={job.stage}
         competitors={competitors}
         competitorsLoading={competitorsLoading && competitors.length === 0}
+        stats={{
+          reviewsCollected: job.stats.reviews_collected ?? 0,
+          patternsFound: job.stats.pain_clusters_found ?? 0,
+          competitorsChecked: job.stats.competitors_scraped ?? 0,
+          competitorsTotal: job.stats.competitors_found || competitors.length,
+        }}
         onCancel={() => setCancelRequested(true)}
         cancelPending={cancelMutation.isPending}
         cancelConfirm={cancelRequested}

@@ -29,6 +29,12 @@ interface AnalysisTheaterProps {
   stage: ResearchStage
   competitors: Competitor[]
   competitorsLoading?: boolean
+  stats?: {
+    reviewsCollected: number
+    patternsFound: number
+    competitorsChecked: number
+    competitorsTotal: number
+  }
   onCancel?: () => void
   cancelPending?: boolean
   cancelConfirm?: boolean
@@ -46,6 +52,7 @@ export function AnalysisTheater({
   stage,
   competitors,
   competitorsLoading,
+  stats,
   onCancel,
   cancelPending,
   cancelConfirm,
@@ -69,6 +76,12 @@ export function AnalysisTheater({
   }, [copy.tips.length, stage])
 
   const tip = copy.tips[tipIndex] ?? copy.tips[0]
+  const liveStats = {
+    reviewsCollected: stats?.reviewsCollected ?? 0,
+    patternsFound: stats?.patternsFound ?? 0,
+    competitorsChecked: stats?.competitorsChecked ?? competitors.length,
+    competitorsTotal: Math.max(stats?.competitorsTotal ?? 0, competitors.length),
+  }
 
   return (
     <div className="fixed inset-0 z-40 flex flex-col bg-[#0a0a0c] text-[#e5e1e4]">
@@ -82,7 +95,7 @@ export function AnalysisTheater({
           href="/dashboard"
           className="text-sm text-white/45 transition-colors hover:text-white/80"
         >
-          ← Dashboard
+          Dashboard
         </Link>
         {onCancel && (
           <div>
@@ -213,9 +226,10 @@ export function AnalysisTheater({
             )}
           </div>
 
-          {/* Mobile roadmap */}
+          {/* Mobile roadmap + counters */}
           <div className="mt-8 w-full max-w-lg lg:hidden">
             <TheaterRoadmap currentRank={currentRank} compact />
+            <TheaterLiveCounters stats={liveStats} className="mt-6" />
           </div>
         </section>
 
@@ -224,9 +238,58 @@ export function AnalysisTheater({
           <p className="mb-4 font-mono text-[10px] uppercase tracking-[0.22em] text-white/35">
             Research path
           </p>
-          <TheaterRoadmap currentRank={currentRank} />
+          <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+            <TheaterRoadmap currentRank={currentRank} />
+          </div>
+          <TheaterLiveCounters stats={liveStats} className="shrink-0 border-t border-white/8 pt-6" />
         </aside>
       </div>
+    </div>
+  )
+}
+
+function TheaterLiveCounters({
+  stats,
+  className,
+}: {
+  stats: {
+    reviewsCollected: number
+    patternsFound: number
+    competitorsChecked: number
+    competitorsTotal: number
+  }
+  className?: string
+}) {
+  const competitorLabel =
+    stats.competitorsTotal > 0
+      ? `${stats.competitorsChecked}/${stats.competitorsTotal}`
+      : String(stats.competitorsChecked)
+
+  return (
+    <div className={cn('space-y-4', className)}>
+      <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-white/35">
+        Live signal
+      </p>
+      <ul className="space-y-3">
+        <li className="flex items-baseline justify-between gap-3">
+          <span className="text-xs text-white/45">Reviews</span>
+          <span className="landing-energy-text font-mono text-lg tabular-nums tracking-tight">
+            {stats.reviewsCollected.toLocaleString()}
+          </span>
+        </li>
+        <li className="flex items-baseline justify-between gap-3">
+          <span className="text-xs text-white/45">Patterns</span>
+          <span className="font-mono text-lg tabular-nums tracking-tight text-[#d0bcff]">
+            {stats.patternsFound.toLocaleString()}
+          </span>
+        </li>
+        <li className="flex items-baseline justify-between gap-3">
+          <span className="text-xs text-white/45">Competitors</span>
+          <span className="font-mono text-lg tabular-nums tracking-tight text-white/85">
+            {competitorLabel}
+          </span>
+        </li>
+      </ul>
     </div>
   )
 }

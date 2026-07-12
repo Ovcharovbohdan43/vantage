@@ -1,4 +1,5 @@
-import { PlaywrightCrawler, ProxyConfiguration, log } from "crawlee";
+import { Configuration, PlaywrightCrawler, ProxyConfiguration, RequestQueue, log } from "crawlee";
+import { MemoryStorage } from "@crawlee/memory-storage";
 import type { ScrapedReview, Source } from "../config.js";
 import { config } from "../config.js";
 import { extractReviewsFromHtml, isBlockedContent } from "../extract.js";
@@ -47,7 +48,6 @@ function jitterDelayMs(): number {
 
 async function humanPause(page: import("playwright").Page): Promise<void> {
   await page.waitForTimeout(jitterDelayMs());
-  // Light scroll — looks less like a headless dump
   try {
     await page.mouse.wheel(0, 400 + Math.floor(Math.random() * 600));
     await page.waitForTimeout(400 + Math.floor(Math.random() * 800));
@@ -57,11 +57,11 @@ async function humanPause(page: import("playwright").Page): Promise<void> {
 }
 
 async function waitPastChallenge(page: import("playwright").Page): Promise<string> {
-  const deadline = Date.now() + Math.min(config.pageTimeoutMs, 45_000);
+  const deadline = Date.now() + Math.min(config.pageTimeoutMs, 50_000);
   try {
-    await page.waitForLoadState("networkidle", { timeout: 12_000 });
+    await page.waitForLoadState("domcontentloaded", { timeout: 20_000 });
   } catch {
-    /* Cloudflare / SPA may never go idle */
+    /* continue polling */
   }
 
   while (Date.now() < deadline) {
@@ -77,7 +77,8 @@ async function waitPastChallenge(page: import("playwright").Page): Promise<strin
     if (!isBlockedContent(html, title) && html.length >= 5000) {
       return html;
     }
-    await page.waitForTimeout(1500 + Math.floor(Math.random() * 1000));
+    // Give Cloudflare JS challenge time to resolve instead of aborting on first 403.
+    await page.waitForTimeout(2000 + Math.floor(Math.random() * 1500));
   }
   try {
     return await page.content();
@@ -91,7 +92,6 @@ function filterByRating(reviews: ScrapedReview[], maxRating: number): ScrapedRev
 }
 
 function maxPagesFor(maxReviews: number): number {
-  // Soft cap: never blast dozens of pages in one product visit
   return Math.min(config.maxPagesPerProduct, Math.max(1, Math.ceil(maxReviews / 8) + 1));
 }
 
@@ -109,125 +109,152 @@ export async function crawlProductReviews(
   let currentPage = 1;
   const pageLimit = maxPagesFor(maxReviews);
 
-  // Soft start: only the first URL. Further pages are enqueued one-by-one after a pause.
   const startUrls =
     ref.source === "capterra" && ref.productKey.startsWith("name:")
       ? [ref.url]
       : [withPageQuery(ref.url, 1)];
 
-  const crawler = new PlaywrightCrawler({
-    proxyConfiguration: createProxyConfiguration(),
-    maxRequestsPerCrawl: pageLimit + 3,
-    maxConcurrency: 1,
-    maxRequestsPerMinute: config.maxRequestsPerMinute,
-    navigationTimeoutSecs: Math.ceil(config.pageTimeoutMs / 1000),
-    requestHandlerTimeoutSecs: Math.ceil(config.pageTimeoutMs / 1000) + 60,
-    useSessionPool: true,
-    persistCookiesPerSession: true,
-    // Crawlee fingerprinting — less identical automation profiles
-    browserPoolOptions: {
-      useFingerprints: true,
-    },
-    launchContext: {
-      userAgent: USER_AGENT,
-      launchOptions: {
-        headless: config.headless,
-        args: LAUNCH_ARGS,
+  // Fresh in-memory queue per product — avoids stale "already handled" URLs from disk storage.
+  const configuration = new Configuration({
+    storageClient: new MemoryStorage({ persistStorage: false }),
+    persistStorage: false,
+  });
+  const requestQueue = await RequestQueue.open(`collect-${Date.now()}-${Math.random()}`, {
+    config: configuration,
+  });
+
+  const crawler = new PlaywrightCrawler(
+    {
+      requestQueue,
+      proxyConfiguration: createProxyConfiguration(),
+      maxRequestsPerCrawl: pageLimit + 3,
+      maxConcurrency: 1,
+      maxRequestsPerMinute: config.maxRequestsPerMinute,
+      maxRequestRetries: 2,
+      navigationTimeoutSecs: Math.ceil(config.pageTimeoutMs / 1000),
+      requestHandlerTimeoutSecs: Math.ceil(config.pageTimeoutMs / 1000) + 90,
+      useSessionPool: true,
+      persistCookiesPerSession: true,
+      // Critical for G2/Cloudflare: do NOT leave blockedStatusCodes empty —
+      // empty falls back to defaults which include 403 and aborts before CF resolves.
+      retryOnBlocked: true,
+      maxSessionRotations: 3,
+      sessionPoolOptions: {
+        blockedStatusCodes: [401, 429],
+        maxPoolSize: 10,
       },
-    },
-    preNavigationHooks: [
-      async ({ page }) => {
-        await page.addInitScript(STEALTH_INIT_SCRIPT);
+      browserPoolOptions: {
+        useFingerprints: true,
       },
-    ],
-    async requestHandler({ page, request, crawler: activeCrawler }) {
-      if (collected.length >= maxReviews) return;
+      launchContext: {
+        userAgent: USER_AGENT,
+        launchOptions: {
+          headless: config.headless,
+          args: LAUNCH_ARGS,
+        },
+      },
+      preNavigationHooks: [
+        async ({ page }) => {
+          await page.addInitScript(STEALTH_INIT_SCRIPT);
+        },
+      ],
+      async requestHandler({ page, request, crawler: activeCrawler, session, response }) {
+        if (collected.length >= maxReviews) return;
 
-      await page.setViewportSize({ width: 1366, height: 900 });
+        await page.setViewportSize({ width: 1366, height: 900 });
+        pagesFetched += 1;
 
-      pagesFetched += 1;
-      const html = await waitPastChallenge(page);
-      const title = await page.title();
+        const status = typeof response?.status === "function" ? response.status() : 0;
+        if (status === 403 || status === 429) {
+          // Soft wait — CF interstitial often clears client-side after a few seconds.
+          await page.waitForTimeout(5000 + Math.floor(Math.random() * 3000));
+        }
 
-      if (isBlockedContent(html, title)) {
-        errors.push(`Blocked on ${request.url}`);
-        // Back off hard on block — do not keep hammering
-        await page.waitForTimeout(8000 + Math.floor(Math.random() * 4000));
-        return;
-      }
+        const html = await waitPastChallenge(page);
+        const title = await page.title();
 
-      // Resolve Capterra search → first product reviews URL (single follow-up)
-      if (ref.source === "capterra" && request.url.includes("/search")) {
-        const links = await page
-          .locator('a[href*="capterra.com/p/"]')
-          .evaluateAll((anchors) =>
-            anchors
-              .map((a) => (a as HTMLAnchorElement).href)
-              .filter((href) => /\/p\/\d+\//.test(href)),
-          );
-        const first = links[0];
-        if (!first) {
-          errors.push("Capterra search returned no product links");
+        if (isBlockedContent(html, title)) {
+          errors.push(`Blocked on ${request.url} (status=${status || "n/a"}, title=${title.slice(0, 60)})`);
+          session?.retire();
+          await page.waitForTimeout(8000 + Math.floor(Math.random() * 4000));
           return;
         }
-        resolvedUrl = first.includes("/reviews")
-          ? first
-          : `${first.replace(/\/$/, "")}/reviews/`;
-        const idSlug = /\/p\/(\d+)\/([a-z0-9-]+)/i.exec(resolvedUrl);
-        if (idSlug) {
-          productKey = `${idSlug[1]}-${idSlug[2].toLowerCase()}`;
+
+        if (ref.source === "capterra" && request.url.includes("/search")) {
+          const links = await page
+            .locator('a[href*="capterra.com/p/"]')
+            .evaluateAll((anchors) =>
+              anchors
+                .map((a) => (a as HTMLAnchorElement).href)
+                .filter((href) => /\/p\/\d+\//.test(href)),
+            );
+          const first = links[0];
+          if (!first) {
+            errors.push("Capterra search returned no product links");
+            return;
+          }
+          resolvedUrl = first.includes("/reviews")
+            ? first
+            : `${first.replace(/\/$/, "")}/reviews/`;
+          const idSlug = /\/p\/(\d+)\/([a-z0-9-]+)/i.exec(resolvedUrl);
+          if (idSlug) {
+            productKey = `${idSlug[1]}-${idSlug[2].toLowerCase()}`;
+          }
+          await humanPause(page);
+          await activeCrawler.addRequests([withPageQuery(resolvedUrl, 1)]);
+          return;
         }
+
         await humanPause(page);
-        await activeCrawler.addRequests([withPageQuery(resolvedUrl, 1)]);
-        return;
-      }
 
-      await humanPause(page);
+        let batch = extractReviewsFromHtml(html, ref.source as Source);
 
-      let batch = extractReviewsFromHtml(html, ref.source as Source);
-
-      if (batch.length === 0 && ref.source === "capterra") {
-        const loadMore = page
-          .locator('button:has-text("Load more"), button:has-text("Show more")')
-          .first();
-        if ((await loadMore.count()) > 0) {
-          try {
-            await loadMore.click({ timeout: 5000 });
-            await page.waitForTimeout(2000 + Math.floor(Math.random() * 1500));
-            batch = extractReviewsFromHtml(await page.content(), "capterra");
-          } catch {
-            /* ignore */
+        if (batch.length === 0 && ref.source === "capterra") {
+          const loadMore = page
+            .locator('button:has-text("Load more"), button:has-text("Show more")')
+            .first();
+          if ((await loadMore.count()) > 0) {
+            try {
+              await loadMore.click({ timeout: 5000 });
+              await page.waitForTimeout(2000 + Math.floor(Math.random() * 1500));
+              batch = extractReviewsFromHtml(await page.content(), "capterra");
+            } catch {
+              /* ignore */
+            }
           }
         }
-      }
 
-      const before = collected.length;
-      const filtered = filterByRating(batch, maxRating);
-      for (const review of filtered) {
-        if (seen.has(review.text)) continue;
-        seen.add(review.text);
-        collected.push(review);
-        if (collected.length >= maxReviews) break;
-      }
-      const added = collected.length - before;
+        if (batch.length === 0) {
+          errors.push(`No reviews parsed from ${request.url} (html=${html.length}b)`);
+        }
 
-      // Soft pagination: only request the next page if this one yielded new reviews
-      if (
-        added > 0 &&
-        collected.length < maxReviews &&
-        currentPage < pageLimit &&
-        !request.url.includes("/search")
-      ) {
-        currentPage += 1;
-        const nextUrl = withPageQuery(resolvedUrl, currentPage);
-        await humanPause(page);
-        await activeCrawler.addRequests([nextUrl]);
-      }
+        const before = collected.length;
+        const filtered = filterByRating(batch, maxRating);
+        for (const review of filtered) {
+          if (seen.has(review.text)) continue;
+          seen.add(review.text);
+          collected.push(review);
+          if (collected.length >= maxReviews) break;
+        }
+        const added = collected.length - before;
+
+        if (
+          added > 0 &&
+          collected.length < maxReviews &&
+          currentPage < pageLimit &&
+          !request.url.includes("/search")
+        ) {
+          currentPage += 1;
+          await humanPause(page);
+          await activeCrawler.addRequests([withPageQuery(resolvedUrl, currentPage)]);
+        }
+      },
+      failedRequestHandler({ request }, error) {
+        errors.push(`${request.url}: ${error.message}`);
+      },
     },
-    failedRequestHandler({ request }, error) {
-      errors.push(`${request.url}: ${error.message}`);
-    },
-  });
+    configuration,
+  );
 
   await crawler.run(startUrls);
 
