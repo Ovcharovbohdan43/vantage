@@ -1,11 +1,22 @@
 import { serve } from "@hono/node-server";
 import { timingSafeEqual } from "node:crypto";
+import { existsSync } from "node:fs";
+import path from "node:path";
 import { Hono } from "hono";
 import { config, resolveProxies } from "./config.js";
 import { closePool } from "./db.js";
 import { collectRoutes } from "./routes/collect.js";
 
 const app = new Hono();
+
+function camoufoxBinaryPath(): string {
+  const dir = process.env.CAMOUFOX_INSTALL_DIR?.trim() || "/app/camoufox";
+  return path.join(dir, "camoufox-bin");
+}
+
+function camoufoxReady(): boolean {
+  return existsSync(camoufoxBinaryPath());
+}
 
 function apiKeyMatches(provided: string, expected: string): boolean {
   const a = Buffer.from(provided);
@@ -19,6 +30,8 @@ app.get("/health", (c) =>
     ok: true,
     service: "review-collector",
     proxies: config.proxyUrls.length,
+    camoufox: camoufoxReady(),
+    camoufoxPath: camoufoxBinaryPath(),
   }),
 );
 
@@ -57,6 +70,14 @@ const server = serve(
     console.log(`review-collector listening on 0.0.0.0:${info.port}`);
   },
 );
+
+if (camoufoxReady()) {
+  console.log(`camoufox: ready at ${camoufoxBinaryPath()}`);
+} else {
+  console.error(
+    `camoufox: MISSING at ${camoufoxBinaryPath()} — rebuild image with camoufox-js fetch`,
+  );
+}
 
 try {
   await resolveProxies();
