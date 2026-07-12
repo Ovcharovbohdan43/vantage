@@ -8,6 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import Profile
+from app.services.welcome_email import SIGNUP_BONUS_CREDITS, ensure_welcome_email
 
 ResearchPack = Literal["starter", "founder", "indie"]
 ResearchPlan = Literal["preview", "starter", "founder", "indie"]
@@ -71,10 +72,24 @@ async def get_or_create_profile(
         id=user_id,
         email=email or "",
         subscription_status="free",
+        starter_credits=SIGNUP_BONUS_CREDITS,
+        welcome_email_sent_at=None,
     )
     db.add(profile)
     await db.flush()
     return profile
+
+
+async def get_user_credits(
+    db: AsyncSession,
+    user_id: UUID,
+    email: str | None,
+) -> CreditsSnapshot:
+    profile = await get_or_create_profile(db, user_id, email)
+    if email and not (profile.email or "").strip():
+        profile.email = email
+    await ensure_welcome_email(db, profile)
+    return get_credits_snapshot(profile)
 
 
 def total_credits(profile: Profile) -> int:
@@ -98,15 +113,6 @@ def get_credits_snapshot(profile: Profile) -> CreditsSnapshot:
         can_run_preview=preview_available,
         can_run_full=total >= min(DEPTH_CREDIT_COSTS.values()),
     )
-
-
-async def get_user_credits(
-    db: AsyncSession,
-    user_id: UUID,
-    email: str | None,
-) -> CreditsSnapshot:
-    profile = await get_or_create_profile(db, user_id, email)
-    return get_credits_snapshot(profile)
 
 
 def add_pack_credits(profile: Profile, pack: ResearchPack) -> int:

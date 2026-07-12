@@ -21,7 +21,13 @@ Never put `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_JWT_SECRET`, `RESEND_API_KEY`, 
 
 - Tables `promo_codes` / `promo_code_redemptions` are backend-only (RLS on, no client policies).
 - Redeem only via authenticated `POST /api/v1/billing/promo/redeem`.
-- Seeded code: `TRYIT` → 2 starter credits (one redemption per user).
+- Seeded code: `TRYIT` → 2 starter credits (one redemption per user). Stacks on top of the signup bonus.
+
+## Signup bonus
+
+- Every new profile gets **2 starter credits** via `handle_new_user` / default.
+- Welcome email is sent once on first `/me` or `/billing/credits` call (`welcome_email_sent_at`).
+- Existing profiles were marked `welcome_email_sent_at = now()` so they are not re-emailed.
 
 ## Remaining hardening (ops)
 

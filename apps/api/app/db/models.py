@@ -18,9 +18,10 @@ class Profile(Base):
     stripe_customer_id: Mapped[str | None] = mapped_column(Text, nullable=True)
     stripe_subscription_id: Mapped[str | None] = mapped_column(Text, nullable=True)
     free_preview_used: Mapped[bool] = mapped_column(nullable=False, default=False)
-    starter_credits: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    starter_credits: Mapped[int] = mapped_column(Integer, nullable=False, default=2)
     founder_credits: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     indie_credits: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    welcome_email_sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
