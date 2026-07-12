@@ -99,9 +99,9 @@ export function LandingPage({ featuredArticles, packs }: LandingPageProps) {
                 </span>
               </div>
 
-              <h1 className="max-w-xl text-3xl font-bold leading-[1.15] tracking-tight md:text-5xl">
+              <h1 className="max-w-xl text-[1.7rem] font-bold leading-[1.2] tracking-tight sm:text-3xl md:text-5xl md:leading-[1.15]">
                 <TypewriterText
-                  text={"Find out if your idea is worth the next\n3 months"}
+                  text={"Find out if your idea\nis worth the next 3 months"}
                   energyGradient
                 />
               </h1>
@@ -120,10 +120,9 @@ export function LandingPage({ featuredArticles, packs }: LandingPageProps) {
                 </Link>
                 <Link
                   href="/library"
-                  className="inline-flex items-center justify-center gap-2 rounded-lg border border-white/15 px-7 py-3.5 text-sm font-bold text-[#e5e1e4] transition-colors hover:border-[#d0bcff]/50"
+                  className="inline-flex items-center justify-center rounded-lg border border-white/15 px-7 py-3.5 text-sm font-bold text-[#e5e1e4] transition-colors hover:border-[#d0bcff]/50"
                 >
                   Browse research library
-                  <span aria-hidden>→</span>
                 </Link>
               </div>
 
@@ -300,7 +299,7 @@ export function LandingPage({ featuredArticles, packs }: LandingPageProps) {
                   href="/library"
                   className="text-sm font-medium text-[#d0bcff] underline-offset-2 hover:underline"
                 >
-                  View all research →
+                  View all research
                 </Link>
               </div>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

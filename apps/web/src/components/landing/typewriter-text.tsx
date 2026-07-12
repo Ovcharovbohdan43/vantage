@@ -16,8 +16,8 @@ interface TypewriterTextProps {
   energyGradient?: boolean
 }
 
-function easeOutCubic(t: number) {
-  return 1 - Math.pow(1 - t, 3)
+function easeOutQuad(t: number) {
+  return 1 - (1 - t) * (1 - t)
 }
 
 function renderMultiline(value: string, mapLine?: (line: string, index: number) => ReactNode) {
@@ -25,33 +25,48 @@ function renderMultiline(value: string, mapLine?: (line: string, index: number) 
   return lines.map((line, index) => (
     <Fragment key={index}>
       {index > 0 ? <br /> : null}
-      {mapLine ? mapLine(line, index) : line}
+      {mapLine ? mapLine(line, index) : line || '\u00A0'}
     </Fragment>
   ))
+}
+
+function shouldSkipAnimation() {
+  if (typeof window === 'undefined') return true
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return true
+  // Narrow / low-power phones: character-by-character + background-clip reflows stutter.
+  if (window.matchMedia('(max-width: 640px)').matches) return true
+  return false
 }
 
 export function TypewriterText({
   text,
   accent,
   accentClassName = 'text-[#d0bcff]',
-  duration = 2600,
-  delay = 300,
+  duration = 2200,
+  delay = 200,
   className,
   showCursor = true,
   energyGradient = false,
 }: TypewriterTextProps) {
-  const [visibleCount, setVisibleCount] = useState(0)
-  const [done, setDone] = useState(false)
+  // SSR + first paint: full text (avoids empty hero / hydration mismatch).
+  // Desktop then replays the typewriter once after mount.
+  const [visibleCount, setVisibleCount] = useState(text.length)
+  const [done, setDone] = useState(true)
+  const [animate, setAnimate] = useState(false)
   const rafRef = useRef(0)
+  const countRef = useRef(text.length)
 
   useEffect(() => {
-    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    if (reducedMotion) {
+    if (shouldSkipAnimation()) {
+      countRef.current = text.length
       setVisibleCount(text.length)
       setDone(true)
+      setAnimate(false)
       return
     }
 
+    setAnimate(true)
+    countRef.current = 0
     setVisibleCount(0)
     setDone(false)
     const startedAt = performance.now() + delay
@@ -63,15 +78,19 @@ export function TypewriterText({
         return
       }
 
+      // Mild ease — cubic ease-out crawls on the last ~20% and feels "stuck".
       const progress = Math.min(elapsed / duration, 1)
-      const eased = easeOutCubic(progress)
-      const nextCount = Math.floor(eased * text.length)
+      const nextCount = progress >= 1 ? text.length : Math.floor(easeOutQuad(progress) * text.length)
 
-      setVisibleCount(nextCount)
+      if (nextCount !== countRef.current) {
+        countRef.current = nextCount
+        setVisibleCount(nextCount)
+      }
 
       if (progress < 1) {
         rafRef.current = requestAnimationFrame(tick)
       } else {
+        countRef.current = text.length
         setVisibleCount(text.length)
         setDone(true)
       }
@@ -82,7 +101,10 @@ export function TypewriterText({
   }, [text, duration, delay])
 
   const visible = text.slice(0, visibleCount)
-  const textTone = energyGradient ? 'landing-energy-text' : undefined
+  // Apply gradient only when complete on animated runs — mid-type background-clip
+  // reflows leave blank/glitchy glyphs on some mobile browsers.
+  const useGradient = energyGradient && (!animate || done)
+  const textTone = useGradient ? 'landing-energy-text' : energyGradient ? 'text-[#e5e1e4]' : undefined
   const resolvedAccentClass = energyGradient ? undefined : accentClassName
 
   function accentize(value: string) {
@@ -120,19 +142,25 @@ export function TypewriterText({
     return renderMultiline(value, (line) => accentize(line))
   }
 
+  const lineCount = text.split('\n').length
+
   return (
-    <span className={cn('inline-grid', className)}>
-      <span className={cn('col-start-1 row-start-1 invisible', textTone)} aria-hidden>
+    <span
+      className={cn('relative block w-full max-w-full text-balance', className)}
+      style={{ minHeight: `${lineCount * 1.15}em` }}
+    >
+      {/* Width/height reserve without a second wrapping layer fighting the typed text */}
+      <span className="invisible block whitespace-pre-line" aria-hidden>
         {renderContent(text)}
       </span>
-      <span className="col-start-1 row-start-1">
+      <span className="absolute inset-0 block whitespace-pre-line">
         <span className={textTone}>{renderContent(visible)}</span>
-        {showCursor && (
+        {showCursor && animate && !done && (
           <span
             className={cn(
               'ml-0.5 inline-block h-[0.85em] w-[2px] align-baseline',
               energyGradient ? 'bg-[#ff5ec8]' : 'bg-[#d0bcff]',
-              done ? 'opacity-0 transition-opacity duration-500' : 'animate-pulse',
+              'animate-pulse',
             )}
             aria-hidden
           />
