@@ -60,9 +60,14 @@ export const config = {
 
 export async function resolveProxies(): Promise<void> {
   if (config.webshareApiKey) {
-    const { fetchWebshareProxyUrls } = await import("./webshare.js");
-    config.proxyUrls = await fetchWebshareProxyUrls(config.webshareApiKey);
-    return;
+    try {
+      const { fetchWebshareProxyUrls } = await import("./webshare.js");
+      config.proxyUrls = await fetchWebshareProxyUrls(config.webshareApiKey);
+      return;
+    } catch (err) {
+      console.error("Webshare API failed — continuing without proxy pool:", err);
+      // Fall through to static env / warning below.
+    }
   }
   if (config.proxyUrls.length === 0) {
     console.warn("No Webshare proxy configured — crawling without proxy (likely blocked)");

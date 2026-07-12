@@ -5,6 +5,7 @@ FROM mcr.microsoft.com/playwright:v1.53.2-jammy
 WORKDIR /app
 
 ENV NODE_ENV=production
+ENV PORT=8080
 ENV CRAWLEE_STORAGE_DIR=/tmp/crawlee-storage
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 ENV CAMOUFOX_INSTALL_DIR=/opt/camoufox

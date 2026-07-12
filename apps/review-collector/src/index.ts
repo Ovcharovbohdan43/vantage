@@ -5,8 +5,6 @@ import { config, resolveProxies } from "./config.js";
 import { closePool } from "./db.js";
 import { collectRoutes } from "./routes/collect.js";
 
-await resolveProxies();
-
 const app = new Hono();
 
 function apiKeyMatches(provided: string, expected: string): boolean {
@@ -20,6 +18,7 @@ app.get("/health", (c) =>
   c.json({
     ok: true,
     service: "review-collector",
+    proxies: config.proxyUrls.length,
   }),
 );
 
@@ -51,10 +50,22 @@ process.on("unhandledRejection", (err) => {
   console.error("[unhandledRejection]", err);
 });
 
-const server = serve({ fetch: app.fetch, port: config.port }, (info) => {
-  console.log(`review-collector listening on :${info.port}`);
-  console.log(`proxy: ${config.proxyUrls.length > 0 ? `${config.proxyUrls.length} URL(s)` : "NONE"}`);
-});
+// Bind all interfaces first — Railway health/proxy must not wait on Webshare.
+const server = serve(
+  { fetch: app.fetch, port: config.port, hostname: "0.0.0.0" },
+  (info) => {
+    console.log(`review-collector listening on 0.0.0.0:${info.port}`);
+  },
+);
+
+try {
+  await resolveProxies();
+  console.log(
+    `proxy: ${config.proxyUrls.length > 0 ? `${config.proxyUrls.length} URL(s)` : "NONE"}`,
+  );
+} catch (err) {
+  console.error("[startup] proxy resolve failed (service stays up for /health):", err);
+}
 
 async function shutdown() {
   console.log("shutting down…");
