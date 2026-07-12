@@ -1,8 +1,8 @@
 # Review Collector (Crawlee + Webshare)
 
 Drop-in replacement for Apify `zen-studio/software-review-scraper`.
-Scrapes G2 / Capterra via Crawlee Playwright + Webshare rotating residential proxies,
-and caches reviews in Postgres (`review_products` / `catalog_reviews`).
+Scrapes G2 / Capterra via **Camoufox** (anti-detect Firefox) + Webshare rotating
+residential proxies, and caches reviews in Postgres (`review_products` / `catalog_reviews`).
 
 ## Endpoints
 
