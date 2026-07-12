@@ -13,13 +13,22 @@ ENV CAMOUFOX_INSTALL_DIR=/app/camoufox
 ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=0
 
 COPY apps/review-collector/package.json apps/review-collector/package-lock.json* ./
-# Install with devDeps so `tsc` is available; prune after compile.
-# Cache-bust comment: force Camoufox layer rebuild 2026-07-12b
+# camoufox-js fetch starts GeoIP/addon downloads without awaiting them, so the
+# CLI can exit non-zero even after a successful browser install. Tolerate that
+# and require the real binary instead.
 RUN npm install --include=dev \
-  && npx camoufox-js fetch \
-  && test -x /app/camoufox/camoufox-bin \
-  && ls -la /app/camoufox \
-  && npx camoufox-js path
+  && (CAMOUFOX_INSTALL_DIR=/app/camoufox PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=0 npx camoufox-js fetch || true) \
+  && mkdir -p /app/camoufox \
+  && if [ ! -e /app/camoufox/camoufox-bin ]; then \
+       FOUND="$(find /app/camoufox /root/.cache/camoufox -name 'camoufox-bin' -type f 2>/dev/null | head -n 1)"; \
+       echo "camoufox-bin search result: ${FOUND:-NONE}"; \
+       ls -la /app/camoufox 2>/dev/null || true; \
+       ls -la /root/.cache/camoufox 2>/dev/null || true; \
+       if [ -n "$FOUND" ]; then cp -a "$(dirname "$FOUND")/." /app/camoufox/; fi; \
+     fi \
+  && chmod -R a+rX /app/camoufox \
+  && test -e /app/camoufox/camoufox-bin \
+  && ls -la /app/camoufox/camoufox-bin
 
 COPY apps/review-collector/tsconfig.json ./
 COPY apps/review-collector/src ./src
