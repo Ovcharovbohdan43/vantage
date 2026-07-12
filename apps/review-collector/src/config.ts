@@ -46,10 +46,15 @@ export const config = {
   /** Filled at startup when WEBSHARE_API_KEY is set, otherwise from static env. */
   proxyUrls: buildStaticProxyUrls() as string[],
   maxNegativeRating: envInt("MAX_NEGATIVE_RATING", 3),
-  requestDelayMs: envInt("REQUEST_DELAY_MS", 1500),
+  /** Base pause between page actions (ms). Soft default to avoid G2 rate signals. */
+  requestDelayMs: envInt("REQUEST_DELAY_MS", 3500),
+  delayJitterMs: envInt("DELAY_JITTER_MS", 2500),
+  maxRequestsPerMinute: envInt("MAX_REQUESTS_PER_MINUTE", 8),
+  maxPagesPerProduct: envInt("MAX_PAGES_PER_PRODUCT", 8),
   pageTimeoutMs: envInt("PAGE_TIMEOUT_MS", 60_000),
   minReviewLength: envInt("MIN_REVIEW_LENGTH", 50),
   cacheTtlHours: envInt("CACHE_TTL_HOURS", 168),
+  headless: process.env.COLLECTOR_HEADLESS?.trim() !== "0",
 };
 
 export async function resolveProxies(): Promise<void> {

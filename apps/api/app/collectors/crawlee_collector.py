@@ -81,6 +81,15 @@ class CrawleeReviewCollector:
             self._client.close()
         self._client = None
 
+    def ping(self) -> bool:
+        if not self._client:
+            return False
+        try:
+            response = self._client.get("/health", timeout=5.0)
+            return response.status_code == 200
+        except httpx.HTTPError:
+            return False
+
     def collect_competitor(self, competitor: Competitor, *, max_reviews: int) -> CompetitorScrapeResult:
         if not self._client:
             raise RuntimeError("CrawleeReviewCollector must be used as a context manager")

@@ -116,6 +116,14 @@ def collect_reviews_for_project(
         return result
 
     with build_review_collector() as collector:
+        # Fail fast if the standalone collector is down (avoids N connection-refused loops).
+        if hasattr(collector, "ping") and not collector.ping():
+            result.errors.append(
+                "review-collector is unreachable at REVIEW_COLLECTOR_URL "
+                f"({settings.review_collector_url}). Start it with: npm run dev:collector"
+            )
+            return result
+
         for index, competitor in enumerate(selected, start=1):
             scrape_result = collector.collect_competitor(
                 competitor,

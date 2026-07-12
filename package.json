@@ -5,11 +5,11 @@
   "description": "AI Market Pain Research Platform",
   "scripts": {
     "dev": "node scripts/run-dev.mjs",
-    "dev:inner": "concurrently -k -n web,api,worker -c cyan,magenta,yellow \"node scripts/run-web.mjs\" \"node scripts/run-api.mjs\" \"node scripts/run-worker.mjs\"",
+    "dev:inner": "concurrently -k -n web,api,worker,collector -c cyan,magenta,yellow,green \"node scripts/run-web.mjs\" \"node scripts/run-api.mjs\" \"node scripts/run-worker.mjs\" \"node scripts/run-collector.mjs\"",
     "dev:web": "node scripts/run-web.mjs",
     "dev:api": "node scripts/run-api.mjs",
     "dev:worker": "node scripts/run-worker.mjs",
-    "dev:collector": "npm run dev --prefix apps/review-collector",
+    "dev:collector": "node scripts/run-collector.mjs",
     "setup": "node scripts/setup.mjs",
     "setup:api": "node scripts/setup.mjs",
     "setup:collector": "npm install --prefix apps/review-collector && npx --prefix apps/review-collector playwright install chromium",
