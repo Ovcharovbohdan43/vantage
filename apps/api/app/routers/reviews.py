@@ -25,10 +25,17 @@ async def list_reviews(
     offset: int = Query(default=0, ge=0),
 ):
     project_result = await db.execute(
-        select(Project.id).where(Project.id == project_id, Project.user_id == user.id)
+        select(Project).where(Project.id == project_id, Project.user_id == user.id)
     )
-    if not project_result.scalar_one_or_none():
+    project = project_result.scalar_one_or_none()
+    if not project:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+
+    if project.research_mode == "preview":
+        raise HTTPException(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+            detail="Full review evidence is available after unlocking the report.",
+        )
 
     if competitor_id:
         competitor_result = await db.execute(

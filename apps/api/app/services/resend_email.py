@@ -72,11 +72,7 @@ def _deliverability_headers(*, category: EmailCategory, to: list[str]) -> dict[s
 def verify_resend_webhook(*, payload: str, headers: dict[str, str]) -> dict[str, Any]:
     secret = settings.resend_webhook_secret.strip()
     if not secret:
-        if settings.debug:
-            logger.warning("RESEND_WEBHOOK_SECRET is empty — accepting webhook without verification")
-            import json
-
-            return json.loads(payload)
+        # Never fail-open — forged inbound events can relay phishing to users.
         raise ValueError("Webhook secret is not configured")
 
     webhook_headers = WebhookHeaders(

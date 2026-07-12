@@ -16,6 +16,9 @@ _JWKS_CACHE: dict[str, dict] = {}
 _JWKS_FETCHED_AT: float = 0.0
 _JWKS_TTL_SECONDS = 3600.0
 
+# Never trust client-supplied alg outside this allowlist (rejects alg=none / confusion).
+_ALLOWED_ASYMMETRIC = frozenset({"ES256", "RS256"})
+
 
 class AuthUser(BaseModel):
     id: UUID
@@ -24,7 +27,8 @@ class AuthUser(BaseModel):
 
 def _jwks_url() -> str | None:
     base = settings.supabase_url.rstrip("/")
-    if not base.startswith("http"):
+    if not base.startswith("https://"):
+        # Refuse cleartext JWKS fetch (MITM → forged tokens).
         return None
     return f"{base}/auth/v1/.well-known/jwks.json"
 
@@ -56,6 +60,17 @@ async def _get_jwk(kid: str, *, force_refresh: bool = False) -> dict | None:
     return _JWKS_CACHE.get(kid)
 
 
+def _assert_authenticated_claims(payload: dict) -> None:
+    role = payload.get("role")
+    if role is not None and role not in {"authenticated", "anon"}:
+        # Reject service_role / unexpected roles presented as user tokens.
+        if role == "service_role":
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+    # Supabase user access tokens use role=authenticated
+    if role and role != "authenticated":
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+
+
 async def _decode_token(token: str) -> dict:
     try:
         header = jwt.get_unverified_header(token)
@@ -65,6 +80,9 @@ async def _decode_token(token: str) -> dict:
     alg = header.get("alg", "")
     kid = header.get("kid")
 
+    if alg == "none" or not alg:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+
     if alg == "HS256":
         if not settings.supabase_jwt_secret:
             raise HTTPException(
@@ -72,7 +90,7 @@ async def _decode_token(token: str) -> dict:
                 detail="Auth not configured",
             )
         try:
-            return jwt.decode(
+            payload = jwt.decode(
                 token,
                 settings.supabase_jwt_secret,
                 algorithms=["HS256"],
@@ -80,6 +98,11 @@ async def _decode_token(token: str) -> dict:
             )
         except JWTError as exc:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token") from exc
+        _assert_authenticated_claims(payload)
+        return payload
+
+    if alg not in _ALLOWED_ASYMMETRIC:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
     # Asymmetric signing (ES256 / RS256) via Supabase JWKS
     if not kid:
@@ -92,7 +115,7 @@ async def _decode_token(token: str) -> dict:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Signing key not found")
 
     try:
-        return jwt.decode(
+        payload = jwt.decode(
             token,
             jwk,
             algorithms=[alg],
@@ -100,6 +123,9 @@ async def _decode_token(token: str) -> dict:
         )
     except JWTError as exc:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token") from exc
+
+    _assert_authenticated_claims(payload)
+    return payload
 
 
 async def get_current_user(

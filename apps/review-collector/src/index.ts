@@ -1,4 +1,5 @@
 import { serve } from "@hono/node-server";
+import { timingSafeEqual } from "node:crypto";
 import { Hono } from "hono";
 import { config, resolveProxies } from "./config.js";
 import { closePool } from "./db.js";
@@ -8,12 +9,17 @@ await resolveProxies();
 
 const app = new Hono();
 
+function apiKeyMatches(provided: string, expected: string): boolean {
+  const a = Buffer.from(provided);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(a, b);
+}
+
 app.get("/health", (c) =>
   c.json({
     ok: true,
     service: "review-collector",
-    proxyConfigured: config.proxyUrls.length > 0,
-    proxyCount: config.proxyUrls.length,
   }),
 );
 
@@ -23,8 +29,8 @@ app.use("/v1/*", async (c, next) => {
   }
   const header = c.req.header("authorization") || "";
   const token = header.startsWith("Bearer ") ? header.slice(7).trim() : header.trim();
-  const alt = c.req.header("x-api-key")?.trim();
-  if (token !== config.apiKey && alt !== config.apiKey) {
+  const alt = c.req.header("x-api-key")?.trim() || "";
+  if (!apiKeyMatches(token, config.apiKey) && !apiKeyMatches(alt, config.apiKey)) {
     return c.json({ error: "unauthorized" }, 401);
   }
   await next();
@@ -34,7 +40,7 @@ app.route("/v1/collect", collectRoutes);
 
 app.onError((err, c) => {
   console.error(err);
-  return c.json({ error: "internal_error", message: err.message }, 500);
+  return c.json({ error: "internal_error" }, 500);
 });
 
 // Keep the HTTP process alive if Camoufox/Playwright emits a bad pageerror.

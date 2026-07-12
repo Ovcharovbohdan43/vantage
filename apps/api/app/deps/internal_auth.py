@@ -1,3 +1,4 @@
+import hmac
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
@@ -17,5 +18,6 @@ async def require_service_role(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Service role auth is not configured",
         )
-    if credentials is None or credentials.credentials != secret:
+    token = (credentials.credentials if credentials else "") or ""
+    if not hmac.compare_digest(token, secret):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")

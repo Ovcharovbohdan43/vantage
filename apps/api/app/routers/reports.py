@@ -160,14 +160,51 @@ async def _enrich_competitors(
 async def _report_to_out(project: Project, report: Report, db: AsyncSession) -> ReportOut:
     rec = report.recommendations or {}
     access_level = "preview" if project.research_mode == "preview" else "full"
-    pain_snapshot = report.pain_clusters_snapshot or []
+    pain_snapshot = list(report.pain_clusters_snapshot or [])
+    competitor_snapshot = list(report.competitors_snapshot or [])
     preview_stats = None
+
     if access_level == "preview":
+        # Server-side paywall — never rely on the UI alone.
         preview_stats = {
-            "competitors_found": len(report.competitors_snapshot or []),
+            "competitors_found": len(competitor_snapshot),
             "reviews_analyzed": sum(cluster.get("frequency", 0) for cluster in pain_snapshot),
-            "top_pain_titles": [cluster.get("title") for cluster in pain_snapshot[:3]],
+            "top_pain_titles": [cluster.get("title") for cluster in pain_snapshot[:3] if cluster.get("title")],
         }
+        # Teaser only: titles + limited competitors, no quotes / verdict / feature ideas.
+        pain_snapshot = [
+            {
+                "id": cluster.get("id", ""),
+                "title": cluster.get("title", "Untitled pain"),
+                "description": None,
+                "frequency": cluster.get("frequency", 0),
+                "severity_score": None,
+                "emotional_intensity": None,
+                "commercial_opportunity": None,
+                "solution_direction": None,
+                "quotes": [],
+            }
+            for cluster in pain_snapshot[:3]
+        ]
+        competitor_snapshot = competitor_snapshot[:3]
+        rec = {
+            "verdict": "pivot",
+            "reasoning": "",
+            "next_steps": [],
+            "feature_ideas": [],
+        }
+        summary = (
+            report.summary.split(".")[0].strip() + "."
+            if report.summary
+            else "Unlock the full report for quotes, opportunity analysis, and a build/pivot recommendation."
+        )
+        if len(summary) < 40:
+            summary = (
+                "Preview shows market signals only. Unlock the full report for quotes, "
+                "opportunity analysis, and a build/pivot recommendation."
+            )
+    else:
+        summary = report.summary
 
     pain_clusters = [
         ReportPainCluster(
@@ -184,9 +221,22 @@ async def _report_to_out(project: Project, report: Report, db: AsyncSession) -> 
         for cluster in pain_snapshot
     ]
 
-    competitors = await _enrich_competitors(
-        db, project.id, report.competitors_snapshot or [], pain_snapshot
-    )
+    competitors = await _enrich_competitors(db, project.id, competitor_snapshot, pain_snapshot)
+    if access_level == "preview":
+        competitors = [
+            ReportCompetitorSnapshot(
+                id=c.id,
+                name=c.name,
+                url=c.url,
+                source=c.source,
+                rating=c.rating,
+                reviews_count=c.reviews_count,
+                negative_reviews_count=None,
+                top_complaints=[],
+            )
+            for c in competitors
+        ]
+
     stats = await _build_report_stats(db, project.id, report, pain_snapshot)
 
     return ReportOut(
@@ -201,15 +251,16 @@ async def _report_to_out(project: Project, report: Report, db: AsyncSession) -> 
         ),
         scores=ReportScores(
             market_saturation=report.market_saturation,
-            market_score=report.market_score,
-            risk_score=report.risk_score,
+            market_score=report.market_score if access_level == "full" else min(report.market_score, 55),
+            risk_score=report.risk_score if access_level == "full" else max(report.risk_score, 45),
             data_confidence=report.data_confidence,
         ),
-        summary=report.summary,
+        summary=summary,
         recommendations=ReportRecommendations(
             verdict=rec.get("verdict", "pivot"),
-            reasoning=rec.get("reasoning", ""),
-            next_steps=rec.get("next_steps", []) or [],
+            reasoning=rec.get("reasoning", "") if access_level == "full" else "",
+            next_steps=(rec.get("next_steps", []) or []) if access_level == "full" else [],
+            feature_ideas=(rec.get("feature_ideas", []) or []) if access_level == "full" else [],
         ),
         pain_clusters=pain_clusters,
         competitors=competitors,

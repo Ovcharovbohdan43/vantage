@@ -45,7 +45,12 @@ async def list_pain_clusters(
     user: AuthUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    await _get_owned_project(project_id, user, db)
+    project = await _get_owned_project(project_id, user, db)
+    if project.research_mode == "preview":
+        raise HTTPException(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+            detail="Full pain clusters are available after unlocking the report.",
+        )
 
     count_result = await db.execute(
         select(func.count()).select_from(PainCluster).where(PainCluster.project_id == project_id)
