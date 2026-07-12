@@ -1,4 +1,5 @@
 import logging
+import time
 from dataclasses import dataclass, field
 from math import ceil
 from uuid import UUID
@@ -149,6 +150,11 @@ def collect_reviews_for_project(
                     competitors_total=len(selected),
                     reviews_collected=result.total_reviews,
                 )
+
+            # Soft pacing between products — G2 bans networks that look like rapid bursts.
+            if index < len(selected):
+                pause = max(8.0, settings.scraper_request_delay_seconds * 4)
+                time.sleep(pause)
 
             if scrape_result.blocked and settings.scraper_stop_on_block:
                 result.warnings.append("scraper_blocked")

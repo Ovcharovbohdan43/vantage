@@ -1,9 +1,24 @@
-import { Configuration, PlaywrightCrawler, ProxyConfiguration, RequestQueue, log } from "crawlee";
+import {
+  Configuration,
+  PlaywrightCrawler,
+  ProxyConfiguration,
+  RequestQueue,
+  SessionError,
+  log,
+} from "crawlee";
 import { MemoryStorage } from "@crawlee/memory-storage";
 import type { ScrapedReview, Source } from "../config.js";
 import { config } from "../config.js";
-import { extractReviewsFromHtml, isBlockedContent } from "../extract.js";
+import {
+  extractReviewsFromHtml,
+  isBlockedContent,
+  isHardRestriction,
+} from "../extract.js";
 import { withPageQuery, type ProductRef } from "../product.js";
+import {
+  buildProxyUrlPool,
+  getCachedWebshareCredentials,
+} from "../webshare.js";
 
 export type CrawlResult = {
   reviews: ScrapedReview[];
@@ -27,6 +42,13 @@ window.chrome = { runtime: {} };
 `;
 
 function createProxyConfiguration(): ProxyConfiguration | undefined {
+  const creds = getCachedWebshareCredentials();
+  if (creds) {
+    // Fresh sticky-session URLs → each Crawlee session gets a new residential IP.
+    return new ProxyConfiguration({
+      proxyUrls: buildProxyUrlPool(creds, 32),
+    });
+  }
   if (config.proxyUrls.length === 0) {
     log.warning("No Webshare proxy configured — crawling without proxy (likely blocked)");
     return undefined;
@@ -37,27 +59,27 @@ function createProxyConfiguration(): ProxyConfiguration | undefined {
 }
 
 function jitterDelayMs(): number {
-  const base = Math.max(2000, config.requestDelayMs);
-  const jitter = Math.floor(Math.random() * config.delayJitterMs);
+  const base = Math.max(4000, config.requestDelayMs);
+  const jitter = Math.floor(Math.random() * Math.max(2000, config.delayJitterMs));
   return base + jitter;
 }
 
 async function humanPause(page: import("playwright").Page): Promise<void> {
-  await page.waitForTimeout(jitterDelayMs());
   try {
-    await page.mouse.wheel(0, 400 + Math.floor(Math.random() * 600));
-    await page.waitForTimeout(400 + Math.floor(Math.random() * 800));
+    await page.waitForTimeout(jitterDelayMs());
+    await page.mouse.wheel(0, 300 + Math.floor(Math.random() * 500));
+    await page.waitForTimeout(600 + Math.floor(Math.random() * 900));
   } catch {
-    /* ignore */
+    /* page may close during soft pauses */
   }
 }
 
 async function waitPastChallenge(page: import("playwright").Page): Promise<string> {
-  const deadline = Date.now() + Math.min(config.pageTimeoutMs, 70_000);
+  const deadline = Date.now() + Math.min(config.pageTimeoutMs, 45_000);
   try {
-    await page.waitForLoadState("domcontentloaded", { timeout: 25_000 });
+    await page.waitForLoadState("domcontentloaded", { timeout: 20_000 });
   } catch {
-    /* continue polling */
+    /* continue */
   }
 
   while (Date.now() < deadline) {
@@ -67,19 +89,24 @@ async function waitPastChallenge(page: import("playwright").Page): Promise<strin
       title = await page.title();
       html = await page.content();
     } catch {
-      await page.waitForTimeout(2000);
-      continue;
+      return "";
     }
+
+    // Hard G2 ban — waiting will not help; rotate IP immediately.
+    if (isHardRestriction(html, title)) {
+      return html;
+    }
+
     if (!isBlockedContent(html, title) && html.length >= 8000) {
       return html;
     }
-    // Cloudflare interstitial needs wall-clock time + occasional interaction
+
     try {
-      await page.mouse.move(120 + Math.random() * 400, 160 + Math.random() * 200);
+      await page.mouse.move(100 + Math.random() * 500, 120 + Math.random() * 300);
+      await page.waitForTimeout(2000 + Math.floor(Math.random() * 1500));
     } catch {
-      /* ignore */
+      return html || "";
     }
-    await page.waitForTimeout(2500 + Math.floor(Math.random() * 2000));
   }
   try {
     return await page.content();
@@ -93,7 +120,8 @@ function filterByRating(reviews: ScrapedReview[], maxRating: number): ScrapedRev
 }
 
 function maxPagesFor(maxReviews: number): number {
-  return Math.min(config.maxPagesPerProduct, Math.max(1, Math.ceil(maxReviews / 8) + 1));
+  // Soft: few pages, long pauses — reduces "rapid taps" signals on G2.
+  return Math.min(config.maxPagesPerProduct, Math.max(1, Math.ceil(maxReviews / 12)));
 }
 
 export async function crawlProductReviews(
@@ -115,7 +143,6 @@ export async function crawlProductReviews(
       ? [ref.url]
       : [withPageQuery(ref.url, 1)];
 
-  // Fresh in-memory queue per product — avoids stale "already handled" URLs from disk storage.
   const configuration = new Configuration({
     storageClient: new MemoryStorage({ persistStorage: false }),
     persistStorage: false,
@@ -128,26 +155,25 @@ export async function crawlProductReviews(
     {
       requestQueue,
       proxyConfiguration: createProxyConfiguration(),
-      maxRequestsPerCrawl: pageLimit + 3,
+      maxRequestsPerCrawl: pageLimit + 2,
       maxConcurrency: 1,
       maxRequestsPerMinute: config.maxRequestsPerMinute,
       maxRequestRetries: 2,
+      maxSessionRotations: 5,
       navigationTimeoutSecs: Math.ceil(config.pageTimeoutMs / 1000),
-      requestHandlerTimeoutSecs: Math.ceil(config.pageTimeoutMs / 1000) + 90,
+      requestHandlerTimeoutSecs: Math.ceil(config.pageTimeoutMs / 1000) + 60,
       useSessionPool: true,
       persistCookiesPerSession: true,
-      maxSessionRotations: 3,
-      // Do NOT leave blockedStatusCodes empty (Crawlee falls back to [401,403,429]).
-      // Omit 403 so Cloudflare's initial challenge can resolve in requestHandler.
       sessionPoolOptions: {
+        // Allow Cloudflare 403 challenge; rotate only on auth/rate-limit.
         blockedStatusCodes: [401, 429],
-        maxPoolSize: 10,
+        maxPoolSize: 20,
       },
       browserPoolOptions: {
         useFingerprints: true,
+        retireBrowserAfterPageCount: 1,
       },
       launchContext: {
-        // No custom userAgent — lets Crawlee fingerprint injection stay enabled.
         launchOptions: {
           headless: config.headless,
           args: LAUNCH_ARGS,
@@ -158,26 +184,36 @@ export async function crawlProductReviews(
           await page.addInitScript(STEALTH_INIT_SCRIPT);
         },
       ],
-      async requestHandler({ page, request, crawler: activeCrawler, session, response }) {
+      async requestHandler({ page, request, crawler: activeCrawler, session, proxyInfo }) {
         if (collected.length >= maxReviews) return;
 
-        await page.setViewportSize({ width: 1366, height: 900 });
-        pagesFetched += 1;
-
-        const status = typeof response?.status === "function" ? response.status() : 0;
-        if (status === 403 || status === 429) {
-          // Soft wait — CF interstitial often clears client-side after a few seconds.
-          await page.waitForTimeout(5000 + Math.floor(Math.random() * 3000));
+        try {
+          await page.setViewportSize({ width: 1366, height: 900 });
+        } catch {
+          throw new SessionError("Page closed before viewport set");
         }
 
-        const html = await waitPastChallenge(page);
-        const title = await page.title();
+        pagesFetched += 1;
+        log.info(`Crawl ${request.url} via ${proxyInfo?.url ? "webshare-session" : "direct"}`);
 
-        if (isBlockedContent(html, title)) {
-          errors.push(`Blocked on ${request.url} (status=${status || "n/a"}, title=${title.slice(0, 60)})`);
+        const html = await waitPastChallenge(page);
+        let title = "";
+        try {
+          title = await page.title();
+        } catch {
+          throw new SessionError("Page closed while reading title");
+        }
+
+        if (isHardRestriction(html, title)) {
+          errors.push(`G2 restriction page on ${request.url} — rotating residential IP`);
           session?.retire();
-          await page.waitForTimeout(8000 + Math.floor(Math.random() * 4000));
-          return;
+          throw new SessionError("G2 temporary restriction — session retired");
+        }
+
+        if (isBlockedContent(html, title) || html.length < 8000) {
+          errors.push(`Blocked/challenge on ${request.url} (title=${title.slice(0, 40)})`);
+          session?.retire();
+          throw new SessionError(`Soft block: ${title.slice(0, 40)}`);
         }
 
         if (ref.source === "capterra" && request.url.includes("/search")) {
@@ -208,7 +244,6 @@ export async function crawlProductReviews(
         await humanPause(page);
 
         let batch = extractReviewsFromHtml(html, ref.source as Source);
-
         if (batch.length === 0 && ref.source === "capterra") {
           const loadMore = page
             .locator('button:has-text("Load more"), button:has-text("Show more")')
@@ -216,7 +251,7 @@ export async function crawlProductReviews(
           if ((await loadMore.count()) > 0) {
             try {
               await loadMore.click({ timeout: 5000 });
-              await page.waitForTimeout(2000 + Math.floor(Math.random() * 1500));
+              await page.waitForTimeout(2500);
               batch = extractReviewsFromHtml(await page.content(), "capterra");
             } catch {
               /* ignore */
@@ -229,8 +264,7 @@ export async function crawlProductReviews(
         }
 
         const before = collected.length;
-        const filtered = filterByRating(batch, maxRating);
-        for (const review of filtered) {
+        for (const review of filterByRating(batch, maxRating)) {
           if (seen.has(review.text)) continue;
           seen.add(review.text);
           collected.push(review);
@@ -257,7 +291,6 @@ export async function crawlProductReviews(
   );
 
   await crawler.run(startUrls);
-
   collected.sort((a, b) => (a.rating ?? 99) - (b.rating ?? 99));
 
   return {

@@ -262,14 +262,27 @@ export function extractReviewsFromHtml(html: string, source: Source): ScrapedRev
   return reviews;
 }
 
+export function isHardRestriction(html: string, title: string): boolean {
+  const blob = `${title}\n${html}`.toLowerCase();
+  return (
+    blob.includes("access is temporarily restricted") ||
+    blob.includes("unusual activity from your device") ||
+    blob.includes("unusual activity from your network") ||
+    blob.includes("automated (bot) activity")
+  );
+}
+
 export function isBlockedContent(html: string, title: string): boolean {
+  if (isHardRestriction(html, title)) return true;
   const t = title.toLowerCase();
   const h = html.toLowerCase();
   if (
     t.includes("just a moment") ||
     t.includes("attention required") ||
     t.includes("access denied") ||
-    t.includes("cf-browser-verification")
+    t.includes("cf-browser-verification") ||
+    t === "g2.com" ||
+    t === "capterra.com"
   ) {
     return true;
   }
