@@ -23,6 +23,7 @@ class PageFetcher:
         self._playwright: Playwright | None = None
         self._browser: Browser | None = None
         self._page: Page | None = None
+        self._playwright_failed = False
 
     def __enter__(self) -> PageFetcher:
         return self
@@ -32,9 +33,15 @@ class PageFetcher:
 
     def close(self) -> None:
         if self._browser:
-            self._browser.close()
+            try:
+                self._browser.close()
+            except Exception:  # noqa: BLE001
+                pass
         if self._playwright:
-            self._playwright.stop()
+            try:
+                self._playwright.stop()
+            except Exception:  # noqa: BLE001
+                pass
         self._browser = None
         self._playwright = None
         self._page = None
@@ -42,13 +49,17 @@ class PageFetcher:
     def _ensure_playwright(self) -> Page | None:
         if self._page:
             return self._page
+        if self._playwright_failed:
+            return None
         try:
             self._playwright = sync_playwright().start()
             self._browser = launch_stealth_browser(self._playwright)
             self._page = new_stealth_context(self._browser).new_page()
             return self._page
         except Exception as exc:  # noqa: BLE001 — fall back to httpx-only if Playwright unavailable
+            self._playwright_failed = True
             logger.warning("Playwright unavailable for page fetch: %s", exc)
+            self.close()
             return None
 
     def fetch_html(self, url: str) -> str | None:

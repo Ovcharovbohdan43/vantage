@@ -138,7 +138,10 @@ def discover_competitors_for_project(
                 category=project.category,
             )
             if not page:
-                logger.info("Could not validate competitor page for %s", suggestion.name)
+                logger.info(
+                    "Could not live-validate competitor page for %s (likely blocked) — soft-accept if possible",
+                    suggestion.name,
+                )
                 continue
 
             if any(existing_page.url == page.url for existing_page in validated_pages):

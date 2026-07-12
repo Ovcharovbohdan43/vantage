@@ -1,4 +1,5 @@
 import json
+import logging
 import re
 from dataclasses import dataclass
 
@@ -16,6 +17,8 @@ from app.services.review_sources import (
     extract_g2_product_links,
     parse_review_source_url,
 )
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_HEADERS = {
     "User-Agent": (
@@ -190,6 +193,49 @@ def fetch_and_validate_page(
     )
 
 
+def soft_accept_competitor_page(
+    *,
+    name: str,
+    sources: list[str],
+    description: str | None = None,
+    category: str | None = None,
+    explicit_urls: list[str] | None = None,
+) -> ValidatedCompetitorPage | None:
+    """Accept a best-effort product URL without live HTML.
+
+    Railway/datacenter IPs are routinely 403'd by G2/Capterra during discovery.
+    Review collection uses Camoufox + residential proxies and can resolve/scrape later.
+    """
+    resolved_name = name.strip()
+    if not resolved_name:
+        return None
+
+    for raw_url in explicit_urls or []:
+        parsed = parse_review_source_url(raw_url)
+        if parsed and _host_allowed(parsed.url):
+            return ValidatedCompetitorPage(
+                name=resolved_name,
+                url=parsed.url,
+                source=parsed.source,
+                description=description,
+                category=category,
+            )
+
+    if "g2" in sources:
+        for candidate in build_g2_candidate_urls(resolved_name):
+            parsed = parse_review_source_url(candidate)
+            if parsed:
+                return ValidatedCompetitorPage(
+                    name=resolved_name,
+                    url=parsed.url,
+                    source="g2",
+                    description=description,
+                    category=category,
+                )
+
+    return None
+
+
 def resolve_competitor_page(
     fetcher: PageFetcher,
     *,
@@ -261,7 +307,14 @@ def resolve_competitor_page(
                 if validated:
                     return validated
 
-    return None
+    # Live validation blocked (typical on Railway) — still enqueue for review-collector.
+    return soft_accept_competitor_page(
+        name=name,
+        sources=sources,
+        description=description,
+        category=category,
+        explicit_urls=explicit_urls,
+    )
 
 
 def validate_manual_competitor_url(
@@ -276,6 +329,13 @@ def validate_manual_competitor_url(
         raise ValueError("URL must be a G2 or Capterra product page")
 
     validated = fetch_and_validate_page(fetcher, name=name, url=parsed.url, category=category)
-    if not validated:
-        raise ValueError("Could not verify product page on G2 or Capterra")
-    return validated
+    if validated:
+        return validated
+
+    # Accept well-formed product URLs even when G2/Capterra block the worker IP.
+    return ValidatedCompetitorPage(
+        name=name.strip() or parsed.slug or "Competitor",
+        url=parsed.url,
+        source=parsed.source,
+        category=category,
+    )
