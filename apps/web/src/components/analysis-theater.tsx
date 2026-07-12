@@ -29,11 +29,24 @@ interface AnalysisTheaterProps {
   stage: ResearchStage
   competitors: Competitor[]
   competitorsLoading?: boolean
+  startedAt?: string | null
+  stats?: {
+    reviewsCollected: number
+    patternsFound: number
+    competitorsChecked: number
+    competitorsTotal: number
+  }
   onCancel?: () => void
   cancelPending?: boolean
   cancelConfirm?: boolean
   onCancelConfirm?: () => void
   onCancelDismiss?: () => void
+}
+
+function formatElapsed(totalSeconds: number): string {
+  const mins = Math.floor(totalSeconds / 60)
+  const secs = totalSeconds % 60
+  return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
 }
 
 function stageRank(stage: ResearchStage): number {
@@ -46,6 +59,8 @@ export function AnalysisTheater({
   stage,
   competitors,
   competitorsLoading,
+  startedAt,
+  stats,
   onCancel,
   cancelPending,
   cancelConfirm,
@@ -54,6 +69,7 @@ export function AnalysisTheater({
 }: AnalysisTheaterProps) {
   const copy = getAnalysisLoadingCopy(stage)
   const [tipIndex, setTipIndex] = useState(0)
+  const [elapsedSec, setElapsedSec] = useState(0)
   const currentRank = stageRank(stage)
 
   useEffect(() => {
@@ -68,7 +84,23 @@ export function AnalysisTheater({
     return () => clearInterval(timer)
   }, [copy.tips.length, stage])
 
+  useEffect(() => {
+    const origin = startedAt ? new Date(startedAt).getTime() : Date.now()
+    const tick = () => {
+      setElapsedSec(Math.max(0, Math.floor((Date.now() - origin) / 1000)))
+    }
+    tick()
+    const timer = setInterval(tick, 1000)
+    return () => clearInterval(timer)
+  }, [startedAt])
+
   const tip = copy.tips[tipIndex] ?? copy.tips[0]
+  const liveStats = {
+    reviewsCollected: stats?.reviewsCollected ?? 0,
+    patternsFound: stats?.patternsFound ?? 0,
+    competitorsChecked: stats?.competitorsChecked ?? competitors.length,
+    competitorsTotal: Math.max(stats?.competitorsTotal ?? 0, competitors.length),
+  }
 
   return (
     <div className="fixed inset-0 z-40 flex flex-col bg-[#0a0a0c] text-[#e5e1e4]">
@@ -82,44 +114,64 @@ export function AnalysisTheater({
           href="/dashboard"
           className="text-sm text-white/45 transition-colors hover:text-white/80"
         >
-          ← Dashboard
+          Dashboard
         </Link>
-        {onCancel && (
-          <div>
-            {cancelConfirm ? (
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="hidden text-xs text-white/50 sm:inline">Stop this run?</span>
-                <button
-                  type="button"
-                  onClick={onCancelConfirm}
-                  disabled={cancelPending}
-                  className="rounded-md border border-red-400/40 px-3 py-1.5 text-xs font-medium text-red-300 transition-colors hover:bg-red-500/10 disabled:opacity-50"
-                >
-                  {cancelPending ? 'Cancelling…' : 'Yes, cancel'}
-                </button>
-                <button
-                  type="button"
-                  onClick={onCancelDismiss}
-                  disabled={cancelPending}
-                  className="rounded-md border border-white/15 px-3 py-1.5 text-xs font-medium text-white/70 transition-colors hover:border-white/30"
-                >
-                  Keep going
-                </button>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={onCancel}
-                className="rounded-md border border-white/12 px-3 py-1.5 text-xs font-medium text-white/55 transition-colors hover:border-white/25 hover:text-white/80"
-              >
-                Cancel
-              </button>
-            )}
+        <div className="flex items-center gap-4">
+          <div className="text-right">
+            <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-white/35">
+              Elapsed
+            </p>
+            <p className="font-mono text-sm tabular-nums tracking-wide text-[#ff8adf]">
+              {formatElapsed(elapsedSec)}
+            </p>
           </div>
-        )}
+          {onCancel && (
+            <div>
+              {cancelConfirm ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="hidden text-xs text-white/50 sm:inline">Stop this run?</span>
+                  <button
+                    type="button"
+                    onClick={onCancelConfirm}
+                    disabled={cancelPending}
+                    className="rounded-md border border-red-400/40 px-3 py-1.5 text-xs font-medium text-red-300 transition-colors hover:bg-red-500/10 disabled:opacity-50"
+                  >
+                    {cancelPending ? 'Cancelling…' : 'Yes, cancel'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onCancelDismiss}
+                    disabled={cancelPending}
+                    className="rounded-md border border-white/15 px-3 py-1.5 text-xs font-medium text-white/70 transition-colors hover:border-white/30"
+                  >
+                    Keep going
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={onCancel}
+                  className="rounded-md border border-white/12 px-3 py-1.5 text-xs font-medium text-white/55 transition-colors hover:border-white/25 hover:text-white/80"
+                >
+                  Cancel
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       </header>
 
-      <div className="relative z-10 mx-auto grid min-h-0 w-full max-w-[1280px] flex-1 grid-cols-1 gap-6 px-5 pb-8 md:px-8 lg:grid-cols-[220px_minmax(0,1fr)_240px] lg:gap-8 lg:pb-10">
+      <div className="relative z-10 mx-auto w-full max-w-[1280px] px-5 md:px-8">
+        <div className="rounded-xl border border-[#d0bcff]/20 bg-[#d0bcff]/8 px-4 py-3 text-left sm:px-5">
+          <p className="text-sm leading-relaxed text-[#e5e1e4]/90">
+            Data collection can take about{' '}
+            <span className="font-medium text-[#d0bcff]">10 minutes</span>. We gather and process
+            thousands of real customer reviews to find recurring pain patterns — not a quick skim.
+          </p>
+        </div>
+      </div>
+
+      <div className="relative z-10 mx-auto grid min-h-0 w-full max-w-[1280px] flex-1 grid-cols-1 gap-6 px-5 pb-8 pt-4 md:px-8 lg:grid-cols-[220px_minmax(0,1fr)_240px] lg:gap-8 lg:pb-10">
         {/* Competitors — no cards / no background */}
         <aside className="order-2 hidden min-h-0 flex-col lg:order-1 lg:flex">
           <p className="mb-4 font-mono text-[10px] uppercase tracking-[0.22em] text-white/35">
@@ -213,9 +265,10 @@ export function AnalysisTheater({
             )}
           </div>
 
-          {/* Mobile roadmap */}
+          {/* Mobile roadmap + counters */}
           <div className="mt-8 w-full max-w-lg lg:hidden">
             <TheaterRoadmap currentRank={currentRank} compact />
+            <TheaterLiveCounters stats={liveStats} className="mt-6" />
           </div>
         </section>
 
@@ -224,9 +277,58 @@ export function AnalysisTheater({
           <p className="mb-4 font-mono text-[10px] uppercase tracking-[0.22em] text-white/35">
             Research path
           </p>
-          <TheaterRoadmap currentRank={currentRank} />
+          <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+            <TheaterRoadmap currentRank={currentRank} />
+          </div>
+          <TheaterLiveCounters stats={liveStats} className="shrink-0 border-t border-white/8 pt-6" />
         </aside>
       </div>
+    </div>
+  )
+}
+
+function TheaterLiveCounters({
+  stats,
+  className,
+}: {
+  stats: {
+    reviewsCollected: number
+    patternsFound: number
+    competitorsChecked: number
+    competitorsTotal: number
+  }
+  className?: string
+}) {
+  const competitorLabel =
+    stats.competitorsTotal > 0
+      ? `${stats.competitorsChecked}/${stats.competitorsTotal}`
+      : String(stats.competitorsChecked)
+
+  return (
+    <div className={cn('space-y-4', className)}>
+      <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-white/35">
+        Live signal
+      </p>
+      <ul className="space-y-3">
+        <li className="flex items-baseline justify-between gap-3">
+          <span className="text-xs text-white/45">Reviews</span>
+          <span className="landing-energy-text font-mono text-lg tabular-nums tracking-tight">
+            {stats.reviewsCollected.toLocaleString()}
+          </span>
+        </li>
+        <li className="flex items-baseline justify-between gap-3">
+          <span className="text-xs text-white/45">Patterns</span>
+          <span className="font-mono text-lg tabular-nums tracking-tight text-[#d0bcff]">
+            {stats.patternsFound.toLocaleString()}
+          </span>
+        </li>
+        <li className="flex items-baseline justify-between gap-3">
+          <span className="text-xs text-white/45">Competitors</span>
+          <span className="font-mono text-lg tabular-nums tracking-tight text-white/85">
+            {competitorLabel}
+          </span>
+        </li>
+      </ul>
     </div>
   )
 }
