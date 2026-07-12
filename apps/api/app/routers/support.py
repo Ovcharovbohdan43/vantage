@@ -87,9 +87,18 @@ async def submit_support_request(
         ) from exc
     except RuntimeError as exc:
         logger.exception("Support email send failed for user %s", user_id)
+        raw = str(exc)
+        if "only send testing emails" in raw.lower() or "verify a domain" in raw.lower():
+            detail = (
+                "Support email is blocked by Resend test mode. "
+                "Verify a domain at resend.com/domains and set RESEND_FROM_EMAIL "
+                "to an address on that domain."
+            )
+        else:
+            detail = "Could not send support message"
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="Could not send support message",
+            detail=detail,
         ) from exc
 
     await db.commit()
