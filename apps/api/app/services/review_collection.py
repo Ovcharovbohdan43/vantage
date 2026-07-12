@@ -7,9 +7,8 @@ from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
-from app.collectors.apify_collector import ApifyReviewCollector
+from app.collectors.crawlee_collector import CrawleeReviewCollector
 from app.collectors.extraction import ScrapedReview, compute_content_hash
-from app.collectors.playwright_collector import PlaywrightReviewCollector
 from app.config import settings
 from app.db.models import Competitor, Project, Review
 from app.services.research_limits import (
@@ -33,16 +32,17 @@ class CollectionResult:
 
 
 def build_review_collector():
-    """Pick the review collector based on configuration.
+    """Use the standalone Crawlee + Webshare review-collector service.
 
-    Apify actors reliably bypass Cloudflare and paginate to real volume; the local
-    Playwright collector is a best-effort fallback when no Apify token is set.
+    This branch replaces Apify; there is no Playwright/Apify fallback.
     """
-    if settings.use_apify:
-        logger.info("Using Apify review collector (provider=%s)", settings.scraper_provider)
-        return ApifyReviewCollector()
-    logger.info("Using Playwright review collector (best-effort)")
-    return PlaywrightReviewCollector()
+    if not settings.use_crawlee:
+        raise RuntimeError(
+            "SCRAPER_PROVIDER=crawlee requires REVIEW_COLLECTOR_URL and "
+            "REVIEW_COLLECTOR_API_KEY (see apps/review-collector/README.md)."
+        )
+    logger.info("Using Crawlee review-collector at %s", settings.review_collector_url)
+    return CrawleeReviewCollector()
 
 
 def count_project_reviews(db: Session, project_id: UUID) -> int:

@@ -35,11 +35,14 @@ class Settings(BaseSettings):
     scraper_max_retries: int = 3
     scraper_stop_on_block: bool = False
 
-    # Review scraping provider: "apify" (via Apify actors, bypasses Cloudflare and
-    # paginates reliably) or "playwright" (local best-effort, flaky behind Cloudflare).
-    scraper_provider: str = "playwright"
+    # Review scraping provider. Branch test/crawlee-review-collector uses "crawlee" only
+    # (standalone Railway service). Legacy "apify" / "playwright" are not wired here.
+    scraper_provider: str = "crawlee"
     apify_token: str = ""
     apify_reviews_actor: str = "zen-studio/software-review-scraper"
+    review_collector_url: str = "http://localhost:8080"
+    review_collector_api_key: str = ""
+    review_collector_timeout_seconds: int = 600
     app_web_url: str = "http://localhost:3000"
 
     stripe_secret_key: str = ""
@@ -71,6 +74,14 @@ class Settings(BaseSettings):
     @property
     def use_apify(self) -> bool:
         return self.scraper_provider.strip().lower() == "apify" and bool(self.apify_token.strip())
+
+    @property
+    def use_crawlee(self) -> bool:
+        return (
+            self.scraper_provider.strip().lower() == "crawlee"
+            and bool(self.review_collector_url.strip())
+            and bool(self.review_collector_api_key.strip())
+        )
 
     @property
     def resend_configured(self) -> bool:

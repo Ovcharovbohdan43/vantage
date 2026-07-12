@@ -1,0 +1,188 @@
+import type { ScrapedReview, Source } from "./config.js";
+import { config } from "./config.js";
+import { getPool } from "./db.js";
+import { computeContentHash } from "./hash.js";
+import type { ProductRef } from "./product.js";
+
+export type CatalogProduct = {
+  id: string;
+  source: Source;
+  productKey: string;
+  url: string;
+  name: string | null;
+  lastScrapedAt: Date | null;
+};
+
+export async function upsertProduct(ref: ProductRef): Promise<CatalogProduct> {
+  const pool = getPool();
+  const result = await pool.query<{
+    id: string;
+    source: Source;
+    product_key: string;
+    url: string;
+    name: string | null;
+    last_scraped_at: Date | null;
+  }>(
+    `INSERT INTO public.review_products (source, product_key, url, name)
+     VALUES ($1, $2, $3, $4)
+     ON CONFLICT (source, product_key) DO UPDATE SET
+       url = EXCLUDED.url,
+       name = COALESCE(EXCLUDED.name, public.review_products.name)
+     RETURNING id, source, product_key, url, name, last_scraped_at`,
+    [ref.source, ref.productKey, ref.url, ref.nameHint],
+  );
+  const row = result.rows[0];
+  return {
+    id: row.id,
+    source: row.source,
+    productKey: row.product_key,
+    url: row.url,
+    name: row.name,
+    lastScrapedAt: row.last_scraped_at,
+  };
+}
+
+/** Fast path: count + fetch in one round-trip when cache is warm. */
+export async function getCachedReviews(
+  productId: string,
+  opts: { maxReviews: number; maxRating: number },
+): Promise<{ count: number; reviews: ScrapedReview[]; fresh: boolean }> {
+  const { maxReviews, maxRating } = opts;
+  const pool = getPool();
+  const ttlMs = config.cacheTtlHours * 60 * 60 * 1000;
+
+  const meta = await pool.query<{ last_scraped_at: Date | null; source: Source }>(
+    `SELECT last_scraped_at, source FROM public.review_products WHERE id = $1`,
+    [productId],
+  );
+  const product = meta.rows[0];
+  if (!product) return { count: 0, reviews: [], fresh: false };
+
+  const lastScraped = product.last_scraped_at ? new Date(product.last_scraped_at).getTime() : 0;
+  const fresh = lastScraped > 0 && Date.now() - lastScraped < ttlMs;
+
+  const countResult = await pool.query<{ count: string }>(
+    `SELECT COUNT(*)::text AS count
+     FROM public.catalog_reviews
+     WHERE product_id = $1
+       AND (rating IS NULL OR rating <= $2)`,
+    [productId, maxRating],
+  );
+  const count = Number.parseInt(countResult.rows[0]?.count ?? "0", 10);
+
+  if (!fresh || count < maxReviews) {
+    return { count, reviews: [], fresh };
+  }
+
+  const rows = await pool.query<{
+    text: string;
+    rating: number | null;
+    title: string | null;
+    author: string | null;
+    review_date: Date | null;
+    language: string | null;
+  }>(
+    `SELECT text, rating, title, author, review_date, language
+     FROM public.catalog_reviews
+     WHERE product_id = $1
+       AND (rating IS NULL OR rating <= $2)
+     ORDER BY rating ASC NULLS LAST, review_date DESC NULLS LAST
+     LIMIT $3`,
+    [productId, maxRating, maxReviews],
+  );
+
+  return {
+    count,
+    fresh,
+    reviews: rows.rows.map((r) => ({
+      source: product.source,
+      text: r.text,
+      rating: r.rating,
+      title: r.title,
+      author: r.author,
+      reviewDate: r.review_date ? new Date(r.review_date).toISOString() : null,
+      language: r.language,
+    })),
+  };
+}
+
+export async function saveReviews(
+  product: CatalogProduct,
+  reviews: ScrapedReview[],
+): Promise<number> {
+  if (reviews.length === 0) return 0;
+  const pool = getPool();
+  const client = await pool.connect();
+  let inserted = 0;
+  try {
+    await client.query("BEGIN");
+    for (const review of reviews) {
+      const text = review.text.trim();
+      if (text.length < config.minReviewLength) continue;
+      const hash = computeContentHash(product.productKey, product.source, text);
+      const result = await client.query(
+        `INSERT INTO public.catalog_reviews
+           (product_id, content_hash, rating, title, text, language, author, review_date)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         ON CONFLICT (product_id, content_hash) DO NOTHING`,
+        [
+          product.id,
+          hash,
+          review.rating,
+          review.title,
+          text,
+          review.language,
+          review.author,
+          review.reviewDate,
+        ],
+      );
+      inserted += result.rowCount ?? 0;
+    }
+    await client.query(
+      `UPDATE public.review_products SET last_scraped_at = NOW() WHERE id = $1`,
+      [product.id],
+    );
+    await client.query("COMMIT");
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
+  return inserted;
+}
+
+/** After scrape (or when cache was partial), return normalized slice for the caller. */
+export async function listReviews(
+  productId: string,
+  source: Source,
+  opts: { maxReviews: number; maxRating: number },
+): Promise<ScrapedReview[]> {
+  const { maxReviews, maxRating } = opts;
+  const pool = getPool();
+  const rows = await pool.query<{
+    text: string;
+    rating: number | null;
+    title: string | null;
+    author: string | null;
+    review_date: Date | null;
+    language: string | null;
+  }>(
+    `SELECT text, rating, title, author, review_date, language
+     FROM public.catalog_reviews
+     WHERE product_id = $1
+       AND (rating IS NULL OR rating <= $2)
+     ORDER BY rating ASC NULLS LAST, review_date DESC NULLS LAST
+     LIMIT $3`,
+    [productId, maxRating, maxReviews],
+  );
+  return rows.rows.map((r) => ({
+    source,
+    text: r.text,
+    rating: r.rating,
+    title: r.title,
+    author: r.author,
+    reviewDate: r.review_date ? new Date(r.review_date).toISOString() : null,
+    language: r.language,
+  }));
+}
