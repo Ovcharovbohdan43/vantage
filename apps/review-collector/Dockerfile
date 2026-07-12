@@ -10,9 +10,11 @@ ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 ENV CAMOUFOX_INSTALL_DIR=/opt/camoufox
 
 COPY apps/review-collector/package.json apps/review-collector/package-lock.json* ./
-# Install with devDeps so `tsc` is available; prune after compile.
+# Playwright base image often sets PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1, which makes
+# `camoufox-js fetch` a no-op — force the download and fail the build if missing.
 RUN npm install --include=dev \
-  && npx camoufox-js fetch
+  && PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=0 npx camoufox-js fetch \
+  && test -n "$(ls -A /opt/camoufox 2>/dev/null)"
 
 COPY apps/review-collector/tsconfig.json ./
 COPY apps/review-collector/src ./src

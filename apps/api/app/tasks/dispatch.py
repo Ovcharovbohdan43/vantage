@@ -25,7 +25,8 @@ def enqueue_research(job_id: str) -> None:
     pipeline in a background thread inside the API process (local dev default).
     """
     if settings.has_real_broker:
-        run_research.delay(job_id)
+        # Stable task_id = job UUID so cancel can revoke the running worker.
+        run_research.apply_async(args=[job_id], task_id=str(job_id))
     else:
         logger.info("No real broker configured — running research %s in-process", job_id)
         _run_in_thread(job_id)

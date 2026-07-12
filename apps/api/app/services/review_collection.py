@@ -14,6 +14,7 @@ from app.collectors.crawlee_collector import CrawleeReviewCollector
 from app.collectors.extraction import ScrapedReview, compute_content_hash
 from app.config import settings
 from app.db.models import Competitor, Project, Review
+from app.services.research_cancel import ResearchCancelled
 from app.services.research_limits import (
     MIN_COMPETITOR_SUCCESS_RATIO,
     MIN_REVIEW_LENGTH,
@@ -22,6 +23,20 @@ from app.services.research_limits import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _sleep_unless_cancelled(seconds: float, should_cancel) -> None:
+    """Sleep in short slices so cancel is noticed without waiting for Apify/Crawlee."""
+    if seconds <= 0:
+        return
+    deadline = time.monotonic() + seconds
+    while True:
+        if should_cancel and should_cancel():
+            raise ResearchCancelled()
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            return
+        time.sleep(min(0.5, remaining))
 
 
 @dataclass
@@ -125,6 +140,7 @@ def collect_reviews_for_project(
     competitors: list[Competitor],
     *,
     on_progress=None,
+    should_cancel=None,
 ) -> CollectionResult:
     """Crawlee/Webshare is primary; Apify runs only when a competitor yields no reviews."""
     limits = get_plan_limits(project)
@@ -136,6 +152,9 @@ def collect_reviews_for_project(
         competitors_with_reviews=0,
         pages_fetched=0,
     )
+
+    if should_cancel and should_cancel():
+        raise ResearchCancelled()
 
     if not selected:
         result.errors.append("No competitors available for review collection")
@@ -173,11 +192,17 @@ def collect_reviews_for_project(
         )
         return result
 
+    if should_cancel and should_cancel():
+        raise ResearchCancelled()
+
     primary_ctx = CrawleeReviewCollector() if crawlee_alive else nullcontext()
     fallback_ctx = ApifyReviewCollector() if apify_ready else nullcontext()
 
     with primary_ctx as primary, fallback_ctx as fallback:
         for index, competitor in enumerate(selected, start=1):
+            if should_cancel and should_cancel():
+                raise ResearchCancelled()
+
             scrape_result = None
             used_fallback = False
 
@@ -186,9 +211,13 @@ def collect_reviews_for_project(
                     competitor,
                     max_reviews=limits.max_reviews_per_competitor,
                 )
+                if should_cancel and should_cancel():
+                    raise ResearchCancelled()
                 result.pages_fetched += scrape_result.pages_fetched
                 result.errors.extend(scrape_result.errors)
                 if (not scrape_result.reviews) and fallback is not None:
+                    if should_cancel and should_cancel():
+                        raise ResearchCancelled()
                     logger.info(
                         "Crawlee returned 0 reviews for %s — trying Apify fallback",
                         competitor.name,
@@ -210,6 +239,9 @@ def collect_reviews_for_project(
                 result.errors.extend(scrape_result.errors)
             else:
                 continue
+
+            if should_cancel and should_cancel():
+                raise ResearchCancelled()
 
             if used_fallback:
                 result.warnings.append(f"apify_fallback:{competitor.name}")
@@ -237,7 +269,7 @@ def collect_reviews_for_project(
 
             if index < len(selected):
                 pause = max(4.0, settings.scraper_request_delay_seconds * 2)
-                time.sleep(pause)
+                _sleep_unless_cancelled(pause, should_cancel)
 
             if scrape_result.blocked and settings.scraper_stop_on_block:
                 result.warnings.append("scraper_blocked")

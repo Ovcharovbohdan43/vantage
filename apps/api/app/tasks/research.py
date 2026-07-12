@@ -15,7 +15,7 @@ from app.services.pain_analysis import run_pain_analysis
 from app.services.report_generation import generate_report_for_project
 from app.services.credits import mark_preview_used
 from app.tasks.library import enqueue_library_article
-from app.services.research_cancel import is_job_cancelled
+from app.services.research_cancel import ResearchCancelled, is_job_cancelled
 from app.services.research_limits import MIN_COMPETITOR_SUCCESS_RATIO
 from app.services.review_collection import collect_reviews_for_project
 
@@ -223,6 +223,7 @@ def run_research(self, job_id: str) -> None:
                 project,
                 competitors,
                 on_progress=on_collection_progress,
+                should_cancel=lambda: _exit_if_cancelled(uid),
             )
 
             # Best-effort scraping: G2/Capterra sit behind Cloudflare and may block us.
@@ -250,6 +251,8 @@ def run_research(self, job_id: str) -> None:
                 progress_pct=68,
                 stats=base_stats,
             )
+    except ResearchCancelled:
+        return
     except Exception as exc:  # noqa: BLE001
         with get_sync_db() as db:
             job = db.get(ResearchJob, uid)
