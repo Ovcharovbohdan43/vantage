@@ -88,8 +88,12 @@ async def get_user_credits(
     profile = await get_or_create_profile(db, user_id, email)
     if email and not (profile.email or "").strip():
         profile.email = email
-    await ensure_welcome_email(db, profile)
-    return get_credits_snapshot(profile)
+    sent = await ensure_welcome_email(db, profile)
+    snapshot = get_credits_snapshot(profile)
+    if sent:
+        # Persist welcome_email_sent_at + outbound email_messages row.
+        await db.commit()
+    return snapshot
 
 
 def total_credits(profile: Profile) -> int:
