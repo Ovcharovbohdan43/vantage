@@ -16,22 +16,35 @@ class ClusterQuote(BaseModel):
     text: str = Field(min_length=10, max_length=2000)
 
 
+class NamedSubTheme(BaseModel):
+    index: int = Field(ge=0)
+    title: str = Field(min_length=8, max_length=140)
+
+
+class NamedFeatureRequest(BaseModel):
+    label: str = Field(min_length=3, max_length=100)
+    candidate_indices: list[int] = Field(min_length=1, max_length=20)
+
+
 class ClusterAnalysisResult(BaseModel):
-    title: str = Field(min_length=3, max_length=120)
-    description: str = Field(min_length=20, max_length=800)
+    """LLM names pains/subthemes; counts come from code."""
+
+    title: str = Field(min_length=12, max_length=140)
+    description: str = Field(min_length=20, max_length=600)
+    why_opportunity: str = Field(min_length=20, max_length=500)
     severity_score: float = Field(ge=1, le=10)
     emotional_intensity: float = Field(ge=1, le=10)
     commercial_opportunity: float = Field(ge=1, le=10)
-    solution_direction: str = Field(min_length=10, max_length=400)
-    user_quotes: list[ClusterQuote] = Field(min_length=1, max_length=3)
+    sub_theme_titles: list[NamedSubTheme] = Field(default_factory=list, max_length=8)
+    feature_request_groups: list[NamedFeatureRequest] = Field(default_factory=list, max_length=8)
 
 
 MarketSaturation = Literal["HIGH", "MEDIUM", "LOW"]
-Verdict = Literal["build", "pivot", "dont_build"]
+Verdict = Literal["build", "pivot", "dont_build"]  # deprecated — kept for schema compat
 
 
 class ReportFeatureIdea(BaseModel):
-    """Concrete product/service idea that exploits a competitor weakness."""
+    """Deprecated — kept for older payloads."""
 
     pain_addressed: str = Field(min_length=3, max_length=160)
     feature_name: str = Field(min_length=3, max_length=100)
@@ -40,18 +53,21 @@ class ReportFeatureIdea(BaseModel):
 
 
 class ReportRecommendations(BaseModel):
-    verdict: Verdict
+    """Opportunity narrative only — no build/pivot verdict or interview advice."""
+
+    verdict: Verdict = "pivot"  # unused by UI; default for compat
     reasoning: str = Field(min_length=20, max_length=1600)
-    next_steps: list[str] = Field(min_length=1, max_length=6)
-    feature_ideas: list[ReportFeatureIdea] = Field(min_length=3, max_length=8)
+    next_steps: list[str] = Field(default_factory=list)
+    feature_ideas: list[ReportFeatureIdea] = Field(default_factory=list)
 
 
 class ReportSynthesisResult(BaseModel):
-    summary: str = Field(min_length=40, max_length=2500)
+    summary: str = Field(min_length=40, max_length=1800)
     market_saturation: MarketSaturation
     market_score: float = Field(ge=0, le=100)
     risk_score: float = Field(ge=0, le=100)
-    recommendations: ReportRecommendations
+    opportunity_reasoning: str = Field(min_length=20, max_length=1200)
+    recommendations: ReportRecommendations | None = None
 
 
 # --- Research Library (public articles) ---

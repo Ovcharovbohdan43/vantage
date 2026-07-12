@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from app.db.models import Competitor, PainCluster
+from app.services.report_analytics import opportunity_reasoning_from_analytics
 
 
 def clamp_score(value: float) -> float:
@@ -66,16 +67,6 @@ def compute_risk_score(*, market_saturation: str, competitors: list[Competitor])
     return clamp_score(score)
 
 
-def infer_verdict(*, market_score: float, risk_score: float, cluster_count: int) -> str:
-    if cluster_count == 0:
-        return "pivot"
-    if market_score >= 62 and risk_score <= 58:
-        return "build"
-    if market_score < 38 or risk_score >= 78:
-        return "dont_build"
-    return "pivot"
-
-
 @dataclass
 class HeuristicReport:
     summary: str
@@ -83,6 +74,7 @@ class HeuristicReport:
     market_score: float
     risk_score: float
     recommendations: dict
+    opportunity_reasoning: str
 
 
 def build_heuristic_report(
@@ -91,8 +83,9 @@ def build_heuristic_report(
     clusters: list[PainCluster],
     competitors: list[Competitor],
     reviews_collected: int,
-    warnings: list[str],
+    warnings: list[str] | None = None,  # kept for call-site compat; never shown to users
 ) -> HeuristicReport:
+    del warnings  # internal only — never append to user-facing summary
     saturation = compute_market_saturation(competitors)
     market_score = compute_market_score(
         market_saturation=saturation,
@@ -100,77 +93,51 @@ def build_heuristic_report(
         reviews_collected=reviews_collected,
     )
     risk_score = compute_risk_score(market_saturation=saturation, competitors=competitors)
-    verdict = infer_verdict(
-        market_score=market_score,
-        risk_score=risk_score,
-        cluster_count=len(clusters),
-    )
 
-    if clusters:
-        top = clusters[0]
+    negative_signals = sum(c.frequency for c in clusters)
+    top = clusters[0] if clusters else None
+    top_title = top.title if top else None
+    top_count = top.frequency if top else 0
+
+    if top:
         summary = (
-            f"Analysis of '{idea_title}' found {len(clusters)} recurring pain pattern(s) across "
-            f"{reviews_collected} collected reviews and {len(competitors)} competitors. "
-            f"The strongest signal is “{top.title}” ({top.frequency} mentions). "
+            f"Here’s what {reviews_collected} unhappy customers said about products near "
+            f"“{idea_title}”: {len(clusters)} recurring pain pattern(s) across "
+            f"{len(competitors)} competitors. The largest signal is “{top.title}” "
+            f"({top.frequency} mentions"
+            f"{f', {round(100 * top.frequency / negative_signals, 1)}% of clustered complaints' if negative_signals else ''}"
+            f")."
         )
     else:
         summary = (
-            f"Analysis of '{idea_title}' mapped {len(competitors)} competitors but could not derive "
+            f"Mapped {len(competitors)} competitors for “{idea_title}” but could not derive "
             f"reliable pain clusters from {reviews_collected} collected reviews. "
-            "Treat conclusions as directional only until more review data is available. "
+            "Treat conclusions as directional only until more review data is available."
         )
 
-    if warnings:
-        summary += f"Data limitations: {', '.join(warnings)}."
-
-    reasoning = (
-        f"Market saturation is {saturation} with {len(competitors)} tracked competitors. "
-        f"Opportunity score {market_score}/100 and risk score {risk_score}/100 "
-        f"based on competitor density and observed user pain signals."
+    reasoning = opportunity_reasoning_from_analytics(
+        market_score=market_score,
+        reviews_analyzed=reviews_collected,
+        negative_signals=negative_signals,
+        top_cluster_title=top_title,
+        top_cluster_count=top_count,
+        top_competitor=None,
+        top_competitor_count=0,
+        trend=None,
     )
-
-    next_steps = [
-        "Interview 5–10 buyers who mentioned the top pain cluster; ask what they tried instead.",
-        "Ship a thin wedge MVP that only solves the #1 complaint better than the incumbent.",
-        "Position against a named competitor weakness in your landing page headline.",
-    ]
-    if reviews_collected < 100:
-        next_steps.insert(0, "Collect more negative reviews (target 100+) before locking MVP scope.")
-
-    feature_ideas: list[dict] = []
-    for cluster in clusters[:4]:
-        title = cluster.title or "Recurring complaint"
-        direction = (cluster.solution_direction or "").strip()
-        feature_ideas.append(
-            {
-                "pain_addressed": title,
-                "feature_name": f"Fix for: {title[:60]}",
-                "how_it_works": (
-                    direction
-                    if len(direction) >= 40
-                    else (
-                        f"Build a focused workflow in '{idea_title}' that removes “{title}” from the "
-                        f"critical path — auto-detect the failure, offer a one-click recovery, and "
-                        f"log the outcome so users do not repeat the competitor friction."
-                    )
-                ),
-                "why_it_wins": (
-                    f"Competitors keep generating “{title}” complaints "
-                    f"({cluster.frequency} signals). Owning a cleaner path here is a wedge."
-                ),
-            }
-        )
 
     return HeuristicReport(
         summary=summary.strip(),
         market_saturation=saturation,
         market_score=market_score,
         risk_score=risk_score,
+        opportunity_reasoning=reasoning,
         recommendations={
-            "verdict": verdict,
+            "verdict": "pivot",
             "reasoning": reasoning,
-            "next_steps": next_steps,
-            "feature_ideas": feature_ideas,
+            "next_steps": [],
+            "feature_ideas": [],
+            "opportunity_reasoning": reasoning,
         },
     )
 

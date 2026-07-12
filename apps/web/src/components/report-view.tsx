@@ -16,14 +16,18 @@ import {
   ReportCustomerVoicePreview,
 } from '@/components/report/report-competitors'
 import { ReportDeepDive } from '@/components/report/report-deep-dive'
-import { ReportFeatureIdeas } from '@/components/report/report-feature-ideas'
 import {
   ReportAnalysisTimeline,
   ReportExecutiveSummary,
   ReportTimeSavedBanner,
-  ReportVerdictHero,
 } from '@/components/report/report-hero'
 import { ReportPainDistribution, ReportPainMap } from '@/components/report/report-pain-map'
+import {
+  ReportAiSummary,
+  ReportBiggestOpportunities,
+  ReportYearTrends,
+} from '@/components/report/report-opportunities'
+import { ReportOpportunitySize } from '@/components/report/report-opportunity-size'
 import { getProjectReport } from '@/lib/api/report'
 import { getCredits } from '@/lib/api/billing'
 import { ApiError } from '@/lib/api/client'
@@ -199,14 +203,21 @@ export function ReportView({ projectId }: ReportViewProps) {
               <span className="mb-1 block font-mono text-xs uppercase tracking-widest text-[#d0bcff]">
                 Free preview
               </span>
-              First screen shows market signals. Unlock for verdict, pain map, competitor depth, and all
-              customer quotes.
+              First screen shows market signals. Unlock for complaint breakdowns, competitor tables,
+              and all customer quotes.
             </div>
           )}
 
           <ReportExecutiveSummary report={data} isPreview={isPreview} />
-          <ReportVerdictHero report={data} isPreview={isPreview} />
-          <ReportFeatureIdeas report={data} isPreview={isPreview} />
+          <ReportOpportunitySize report={data} isPreview={isPreview} />
+          <ReportBiggestOpportunities
+            report={data}
+            isPreview={isPreview}
+            onReadEvidence={(clusterId) => openEvidence(clusterId)}
+          />
+          <ReportYearTrends report={data} isPreview={isPreview} />
+          <ReportCompetitorsSection competitors={data.competitors} isPreview={isPreview} />
+          <ReportAiSummary report={data} isPreview={isPreview} />
           <ReportAnalysisTimeline report={data} />
 
           <section className="mb-8">
@@ -224,8 +235,6 @@ export function ReportView({ projectId }: ReportViewProps) {
             isPreview={isPreview}
             onViewAll={() => openEvidence()}
           />
-
-          <ReportCompetitorsSection competitors={data.competitors} isPreview={isPreview} />
 
           <ReportDeepDive report={data} isPreview={isPreview} />
 

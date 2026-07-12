@@ -5,7 +5,6 @@ from app.services.market_scoring import (
     build_heuristic_report,
     compute_market_saturation,
     derive_data_confidence,
-    infer_verdict,
 )
 
 
@@ -46,37 +45,32 @@ def test_market_saturation_low_for_few_competitors() -> None:
     assert compute_market_saturation(competitors) == "LOW"
 
 
-def test_infer_verdict_build_when_opportunity_high_risk_low() -> None:
-    assert infer_verdict(market_score=70, risk_score=45, cluster_count=3) == "build"
-
-
 def test_heuristic_report_handles_zero_clusters() -> None:
     report = build_heuristic_report(
         idea_title="Test idea",
         clusters=[],
         competitors=[_competitor("A", 4.2)],
         reviews_collected=0,
-        warnings=["no_reviews_collected"],
+        warnings=["no_reviews_collected", "apify_fallback:Acme"],
     )
-    assert report.recommendations["verdict"] in {"pivot", "dont_build", "build"}
-    assert "0 collected reviews" in report.summary
-    assert isinstance(report.recommendations.get("feature_ideas"), list)
+    assert "apify_fallback" not in report.summary
+    assert "Data limitations" not in report.summary
+    assert report.recommendations["next_steps"] == []
+    assert report.recommendations["feature_ideas"] == []
+    assert report.opportunity_reasoning
 
 
-def test_heuristic_report_includes_feature_ideas_from_clusters() -> None:
+def test_heuristic_report_uses_customer_voice_summary() -> None:
     report = build_heuristic_report(
         idea_title="Better editor",
-        clusters=[_cluster("Export fails", 12, 8.0)],
+        clusters=[_cluster("Export fails silently", 12, 8.0)],
         competitors=[_competitor("A", 4.2)],
         reviews_collected=80,
         warnings=[],
     )
-    ideas = report.recommendations["feature_ideas"]
-    assert len(ideas) >= 1
-    assert ideas[0]["pain_addressed"]
-    assert ideas[0]["feature_name"]
-    assert len(ideas[0]["how_it_works"]) >= 40
-    assert ideas[0]["why_it_wins"]
+    assert "unhappy customers" in report.summary.lower() or "Export fails" in report.summary
+    assert report.recommendations["feature_ideas"] == []
+    assert "Interview" not in report.recommendations["reasoning"]
 
 
 def test_data_confidence_low_without_reviews() -> None:

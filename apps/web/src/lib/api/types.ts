@@ -100,6 +100,41 @@ export interface ReportQuote {
   rating: number | null
   competitor: string | null
   source: string | null
+  review_date?: string | null
+}
+
+export interface ReportSubTheme {
+  title: string
+  frequency: number
+  share_pct?: number | null
+}
+
+export interface ReportCompetitorComplaint {
+  name: string
+  complaints: number
+}
+
+export interface ReportTermCount {
+  term: string
+  count: number
+}
+
+export interface ReportFeatureRequest {
+  label: string
+  count: number
+  examples?: string[]
+}
+
+export interface ReportYearCount {
+  year: number
+  count: number
+}
+
+export interface ReportOpportunitySize {
+  reviews_analyzed: number
+  negative_signals: number
+  clusters_found: number
+  underserved_problems: number
 }
 
 export interface ReportPainCluster {
@@ -107,10 +142,21 @@ export interface ReportPainCluster {
   title: string
   description: string | null
   frequency: number
+  mention_count?: number | null
+  share_pct?: number | null
+  negative_share_pct?: number | null
   severity_score: number | null
   emotional_intensity: number | null
   commercial_opportunity: number | null
   solution_direction: string | null
+  trend?: 'growing' | 'flat' | 'declining' | null
+  year_counts?: ReportYearCount[]
+  date_coverage?: number | null
+  competitors?: ReportCompetitorComplaint[]
+  top_terms?: ReportTermCount[]
+  feature_requests?: ReportFeatureRequest[]
+  sub_themes?: ReportSubTheme[]
+  why_opportunity?: string | null
   quotes: ReportQuote[]
 }
 
@@ -168,6 +214,8 @@ export interface ResearchReport {
       how_it_works: string
       why_it_wins: string
     }>
+    opportunity_reasoning?: string | null
+    opportunity_size?: ReportOpportunitySize | null
   }
   pain_clusters: ReportPainCluster[]
   competitors: ReportCompetitor[]

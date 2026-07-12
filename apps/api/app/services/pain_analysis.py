@@ -24,9 +24,30 @@ class PainAnalysisResult:
     warnings: list[str] = field(default_factory=list)
 
 
+def _sub_themes_payload(cluster: BuiltCluster) -> list[dict]:
+    return [
+        {
+            "title": theme.title_placeholder,
+            "frequency": theme.frequency,
+            "review_ids": theme.review_ids,
+            "examples": theme.examples[:5],
+        }
+        for theme in cluster.sub_themes
+    ]
+
+
 def _save_clusters(db: Session, project_id: UUID, clusters: list[BuiltCluster]) -> None:
     db.execute(delete(PainCluster).where(PainCluster.project_id == project_id))
     for cluster in clusters:
+        # Persist nested themes inside examples metadata without a schema migration.
+        examples_payload: list | dict
+        if cluster.sub_themes:
+            examples_payload = {
+                "quotes": cluster.examples,
+                "sub_themes": _sub_themes_payload(cluster),
+            }
+        else:
+            examples_payload = cluster.examples
         db.add(
             PainCluster(
                 project_id=project_id,
@@ -34,7 +55,7 @@ def _save_clusters(db: Session, project_id: UUID, clusters: list[BuiltCluster]) 
                 description=None,
                 frequency=cluster.frequency,
                 severity_score=cluster.severity_score,
-                examples=cluster.examples,
+                examples=examples_payload,
                 representative_review_ids=cluster.representative_review_ids,
             )
         )

@@ -22,7 +22,7 @@ const ROADMAP_BLURBS: Record<(typeof ROADMAP)[number], string> = {
   collecting_reviews: 'What customers complain about',
   analyzing: 'Where the pain clusters form',
   generating_report: 'What you should do next',
-  completed: 'Your verdict is ready',
+  completed: 'Your research is ready',
 }
 
 interface AnalysisTheaterProps {

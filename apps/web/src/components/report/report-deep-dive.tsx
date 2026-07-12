@@ -4,24 +4,13 @@ import { useState } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { ReportCompetitorCharts, ReportPainCharts, ReportScoreCharts } from '@/components/report-charts'
 import type { ResearchReport } from '@/lib/api/types'
-import type { ReportVerdict } from '@/lib/api/types'
 import { cn } from '@/lib/utils'
-
-const VERDICT_LABELS: Record<ReportVerdict, string> = {
-  build: 'Build',
-  pivot: 'Pivot',
-  dont_build: "Don't build",
-}
-
-const VERDICT_STYLES: Record<ReportVerdict, string> = {
-  build: 'border-emerald-400/35 bg-emerald-400/10 text-emerald-300',
-  pivot: 'border-[#d0bcff]/40 bg-[#d0bcff]/12 text-[#d0bcff]',
-  dont_build: 'border-[#ff4ec8]/40 bg-[#ff4ec8]/12 text-[#ff8adf]',
-}
 
 export function ReportDeepDive({ report, isPreview }: { report: ResearchReport; isPreview: boolean }) {
   const [open, setOpen] = useState(false)
   const { scores, recommendations } = report
+  const reasoning =
+    recommendations.opportunity_reasoning || recommendations.reasoning || ''
 
   return (
     <section className="mb-8 overflow-hidden rounded-xl border border-white/10 bg-[#1c1b1d]/40">
@@ -32,11 +21,9 @@ export function ReportDeepDive({ report, isPreview }: { report: ResearchReport; 
       >
         <div>
           <p className="font-mono text-xs uppercase tracking-widest text-[#958ea0]">
-            Full market analysis
+            Charts & methodology
           </p>
-          <p className="mt-0.5 text-sm text-[#cbc3d7]">
-            Scores, risk breakdown, methodology & summary
-          </p>
+          <p className="mt-0.5 text-sm text-[#cbc3d7]">Score charts and competitor landscape</p>
         </div>
         <ChevronDown
           size={18}
@@ -55,58 +42,14 @@ export function ReportDeepDive({ report, isPreview }: { report: ResearchReport; 
             <ReportPainCharts clusters={report.pain_clusters} />
           )}
 
-          {!isPreview && (
+          {!isPreview && reasoning && (
             <div className="rounded-xl border border-white/10 bg-[#201f22]/60 p-5">
               <p className="mb-2 font-mono text-xs uppercase tracking-widest text-[#958ea0]">
-                Recommendation detail
+                Opportunity reasoning
               </p>
-              <span
-                className={cn(
-                  'mb-3 inline-flex rounded border px-2.5 py-1 text-sm font-semibold',
-                  VERDICT_STYLES[recommendations.verdict],
-                )}
-              >
-                {VERDICT_LABELS[recommendations.verdict]}
-              </span>
-              <p className="mb-4 text-sm leading-relaxed text-[#cbc3d7]">
-                {recommendations.reasoning}
-              </p>
-              {recommendations.next_steps.length > 0 && (
-                <ul className="space-y-1.5 border-t border-white/8 pt-4">
-                  {recommendations.next_steps.map((step) => (
-                    <li key={step} className="flex gap-2 text-sm text-[#e5e1e4]">
-                      <span className="shrink-0 text-[#d0bcff]">→</span>
-                      <span>{step}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {(recommendations.feature_ideas?.length ?? 0) > 0 && (
-                <div className="mt-5 space-y-3 border-t border-white/8 pt-4">
-                  <p className="font-mono text-[10px] uppercase tracking-widest text-[#958ea0]">
-                    Feature & service ideas
-                  </p>
-                  {recommendations.feature_ideas!.map((idea) => (
-                    <div key={idea.feature_name} className="rounded-lg border border-white/8 bg-[#1c1b1d]/50 p-3">
-                      <p className="text-sm font-medium text-[#e5e1e4]">{idea.feature_name}</p>
-                      <p className="mt-1 font-mono text-[10px] text-[#958ea0]">
-                        Attacks: {idea.pain_addressed}
-                      </p>
-                      <p className="mt-2 text-sm leading-relaxed text-[#cbc3d7]">{idea.how_it_works}</p>
-                      <p className="mt-2 text-sm text-[#d0bcff]/90">{idea.why_it_wins}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
+              <p className="text-sm leading-relaxed text-[#cbc3d7]">{reasoning}</p>
             </div>
           )}
-
-          <div>
-            <p className="mb-2 font-mono text-xs uppercase tracking-widest text-[#958ea0]">Summary</p>
-            <p className="text-sm leading-relaxed whitespace-pre-line text-[#cbc3d7]">
-              {report.summary}
-            </p>
-          </div>
 
           {!isPreview && report.competitors.length > 0 && (
             <ReportCompetitorCharts competitors={report.competitors} />

@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils'
 const PACK_COPY: Record<ResearchPack, { label: string; tagline: string }> = {
   starter: {
     label: 'Starter Research',
-    tagline: 'One full market analysis — quotes, pain map, and a build/pivot verdict.',
+    tagline: 'One full market analysis — quotes, pain map, and opportunity evidence.',
   },
   founder: {
     label: 'Founder Pack',

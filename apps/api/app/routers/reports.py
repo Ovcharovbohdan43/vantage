@@ -8,14 +8,20 @@ from app.db.models import Competitor, Project, Report, ResearchJob, Review
 from app.db.session import get_db
 from app.deps.auth import AuthUser, get_current_user
 from app.schemas.reports import (
+    ReportCompetitorComplaint,
     ReportCompetitorSnapshot,
+    ReportFeatureRequest,
     ReportIdea,
+    ReportOpportunitySize,
     ReportOut,
     ReportPainCluster,
     ReportQuote,
     ReportRecommendations,
     ReportScores,
     ReportStats,
+    ReportSubTheme,
+    ReportTermCount,
+    ReportYearCount,
 )
 
 router = APIRouter(prefix="/projects", tags=["reports"])
@@ -32,14 +38,6 @@ async def _get_owned_project(project_id: UUID, user: AuthUser, db: AsyncSession)
     if not project:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
     return project
-
-
-def _competition_level(risk_score: float, saturation: str) -> str:
-    if saturation == "HIGH" or risk_score >= 70:
-        return "High"
-    if saturation == "MEDIUM" or risk_score >= 45:
-        return "Medium"
-    return "Low"
 
 
 def _top_complaints_for_competitor(competitor_name: str, pain_clusters: list[dict]) -> list[str]:
@@ -64,6 +62,90 @@ def _top_complaints_for_competitor(competitor_name: str, pain_clusters: list[dic
             if len(complaints) >= 2:
                 break
     return complaints[:2]
+
+
+def _parse_pain_cluster(cluster: dict) -> ReportPainCluster:
+    quotes = []
+    for quote in cluster.get("quotes") or []:
+        if not quote.get("text"):
+            continue
+        quotes.append(
+            ReportQuote(
+                text=quote["text"],
+                rating=quote.get("rating"),
+                competitor=quote.get("competitor"),
+                source=quote.get("source"),
+                review_date=quote.get("review_date"),
+            )
+        )
+
+    sub_themes = [
+        ReportSubTheme(
+            title=str(theme.get("title") or "Sub-theme"),
+            frequency=int(theme.get("frequency") or 0),
+            share_pct=theme.get("share_pct"),
+        )
+        for theme in (cluster.get("sub_themes") or [])
+        if theme.get("title") or theme.get("frequency")
+    ]
+
+    competitors = [
+        ReportCompetitorComplaint(
+            name=str(row.get("name") or "Unknown"),
+            complaints=int(row.get("complaints") or 0),
+        )
+        for row in (cluster.get("competitors") or [])
+        if row.get("name")
+    ]
+
+    top_terms = [
+        ReportTermCount(term=str(row.get("term")), count=int(row.get("count") or 0))
+        for row in (cluster.get("top_terms") or [])
+        if row.get("term")
+    ]
+
+    feature_requests = [
+        ReportFeatureRequest(
+            label=str(row.get("label") or "Request"),
+            count=int(row.get("count") or 0),
+            examples=[str(x) for x in (row.get("examples") or []) if x][:3],
+        )
+        for row in (cluster.get("feature_requests") or [])
+        if row.get("label")
+    ]
+
+    year_counts = [
+        ReportYearCount(year=int(row.get("year")), count=int(row.get("count") or 0))
+        for row in (cluster.get("year_counts") or [])
+        if row.get("year") is not None
+    ]
+
+    trend = cluster.get("trend")
+    if trend not in {"growing", "flat", "declining"}:
+        trend = None
+
+    return ReportPainCluster(
+        id=cluster.get("id", ""),
+        title=cluster.get("title", "Untitled pain"),
+        description=cluster.get("description"),
+        frequency=cluster.get("frequency", 0),
+        mention_count=cluster.get("mention_count", cluster.get("frequency", 0)),
+        share_pct=cluster.get("share_pct"),
+        negative_share_pct=cluster.get("negative_share_pct"),
+        severity_score=cluster.get("severity_score"),
+        emotional_intensity=cluster.get("emotional_intensity"),
+        commercial_opportunity=cluster.get("commercial_opportunity"),
+        solution_direction=cluster.get("solution_direction"),
+        trend=trend,
+        year_counts=year_counts,
+        date_coverage=cluster.get("date_coverage"),
+        competitors=competitors,
+        top_terms=top_terms,
+        feature_requests=feature_requests,
+        sub_themes=sub_themes,
+        why_opportunity=cluster.get("why_opportunity"),
+        quotes=quotes,
+    )
 
 
 async def _build_report_stats(
@@ -157,69 +239,80 @@ async def _enrich_competitors(
     return enriched
 
 
+def _opportunity_size_from_rec(rec: dict, stats_fallback: dict | None = None) -> ReportOpportunitySize | None:
+    raw = rec.get("opportunity_size")
+    if isinstance(raw, dict):
+        return ReportOpportunitySize(
+            reviews_analyzed=int(raw.get("reviews_analyzed") or 0),
+            negative_signals=int(raw.get("negative_signals") or 0),
+            clusters_found=int(raw.get("clusters_found") or 0),
+            underserved_problems=int(raw.get("underserved_problems") or 0),
+        )
+    if stats_fallback:
+        return ReportOpportunitySize(**stats_fallback)
+    return None
+
+
 async def _report_to_out(project: Project, report: Report, db: AsyncSession) -> ReportOut:
-    rec = report.recommendations or {}
+    rec = dict(report.recommendations or {})
     access_level = "preview" if project.research_mode == "preview" else "full"
     pain_snapshot = list(report.pain_clusters_snapshot or [])
     competitor_snapshot = list(report.competitors_snapshot or [])
     preview_stats = None
 
     if access_level == "preview":
-        # Server-side paywall — never rely on the UI alone.
         preview_stats = {
             "competitors_found": len(competitor_snapshot),
             "reviews_analyzed": sum(cluster.get("frequency", 0) for cluster in pain_snapshot),
             "top_pain_titles": [cluster.get("title") for cluster in pain_snapshot[:3] if cluster.get("title")],
         }
-        # Teaser only: titles + limited competitors, no quotes / verdict / feature ideas.
         pain_snapshot = [
             {
                 "id": cluster.get("id", ""),
                 "title": cluster.get("title", "Untitled pain"),
                 "description": None,
                 "frequency": cluster.get("frequency", 0),
+                "mention_count": cluster.get("mention_count", cluster.get("frequency", 0)),
+                "share_pct": cluster.get("share_pct"),
                 "severity_score": None,
                 "emotional_intensity": None,
                 "commercial_opportunity": None,
                 "solution_direction": None,
                 "quotes": [],
+                "sub_themes": [],
+                "competitors": [],
+                "top_terms": [],
+                "feature_requests": [],
+                "year_counts": [],
+                "why_opportunity": None,
+                "trend": None,
             }
             for cluster in pain_snapshot[:3]
         ]
         competitor_snapshot = competitor_snapshot[:3]
+        opportunity_size = _opportunity_size_from_rec(rec)
         rec = {
             "verdict": "pivot",
             "reasoning": "",
             "next_steps": [],
             "feature_ideas": [],
+            "opportunity_reasoning": None,
+            "opportunity_size": opportunity_size.model_dump() if opportunity_size else rec.get("opportunity_size"),
         }
         summary = (
             report.summary.split(".")[0].strip() + "."
             if report.summary
-            else "Unlock the full report for quotes, opportunity analysis, and a build/pivot recommendation."
+            else "Unlock the full report for complaint breakdowns, competitor tables, and customer quotes."
         )
         if len(summary) < 40:
             summary = (
                 "Preview shows market signals only. Unlock the full report for quotes, "
-                "opportunity analysis, and a build/pivot recommendation."
+                "pain breakdowns, and opportunity evidence."
             )
     else:
         summary = report.summary
 
-    pain_clusters = [
-        ReportPainCluster(
-            id=cluster.get("id", ""),
-            title=cluster.get("title", "Untitled pain"),
-            description=cluster.get("description"),
-            frequency=cluster.get("frequency", 0),
-            severity_score=cluster.get("severity_score"),
-            emotional_intensity=cluster.get("emotional_intensity"),
-            commercial_opportunity=cluster.get("commercial_opportunity"),
-            solution_direction=cluster.get("solution_direction"),
-            quotes=[ReportQuote(**quote) for quote in cluster.get("quotes", [])],
-        )
-        for cluster in pain_snapshot
-    ]
+    pain_clusters = [_parse_pain_cluster(cluster) for cluster in pain_snapshot]
 
     competitors = await _enrich_competitors(db, project.id, competitor_snapshot, pain_snapshot)
     if access_level == "preview":
@@ -238,6 +331,21 @@ async def _report_to_out(project: Project, report: Report, db: AsyncSession) -> 
         ]
 
     stats = await _build_report_stats(db, project.id, report, pain_snapshot)
+    opportunity_size = _opportunity_size_from_rec(
+        rec,
+        {
+            "reviews_analyzed": stats.reviews_analyzed,
+            "negative_signals": stats.pain_signals,
+            "clusters_found": stats.clusters_found,
+            "underserved_problems": stats.major_problems,
+        },
+    )
+
+    opportunity_reasoning = (
+        rec.get("opportunity_reasoning")
+        or (rec.get("reasoning") if access_level == "full" else None)
+        or ""
+    )
 
     return ReportOut(
         id=report.id,
@@ -257,10 +365,12 @@ async def _report_to_out(project: Project, report: Report, db: AsyncSession) -> 
         ),
         summary=summary,
         recommendations=ReportRecommendations(
-            verdict=rec.get("verdict", "pivot"),
-            reasoning=rec.get("reasoning", "") if access_level == "full" else "",
-            next_steps=(rec.get("next_steps", []) or []) if access_level == "full" else [],
-            feature_ideas=(rec.get("feature_ideas", []) or []) if access_level == "full" else [],
+            verdict="pivot",
+            reasoning=opportunity_reasoning if access_level == "full" else "",
+            next_steps=[],
+            feature_ideas=[],
+            opportunity_reasoning=opportunity_reasoning if access_level == "full" else None,
+            opportunity_size=opportunity_size,
         ),
         pain_clusters=pain_clusters,
         competitors=competitors,

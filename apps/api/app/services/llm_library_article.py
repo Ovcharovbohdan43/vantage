@@ -13,9 +13,11 @@ logger = logging.getLogger(__name__)
 
 
 def _cluster_block(clusters: list[PainCluster]) -> str:
+    from app.services.llm_cluster_analysis import cluster_examples_list
+
     lines: list[str] = []
     for cluster in clusters[:12]:
-        examples = cluster.examples or []
+        examples = cluster_examples_list(cluster.examples)
         quote_lines = []
         for ex in examples[:4]:
             text = (ex.get("text") or "")[:300]
@@ -127,7 +129,9 @@ def build_fallback_library_article(
     for cluster in clusters[:8]:
         quotes: list[LibraryPainQuote] = []
         review_ids: list[str] = []
-        for ex in (cluster.examples or [])[:4]:
+        from app.services.llm_cluster_analysis import cluster_examples_list
+
+        for ex in cluster_examples_list(cluster.examples)[:4]:
             rid = str(ex.get("review_id") or cluster.id)
             review_ids.append(rid)
             quotes.append(
@@ -156,8 +160,11 @@ def build_fallback_library_article(
         )
 
     if not pain_points and clusters:
+        from app.services.llm_cluster_analysis import cluster_examples_list
+
         c = clusters[0]
-        sample_text = (c.examples[0].get("text") if c.examples else c.title)[:500]
+        sample_examples = cluster_examples_list(c.examples)
+        sample_text = (sample_examples[0].get("text") if sample_examples else c.title)[:500]
         sample_quote = LibraryPainQuote(
             text=sample_text,
             rating=2,

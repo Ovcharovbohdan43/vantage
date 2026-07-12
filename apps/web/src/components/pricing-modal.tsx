@@ -20,7 +20,7 @@ export function PricingModal({
   open,
   onClose,
   title = 'Get the full report',
-  message = 'Validate your idea before writing code. One credit = one complete market analysis with quotes, opportunity map, and build/pivot recommendation.',
+  message = 'Validate your idea before writing code. One credit = one complete market analysis with quotes, complaint breakdowns, and an opportunity score.',
   highlightPack = 'starter',
 }: PricingModalProps) {
   const [loadingPack, setLoadingPack] = useState<ResearchPack | null>(null)

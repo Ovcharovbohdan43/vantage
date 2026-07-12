@@ -214,7 +214,7 @@ export function NewResearchForm() {
         <p className="text-sm leading-relaxed text-[#cbc3d7]">
           {isFirstResearch
             ? 'Your first analysis is free — a quick teaser of the market before you spend credits.'
-            : 'Choose how deep to go. More reviews and competitors cost more credits, but give a stronger verdict.'}
+            : 'Choose how deep to go. More reviews and competitors cost more credits, but give stronger evidence.'}
         </p>
       </div>
 
@@ -324,7 +324,7 @@ export function NewResearchForm() {
                 <span className="font-mono text-xs text-[#4edea3]">$0 · once</span>
               </div>
               <p className="text-xs leading-relaxed text-[#cbc3d7]">
-                3 competitors, 5 reviews each, top 3 pain themes. No quotes or build/pivot verdict.
+                3 competitors, 5 reviews each, top 3 pain themes. No quotes or full complaint breakdowns.
                 After this, all research uses credits.
               </p>
             </div>

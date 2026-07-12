@@ -14,6 +14,7 @@ from app.services.library_categories import normalize_library_category
 from app.services.library_slug import ensure_unique_slug, slugify
 from app.services.llm_library_article import build_fallback_library_article, generate_library_article_with_llm
 from app.services.llm_library_sanitization import sanitize_library_article
+from app.services.llm_cluster_analysis import cluster_examples_list
 from app.services.llm_schemas import LibraryArticleDraft
 
 logger = logging.getLogger(__name__)
@@ -32,7 +33,7 @@ def _cluster_ids_for_review(db: Session, project_id: UUID, review_id: str) -> li
     clusters = db.scalars(select(PainCluster).where(PainCluster.project_id == project_id)).all()
     for cluster in clusters:
         rep_ids = [str(x) for x in (cluster.representative_review_ids or [])]
-        examples = cluster.examples or []
+        examples = cluster_examples_list(cluster.examples)
         if review_id in rep_ids or any(str(ex.get("review_id")) == review_id for ex in examples):
             cluster_ids.append(str(cluster.id))
     return cluster_ids
@@ -48,7 +49,7 @@ def _snapshot_from_cluster_examples(db: Session, project_id: UUID) -> list[dict]
 
     for cluster in clusters:
         cid = str(cluster.id)
-        for ex in cluster.examples or []:
+        for ex in cluster_examples_list(cluster.examples):
             text = (ex.get("text") or "").strip()
             if not text or text in seen_texts:
                 continue

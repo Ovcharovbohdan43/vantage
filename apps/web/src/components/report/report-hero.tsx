@@ -1,19 +1,13 @@
 'use client'
 
 import type { ResearchReport } from '@/lib/api/types'
-import type { MarketSaturation, ReportVerdict } from '@/lib/api/types'
+import type { MarketSaturation } from '@/lib/api/types'
 import { cn } from '@/lib/utils'
 
 const SATURATION_LABEL: Record<MarketSaturation, string> = {
   HIGH: 'Saturated',
   MEDIUM: 'Moderate',
   LOW: 'Open',
-}
-
-const VERDICT_LABEL: Record<ReportVerdict, string> = {
-  build: 'Build',
-  pivot: 'Pivot',
-  dont_build: "Don't build",
 }
 
 type MetricTone = 'good' | 'caution' | 'bad' | 'neutral'
@@ -48,13 +42,6 @@ function competitionTone(level: 'High' | 'Medium' | 'Low'): MetricTone {
   if (level === 'High') return 'bad'
   if (level === 'Medium') return 'caution'
   return 'good'
-}
-
-function verdictTone(verdict: ReportVerdict | 'locked'): MetricTone {
-  if (verdict === 'build') return 'good'
-  if (verdict === 'pivot') return 'caution'
-  if (verdict === 'dont_build') return 'bad'
-  return 'neutral'
 }
 
 function MetricCard({
@@ -123,7 +110,7 @@ export function ReportExecutiveSummary({
   report: ResearchReport
   isPreview: boolean
 }) {
-  const { scores, stats, recommendations } = report
+  const { scores, stats } = report
   const competition = competitionLevel(scores.risk_score, scores.market_saturation)
   const painTone: MetricTone =
     stats.pain_signals >= 80 ? 'good' : stats.pain_signals >= 30 ? 'caution' : 'bad'
@@ -131,11 +118,13 @@ export function ReportExecutiveSummary({
     stats.reviews_analyzed >= 150 ? 'good' : stats.reviews_analyzed >= 50 ? 'caution' : 'bad'
   const productsTone: MetricTone =
     stats.products_analyzed >= 10 ? 'good' : stats.products_analyzed >= 5 ? 'caution' : 'bad'
+  const opportunityTone: MetricTone =
+    scores.market_score >= 70 ? 'good' : scores.market_score >= 45 ? 'caution' : 'bad'
 
   return (
     <section className="mb-8">
       <h2 className="mb-3 font-mono text-xs uppercase tracking-widest text-[#958ea0]">
-        Executive summary
+        Market snapshot
       </h2>
       <div className="flex flex-wrap gap-2">
         <MetricCard
@@ -161,9 +150,9 @@ export function ReportExecutiveSummary({
           tone={productsTone}
         />
         <MetricCard
-          label="Recommendation"
-          value={isPreview ? 'Locked' : VERDICT_LABEL[recommendations.verdict]}
-          tone={verdictTone(isPreview ? 'locked' : recommendations.verdict)}
+          label="Opportunity"
+          value={isPreview ? 'Locked' : `${Math.round(scores.market_score)}/100`}
+          tone={isPreview ? 'neutral' : opportunityTone}
         />
       </div>
     </section>
@@ -177,94 +166,20 @@ export function ReportVerdictHero({
   report: ResearchReport
   isPreview: boolean
 }) {
-  const { recommendations, scores } = report
-  const verdict = recommendations.verdict
-
-  const VERDICT_ICON: Record<ReportVerdict, string> = {
-    build: '✓',
-    pivot: '⚠',
-    dont_build: '✕',
-  }
-
-  const VERDICT_STYLE: Record<ReportVerdict, string> = {
-    build: 'border-emerald-400/30 bg-emerald-400/10',
-    pivot: 'border-[#d0bcff]/35 bg-[#d0bcff]/10',
-    dont_build: 'border-[#ff4ec8]/35 bg-[#ff4ec8]/10',
-  }
-
-  const VERDICT_ACCENT: Record<ReportVerdict, string> = {
-    build: 'text-emerald-300',
-    pivot: 'text-[#d0bcff]',
-    dont_build: 'text-[#ff8adf]',
-  }
-
-  const oneLiner =
-    recommendations.reasoning.split(/[.!?]/)[0]?.trim() ||
-    "Unlock the full report for a build / pivot / don't-build recommendation."
-
-  return (
-    <section className="mb-8">
-      <h2 className="mb-3 font-mono text-xs uppercase tracking-widest text-[#958ea0]">
-        Should I build it?
-      </h2>
-      <div
-        className={cn(
-          'rounded-xl border p-6 md:p-8',
-          isPreview ? 'border-white/10 bg-[#1c1b1d]/80' : VERDICT_STYLE[verdict],
-        )}
-      >
-        {isPreview ? (
-          <p className="text-sm text-[#cbc3d7]">
-            Verdict locked in preview. Unlock to see whether to build, pivot, or walk away — with
-            confidence score and reasoning.
-          </p>
-        ) : (
-          <div className="flex flex-wrap items-start gap-8">
-            <div>
-              <p className="mb-2 font-mono text-[10px] uppercase tracking-widest text-[#958ea0]">
-                Verdict
-              </p>
-              <p
-                className={cn(
-                  'flex items-center gap-3 text-4xl font-semibold',
-                  VERDICT_ACCENT[verdict],
-                )}
-              >
-                <span aria-hidden>{VERDICT_ICON[verdict]}</span>
-                {VERDICT_LABEL[verdict]}
-              </p>
-            </div>
-            <div>
-              <p className="mb-2 font-mono text-[10px] uppercase tracking-widest text-[#958ea0]">
-                Confidence
-              </p>
-              <p className="text-4xl font-semibold tabular-nums text-[#e5e1e4]">
-                {report.stats.confidence_pct}%
-              </p>
-            </div>
-          </div>
-        )}
-        {!isPreview && (
-          <p className="mt-6 max-w-2xl text-base leading-relaxed text-[#cbc3d7]">{oneLiner}.</p>
-        )}
-        {!isPreview && scores.data_confidence === 'low' && (
-          <p className="mt-3 font-mono text-xs text-[#958ea0]">
-            Low data confidence — validate with interviews.
-          </p>
-        )}
-      </div>
-    </section>
-  )
+  // Kept for import compatibility — opportunity block replaced the BUILD hero.
+  void report
+  void isPreview
+  return null
 }
 
 export function ReportAnalysisTimeline({ report }: { report: ResearchReport }) {
-  const { stats, recommendations } = report
+  const { stats } = report
   const steps = [
     { label: `${stats.reviews_analyzed.toLocaleString()} reviews`, active: true },
     { label: `${stats.clusters_found} pain clusters`, active: stats.clusters_found > 0 },
     { label: `${stats.major_problems} major problems`, active: stats.major_problems > 0 },
-    { label: 'Risk analysis', active: true },
-    { label: 'Final recommendation', active: report.access_level === 'full' },
+    { label: 'Complaint analytics', active: true },
+    { label: 'Opportunity score', active: report.access_level === 'full' },
   ]
 
   return (
@@ -294,11 +209,6 @@ export function ReportAnalysisTimeline({ report }: { report: ResearchReport }) {
             </div>
           ))}
         </div>
-        {report.access_level === 'full' && recommendations.verdict && (
-          <p className="mt-4 font-mono text-xs text-[#958ea0]">
-            Outcome: {VERDICT_LABEL[recommendations.verdict]}
-          </p>
-        )}
       </div>
     </section>
   )
