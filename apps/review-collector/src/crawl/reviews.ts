@@ -17,6 +17,8 @@ const USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
   "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 
+// Kept for reference / future context overrides — crawler uses fingerprint injection instead.
+void USER_AGENT;
 const LAUNCH_ARGS = [
   "--disable-blink-features=AutomationControlled",
   "--no-sandbox",
@@ -57,9 +59,9 @@ async function humanPause(page: import("playwright").Page): Promise<void> {
 }
 
 async function waitPastChallenge(page: import("playwright").Page): Promise<string> {
-  const deadline = Date.now() + Math.min(config.pageTimeoutMs, 50_000);
+  const deadline = Date.now() + Math.min(config.pageTimeoutMs, 70_000);
   try {
-    await page.waitForLoadState("domcontentloaded", { timeout: 20_000 });
+    await page.waitForLoadState("domcontentloaded", { timeout: 25_000 });
   } catch {
     /* continue polling */
   }
@@ -71,14 +73,19 @@ async function waitPastChallenge(page: import("playwright").Page): Promise<strin
       title = await page.title();
       html = await page.content();
     } catch {
-      await page.waitForTimeout(1500);
+      await page.waitForTimeout(2000);
       continue;
     }
-    if (!isBlockedContent(html, title) && html.length >= 5000) {
+    if (!isBlockedContent(html, title) && html.length >= 8000) {
       return html;
     }
-    // Give Cloudflare JS challenge time to resolve instead of aborting on first 403.
-    await page.waitForTimeout(2000 + Math.floor(Math.random() * 1500));
+    // Cloudflare interstitial needs wall-clock time + occasional interaction
+    try {
+      await page.mouse.move(120 + Math.random() * 400, 160 + Math.random() * 200);
+    } catch {
+      /* ignore */
+    }
+    await page.waitForTimeout(2500 + Math.floor(Math.random() * 2000));
   }
   try {
     return await page.content();
@@ -135,10 +142,9 @@ export async function crawlProductReviews(
       requestHandlerTimeoutSecs: Math.ceil(config.pageTimeoutMs / 1000) + 90,
       useSessionPool: true,
       persistCookiesPerSession: true,
-      // Critical for G2/Cloudflare: do NOT leave blockedStatusCodes empty —
-      // empty falls back to defaults which include 403 and aborts before CF resolves.
-      retryOnBlocked: true,
       maxSessionRotations: 3,
+      // Do NOT leave blockedStatusCodes empty (Crawlee falls back to [401,403,429]).
+      // Omit 403 so Cloudflare's initial challenge can resolve in requestHandler.
       sessionPoolOptions: {
         blockedStatusCodes: [401, 429],
         maxPoolSize: 10,
@@ -147,7 +153,7 @@ export async function crawlProductReviews(
         useFingerprints: true,
       },
       launchContext: {
-        userAgent: USER_AGENT,
+        // No custom userAgent — lets Crawlee fingerprint injection stay enabled.
         launchOptions: {
           headless: config.headless,
           args: LAUNCH_ARGS,
