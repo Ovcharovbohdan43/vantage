@@ -16,6 +16,7 @@ export function LoginForm() {
   const searchParams = useSearchParams()
   const next = searchParams.get('next') ?? '/dashboard'
   const confirmed = searchParams.get('confirmed') === 'true'
+  const resetDone = searchParams.get('reset') === 'true'
   const authError = searchParams.get('error')
 
   const [email, setEmail] = useState('')
@@ -23,18 +24,24 @@ export function LoginForm() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [showConfirmedBanner, setShowConfirmedBanner] = useState(confirmed)
+  const [showResetBanner, setShowResetBanner] = useState(resetDone)
 
   useEffect(() => {
     setShowConfirmedBanner(confirmed)
   }, [confirmed])
 
   useEffect(() => {
-    if (!confirmed && !authError) return
+    setShowResetBanner(resetDone)
+  }, [resetDone])
+
+  useEffect(() => {
+    if (!confirmed && !authError && !resetDone) return
     const url = new URL(window.location.href)
     url.searchParams.delete('confirmed')
     url.searchParams.delete('error')
+    url.searchParams.delete('reset')
     window.history.replaceState({}, '', url.pathname + (url.searchParams.toString() ? `?${url.searchParams}` : ''))
-  }, [confirmed, authError])
+  }, [confirmed, authError, resetDone])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -76,11 +83,29 @@ export function LoginForm() {
         />
       )}
 
+      {showResetBanner && (
+        <AuthAlert
+          variant="success"
+          title="Password updated"
+          description="Your password has been changed. Sign in with your new password."
+          className="mb-6"
+        />
+      )}
+
       {authError === 'confirmation_failed' && (
         <AuthAlert
           variant="error"
           title="Confirmation link invalid or expired"
           description="Please sign up again or request a new confirmation email."
+          className="mb-6"
+        />
+      )}
+
+      {authError === 'recovery_failed' && (
+        <AuthAlert
+          variant="error"
+          title="Password reset link invalid or expired"
+          description="Request a new reset link from the forgot password page."
           className="mb-6"
         />
       )}
@@ -102,9 +127,17 @@ export function LoginForm() {
           />
         </div>
         <div className="space-y-2">
-          <label htmlFor="password" className={labelClass}>
-            Password
-          </label>
+          <div className="flex items-center justify-between gap-3">
+            <label htmlFor="password" className={labelClass}>
+              Password
+            </label>
+            <Link
+              href="/forgot-password"
+              className="text-xs font-medium text-[#d0bcff] hover:underline"
+            >
+              Forgot password?
+            </Link>
+          </div>
           <input
             id="password"
             type="password"

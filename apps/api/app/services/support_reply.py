@@ -112,6 +112,8 @@ async def route_support_inbound(db: AsyncSession, inbound: EmailMessage) -> bool
             html=html_body,
             text=text or None,
             reply_to=[reply_to],
+            category="transactional",
+            tags=[{"name": "type", "value": "support_reply"}],
         )
         logger.info("Relayed support reply to user %s", user_id)
         return True
@@ -138,6 +140,8 @@ async def route_support_inbound(db: AsyncSession, inbound: EmailMessage) -> bool
             html=relay_html,
             text=relay_text,
             reply_to=[reply_to],
+            category="transactional",
+            tags=[{"name": "type", "value": "support_followup"}],
         )
         logger.info("Relayed user follow-up to support inbox for %s", user_id)
         return True

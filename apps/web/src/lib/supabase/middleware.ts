@@ -33,26 +33,29 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser()
 
   const { pathname } = request.nextUrl
-  const isAuthRoute =
-    pathname.startsWith('/login') ||
-    pathname.startsWith('/signup') ||
-    pathname.startsWith('/auth')
-  const isProtected =
-    pathname.startsWith('/dashboard') ||
-    pathname.startsWith('/research')
+    const isAuthRoute =
+      pathname.startsWith('/login') ||
+      pathname.startsWith('/signup') ||
+      pathname.startsWith('/forgot-password') ||
+      pathname.startsWith('/auth')
+    const isPasswordRecovery = pathname.startsWith('/reset-password')
+    const isProtected =
+      pathname.startsWith('/dashboard') ||
+      pathname.startsWith('/research')
 
-  if (!user && isProtected) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/login'
-    url.searchParams.set('next', pathname)
-    return NextResponse.redirect(url)
-  }
+    if (!user && isProtected) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/login'
+      url.searchParams.set('next', pathname)
+      return NextResponse.redirect(url)
+    }
 
-  if (user && isAuthRoute) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/dashboard'
-    return NextResponse.redirect(url)
-  }
+    // Recovery session must reach /reset-password; do not bounce to dashboard.
+    if (user && isAuthRoute && !isPasswordRecovery) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/dashboard'
+      return NextResponse.redirect(url)
+    }
 
   if (pathname === '/') {
     if (user) {

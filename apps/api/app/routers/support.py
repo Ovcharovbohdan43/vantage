@@ -80,6 +80,8 @@ async def submit_support_request(
             html=html_body,
             text=text_body,
             reply_to=reply_to,
+            category="transactional",
+            tags=[{"name": "type", "value": "support_ticket"}],
         )
     except EmailNotConfiguredError as exc:
         raise HTTPException(

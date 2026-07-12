@@ -16,8 +16,16 @@ export async function GET(request: Request) {
         return NextResponse.redirect(`${origin}/login?confirmed=true`)
       }
 
+      if (flow === 'recovery') {
+        return NextResponse.redirect(`${origin}/reset-password`)
+      }
+
       const next = searchParams.get('next') ?? '/dashboard'
       return NextResponse.redirect(`${origin}${next}`)
+    }
+
+    if (flow === 'recovery') {
+      return NextResponse.redirect(`${origin}/login?error=recovery_failed`)
     }
   }
 

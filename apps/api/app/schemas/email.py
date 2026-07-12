@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import BaseModel, EmailStr, Field, model_validator
 
 
@@ -10,6 +12,8 @@ class SendEmailRequest(BaseModel):
     reply_to: list[EmailStr] | None = None
     cc: list[EmailStr] | None = None
     bcc: list[EmailStr] | None = None
+    category: Literal["transactional", "marketing"] = "transactional"
+    tags: list[dict[str, str]] | None = None
 
     @model_validator(mode="after")
     def require_body(self) -> "SendEmailRequest":

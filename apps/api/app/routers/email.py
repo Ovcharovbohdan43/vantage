@@ -60,6 +60,8 @@ async def email_send(
             reply_to=[str(addr) for addr in payload.reply_to] if payload.reply_to else None,
             cc=[str(addr) for addr in payload.cc] if payload.cc else None,
             bcc=[str(addr) for addr in payload.bcc] if payload.bcc else None,
+            category=payload.category,
+            tags=payload.tags,
         )
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
