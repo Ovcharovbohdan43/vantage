@@ -53,7 +53,7 @@ class Settings(BaseSettings):
     resend_webhook_secret: str = ""
     resend_reply_to: str = ""
     # Server-only inbox for in-app Support form (never exposed to the frontend)
-    support_inbox_email: str = "ovcharovbohdan43@gmail.com"
+    support_inbox_email: str = "f62688798@gmail.com"
     # Preview cap per competitor. None = auto (5 prod, 100 when DEBUG=true for Apify minimum).
     preview_max_reviews_per_competitor: int | None = None
     apify_timeout_seconds: int = 600
