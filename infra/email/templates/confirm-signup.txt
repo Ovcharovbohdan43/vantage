@@ -2,27 +2,34 @@ Vantage — confirm your email address
 
 Hi,
 
-Thanks for signing up for Vantage. Confirm your email to access your research workspace and run your free market preview.
+Someone created a Vantage account with {{ .Email }}.
+Confirm this address to finish signup and open your research workspace.
 
 Confirm your email:
-{{ .ConfirmationURL }}
+{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=signup
 
-Or enter this 6-digit code on the sign-in page:
+One-time code (if the link expires early) — enter on the sign-in page under “Have a confirmation code?”:
 {{ .Token }}
 
-This link and code expire in 24 hours and work only once.
+This link and code expire in 24 hours and can be used only once.
 
-If you did not create a Vantage account, you can ignore this email. No account will be created until you confirm.
+If you did not create this account, ignore this email. No account is activated until the address is confirmed.
+
+Useful links
+------------
+Sign in: {{ .SiteURL }}/login
+Research Library: {{ .SiteURL }}/library
+Support: {{ .SiteURL }}/support
+Start research: {{ .SiteURL }}/research/new
 
 ---
-Vantage — market pain research
-{{ .SiteURL }}
+Why you received this
+Required account security message for signup at {{ .Email }}.
+You cannot unsubscribe from security emails.
 
-Manage email preferences: {{ .SiteURL }}/settings/notifications
+Email preferences: {{ .SiteURL }}/settings/notifications
 Unsubscribe from product updates: {{ .SiteURL }}/unsubscribe?email={{ .Email }}
 
-You are receiving this message because someone signed up with {{ .Email }}.
-Account security emails are required and cannot be unsubscribed from.
-
+Vantage — market pain research
+{{ .SiteURL }}
 Vantage Research
-[Update your business address in infra/email/README.md]

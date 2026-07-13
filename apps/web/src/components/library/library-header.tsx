@@ -3,27 +3,33 @@ import { VantageLogo } from '@/components/vantage-logo'
 
 export function LibraryHeader() {
   return (
-    <header className="border-b border-white/8 bg-[#0e0e10]/90 backdrop-blur-md">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-4 py-3 sm:gap-4 sm:px-6 sm:py-4">
-        <Link href="/library" className="flex min-w-0 items-center gap-2">
+    <header className="sticky top-0 z-40 border-b border-white/[0.06] bg-v-bg/90 backdrop-blur-md">
+      <div className="mx-auto flex h-12 max-w-[1120px] items-center justify-between gap-2 px-4 sm:h-14 sm:px-5 md:px-8">
+        <Link href="/" className="flex min-w-0 items-center gap-2 sm:gap-2.5">
           <VantageLogo size={20} className="shrink-0" />
-          <span className="truncate text-sm font-semibold tracking-tight text-[#e5e1e4]">Vantage</span>
-          <span className="hidden font-mono text-[10px] uppercase tracking-widest text-[#958ea0] sm:inline">
-            Research Library
+          <span className="truncate text-[15px] font-semibold tracking-tight text-v-on">Vantage</span>
+          <span className="hidden font-landing-mono text-[10px] uppercase tracking-widest text-v-muted sm:inline">
+            Library
           </span>
         </Link>
-        <nav className="flex shrink-0 items-center gap-2 sm:gap-4 text-sm">
+        <nav className="flex shrink-0 items-center gap-2.5 text-sm sm:gap-4" aria-label="Library">
           <Link
             href="/library"
-            className="hidden text-[#cbc3d7] transition-colors hover:text-[#d0bcff] sm:inline"
+            className="text-[13px] text-v-muted transition-colors hover:text-v-on"
           >
             Browse
           </Link>
           <Link
-            href="/signup"
-            className="landing-primary-glow whitespace-nowrap rounded-lg bg-[#d0bcff] px-2.5 py-1.5 text-xs font-semibold text-[#3c0091] sm:px-3 sm:text-sm"
+            href="/login"
+            className="text-[13px] text-v-muted transition-colors hover:text-v-on"
           >
-            <span className="sm:hidden">Validate</span>
+            Log in
+          </Link>
+          <Link
+            href="/signup"
+            className="inline-flex h-8 items-center rounded-md bg-v-on px-2.5 text-[13px] font-medium text-v-bg transition-opacity hover:opacity-90 sm:px-3.5"
+          >
+            <span className="sm:hidden">Sign up</span>
             <span className="hidden sm:inline">Validate your idea</span>
           </Link>
         </nav>

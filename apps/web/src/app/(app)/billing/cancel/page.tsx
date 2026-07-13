@@ -1,17 +1,29 @@
 import Link from 'next/link'
-import { Button } from '@/components/ui/button'
 
 export default function BillingCancelPage() {
   return (
-    <div className="max-w-md mx-auto px-8 py-20 text-center">
-      <p className="text-xs font-mono uppercase tracking-widest text-zinc-400 mb-3">Checkout canceled</p>
-      <h1 className="text-xl font-semibold text-zinc-950 mb-2">No changes made</h1>
-      <p className="text-sm text-zinc-600 leading-relaxed mb-8">
-        You can upgrade anytime from the dashboard or after viewing a report.
+    <div className="mx-auto max-w-md px-5 py-20 text-center">
+      <p className="mb-3 font-landing-mono text-[11px] uppercase tracking-[0.14em] text-v-muted">
+        Checkout canceled
       </p>
-      <Link href="/dashboard">
-        <Button variant="outline">Back to dashboard</Button>
-      </Link>
+      <h1 className="mb-2 text-xl font-semibold tracking-tight text-v-on">No changes made</h1>
+      <p className="mb-8 text-sm leading-relaxed text-v-muted">
+        You can upgrade anytime from Account or after viewing a report.
+      </p>
+      <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+        <Link
+          href="/dashboard"
+          className="inline-flex h-11 items-center justify-center rounded-md bg-v-on px-5 text-sm font-medium text-v-bg transition-opacity hover:opacity-90"
+        >
+          Back to dashboard
+        </Link>
+        <Link
+          href="/account"
+          className="inline-flex h-11 items-center justify-center rounded-md border border-white/14 px-5 text-sm font-medium text-v-on transition-colors hover:border-white/28"
+        >
+          Buy credits
+        </Link>
+      </div>
     </div>
   )
 }

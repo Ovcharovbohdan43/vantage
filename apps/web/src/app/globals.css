@@ -1,27 +1,30 @@
-@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=JetBrains+Mono:wght@500&family=Inter:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
 @import 'tailwindcss';
 
 @theme {
-  --font-sans: 'Inter', system-ui, sans-serif;
-  --font-mono: 'Geist Mono', ui-monospace, monospace;
-  --font-landing: 'Geist', 'Inter', system-ui, sans-serif;
-  --font-landing-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --font-sans: 'IBM Plex Sans', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --font-landing: 'IBM Plex Sans', system-ui, sans-serif;
+  --font-landing-mono: 'IBM Plex Mono', ui-monospace, monospace;
 
-  --color-v-bg: #131315;
-  --color-v-surface: #131315;
-  --color-v-surface-low: #1c1b1d;
-  --color-v-surface-container: #201f22;
-  --color-v-surface-high: #2a2a2c;
-  --color-v-surface-highest: #353437;
-  --color-v-surface-lowest: #0e0e10;
-  --color-v-on: #e5e1e4;
-  --color-v-muted: #cbc3d7;
-  --color-v-outline: #494454;
-  --color-v-primary: #d0bcff;
-  --color-v-on-primary: #3c0091;
-  --color-v-secondary: #4cd7f6;
-  --color-v-tertiary: #4edea3;
-  --color-v-error: #ffb4ab;
+  /* Research Instrument — true dark, Signal Lime accent */
+  --color-v-bg: #050505;
+  --color-v-surface: #0e0e0e;
+  --color-v-surface-low: #0e0e0e;
+  --color-v-surface-container: #161616;
+  --color-v-surface-high: #1c1c1c;
+  --color-v-surface-highest: #242424;
+  --color-v-surface-lowest: #050505;
+  --color-v-on: #f4f4f5;
+  --color-v-muted: #a1a1aa;
+  --color-v-outline: #242424;
+  --color-v-primary: #e8ff47;
+  --color-v-on-primary: #050505;
+  --color-v-secondary: #5eead4;
+  --color-v-tertiary: #3ddc97;
+  --color-v-error: #f07178;
+  --color-v-warn: #f5a524;
+  --color-v-info: #7dd3fc;
 }
 
 * {
@@ -45,42 +48,18 @@
   }
 }
 
-@keyframes vantage-float {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-10px);
-  }
-}
-
 .landing-root {
   font-family: var(--font-landing);
   background: var(--color-v-bg);
   color: var(--color-v-on);
 }
 
-.landing-root .animate-float {
-  animation: vantage-float 6s ease-in-out infinite;
-}
-
-.landing-glass {
-  background: rgba(24, 24, 27, 0.8);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.landing-primary-glow:hover {
-  box-shadow: 0 0 20px rgba(139, 92, 246, 0.3);
-}
-
 .landing-reveal {
   opacity: 0;
-  transform: translateY(18px);
+  transform: translateY(14px);
   transition:
-    opacity 0.65s cubic-bezier(0.22, 1, 0.36, 1),
-    transform 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+    opacity 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .landing-reveal.is-visible {
@@ -88,35 +67,29 @@
   transform: translateY(0);
 }
 
-@keyframes landing-energy-flow {
-  0% {
-    background-position: 0% 50%;
+@keyframes landing-hero-float {
+  0%,
+  100% {
+    transform: translateY(0);
   }
   50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
+    transform: translateY(-6px);
   }
 }
 
-.landing-energy-text {
-  background-image: linear-gradient(
-    115deg,
-    #f4eef8 0%,
-    #ff8adf 16%,
-    #ff4ec8 32%,
-    #e8d4ff 48%,
-    #d0bcff 62%,
-    #fff5fc 76%,
-    #ff5ec8 88%,
-    #f4eef8 100%
-  );
-  background-size: 240% 100%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  animation: landing-energy-flow 7s ease-in-out infinite;
+@keyframes state-figure-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.landing-hero-float {
+  animation: landing-hero-float 7s ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -126,8 +99,16 @@
     transition: none;
   }
 
-  .landing-energy-text {
+  .landing-hero-float {
     animation: none;
-    background-position: 40% 50%;
   }
+}
+
+/* Legacy class kept so non-landing screens don't crash until Phase 1/2 restyle */
+.landing-primary-glow:hover {
+  filter: brightness(1.05);
+}
+
+.landing-energy-text {
+  color: var(--color-v-on);
 }

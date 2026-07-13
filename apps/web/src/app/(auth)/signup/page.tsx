@@ -6,15 +6,20 @@ import { useState } from 'react'
 import { AuthAlert } from '@/components/auth-alert'
 import { AuthPageShell } from '@/components/auth-page-shell'
 import {
+  authErrorClass,
+  authFieldClass,
+  authHintClass,
+  authLabelClass,
+  authLinkClass,
+  authPrimaryBtnClass,
+  authSecondaryBtnClass,
+} from '@/components/auth-styles'
+import {
   clearPendingPromo,
   redeemPromoCode,
   stashPendingPromo,
 } from '@/lib/api/billing'
 import { createClient } from '@/lib/supabase/client'
-
-const fieldClass =
-  'flex h-10 w-full rounded-lg border border-white/12 bg-[#131315] px-3 text-sm text-[#e5e1e4] placeholder:text-[#958ea0] outline-none transition-colors focus:border-[#d0bcff]/50 focus:ring-1 focus:ring-[#d0bcff]/25'
-const labelClass = 'text-sm font-medium text-[#cbc3d7]'
 
 export default function SignupPage() {
   const router = useRouter()
@@ -78,9 +83,9 @@ export default function SignupPage() {
       title="Create account"
       subtitle="Start validating product ideas with real data"
       footer={
-        <p className="mt-6 text-center text-sm text-[#cbc3d7]">
+        <p className="mt-6 text-center text-sm text-v-muted">
           Already have an account?{' '}
-          <Link href="/login" className="font-medium text-[#d0bcff] hover:underline">
+          <Link href="/login" className={authLinkClass}>
             Sign in
           </Link>
         </p>
@@ -97,30 +102,26 @@ export default function SignupPage() {
                 : `We sent a confirmation link to ${email}. Confirm, then sign in to start your free credits.`
             }
           />
-          <div className="relative overflow-hidden rounded-xl border border-[#d0bcff]/25 bg-gradient-to-br from-[#d0bcff]/12 via-[#1c1b1d] to-[#ff4ec8]/8 p-4">
-            <div className="pointer-events-none absolute -top-8 -right-6 h-24 w-24 rounded-full bg-[#d0bcff]/20 blur-2xl" />
-            <p className="relative font-mono text-[10px] uppercase tracking-[0.18em] text-[#d0bcff]">
+          <div className="rounded-lg border border-white/[0.08] bg-v-bg px-4 py-4">
+            <p className="font-landing-mono text-[11px] uppercase tracking-[0.14em] text-v-muted">
               Don&apos;t miss it
             </p>
-            <p className="relative mt-2 text-sm font-medium leading-snug text-[#e5e1e4]">
+            <p className="mt-2 text-sm font-medium leading-snug text-v-on">
               Check Spam / Junk if the email isn&apos;t in your inbox
             </p>
-            <p className="relative mt-1.5 text-xs leading-relaxed text-[#cbc3d7]">
+            <p className="mt-1.5 text-xs leading-relaxed text-v-muted">
               Confirmation mail sometimes lands there. Mark it as Not spam so future Vantage
               messages arrive normally — then open the link to activate your account.
             </p>
           </div>
-          <Link
-            href="/login"
-            className="inline-flex h-10 w-full items-center justify-center rounded-lg border border-white/15 text-sm font-medium text-[#e5e1e4] transition-colors hover:border-[#d0bcff]/40 hover:text-[#d0bcff]"
-          >
+          <Link href="/login" className={authSecondaryBtnClass}>
             Back to sign in
           </Link>
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <label htmlFor="email" className={labelClass}>
+            <label htmlFor="email" className={authLabelClass}>
               Email
             </label>
             <input
@@ -131,11 +132,11 @@ export default function SignupPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@company.com"
-              className={fieldClass}
+              className={authFieldClass}
             />
           </div>
           <div className="space-y-2">
-            <label htmlFor="password" className={labelClass}>
+            <label htmlFor="password" className={authLabelClass}>
               Password
             </label>
             <input
@@ -146,13 +147,13 @@ export default function SignupPage() {
               minLength={8}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className={fieldClass}
+              className={authFieldClass}
             />
-            <p className="text-xs text-[#958ea0]">Minimum 8 characters</p>
+            <p className={authHintClass}>Minimum 8 characters</p>
           </div>
           <div className="space-y-2">
-            <label htmlFor="promo" className={labelClass}>
-              Promo code <span className="font-normal text-[#958ea0]">(optional)</span>
+            <label htmlFor="promo" className={authLabelClass}>
+              Promo code <span className="font-normal text-v-muted">(optional)</span>
             </label>
             <input
               id="promo"
@@ -161,18 +162,14 @@ export default function SignupPage() {
               value={promoCode}
               onChange={(e) => setPromoCode(e.target.value)}
               placeholder="TRYIT"
-              className={`${fieldClass} uppercase`}
+              className={`${authFieldClass} uppercase`}
             />
-            <p className="text-xs text-[#958ea0]">Have a code? Enter it to get free research credits.</p>
+            <p className={authHintClass}>Have a code? Enter it to get free research credits.</p>
           </div>
 
-          {error && <p className="text-sm text-[#ffb4ab]">{error}</p>}
+          {error && <p className={authErrorClass}>{error}</p>}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="landing-primary-glow inline-flex h-10 w-full items-center justify-center rounded-lg bg-[#d0bcff] text-sm font-bold text-[#3c0091] transition-transform hover:-translate-y-0.5 disabled:pointer-events-none disabled:opacity-50"
-          >
+          <button type="submit" disabled={loading} className={authPrimaryBtnClass}>
             {loading ? 'Creating account…' : 'Create account'}
           </button>
         </form>

@@ -106,6 +106,7 @@ async def send_email(
     category: EmailCategory = "transactional",
     tags: list[dict[str, str]] | None = None,
     headers: dict[str, str] | None = None,
+    extra_metadata: dict[str, Any] | None = None,
 ) -> tuple[str, EmailMessage]:
     _ensure_client()
 
@@ -154,6 +155,17 @@ async def send_email(
     if not resend_id:
         raise RuntimeError("Resend did not return an email id")
 
+    stored_meta: dict[str, Any] = {
+        "cc": cc or [],
+        "bcc": bcc or [],
+        "reply_to": params.get("reply_to", []),
+        "category": category,
+        "tags": tag_list,
+        "headers": merged_headers,
+    }
+    if extra_metadata:
+        stored_meta.update(extra_metadata)
+
     message = EmailMessage(
         id=uuid.uuid4(),
         direction="outbound",
@@ -163,14 +175,7 @@ async def send_email(
         subject=subject,
         text_body=plain,
         html_body=html,
-        message_metadata={
-            "cc": cc or [],
-            "bcc": bcc or [],
-            "reply_to": params.get("reply_to", []),
-            "category": category,
-            "tags": tag_list,
-            "headers": merged_headers,
-        },
+        message_metadata=stored_meta,
     )
     db.add(message)
     await db.flush()

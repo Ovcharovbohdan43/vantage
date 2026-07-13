@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 
 export const metadata = {
   title: 'Support — Vantage',
+  description: 'FAQ and contact for Vantage research credits, reports, and account help.',
 }
 
 export default async function SupportPage() {

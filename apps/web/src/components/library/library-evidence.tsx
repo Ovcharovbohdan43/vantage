@@ -1,13 +1,14 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { MagnifyingGlass } from '@phosphor-icons/react'
 import { getLibraryReviewsFromBrowser } from '@/lib/api/library-browser'
 import type { LibraryReview } from '@/lib/api/library'
 
 const PAGE_SIZE = 20
 
 const fieldClass =
-  'rounded-lg border border-white/12 bg-[#1c1b1d] px-3 py-2 text-sm text-[#e5e1e4] outline-none transition-colors focus:border-[#d0bcff]/45'
+  'h-9 w-full rounded-md border border-white/12 bg-v-bg px-3 text-sm text-v-on outline-none transition-colors focus:border-v-primary/45 focus:ring-1 focus:ring-v-primary/20'
 
 function mergeUniqueReviews(prev: LibraryReview[], next: LibraryReview[]): LibraryReview[] {
   const seen = new Set(prev.map((r) => r.id))
@@ -26,24 +27,26 @@ interface LibraryEvidenceProps {
   initialClusterId?: string | null
 }
 
-function ReviewCard({ review }: { review: LibraryReview }) {
+function ReviewRow({ review }: { review: LibraryReview }) {
   return (
-    <div className="rounded-xl border border-white/10 bg-[#1c1b1d]/60 p-4">
-      <div className="mb-2 flex flex-wrap items-center gap-2 font-mono text-[10px] uppercase text-[#958ea0]">
+    <article className="border-b border-white/[0.06] px-1 py-4 last:border-b-0">
+      <div className="mb-2 flex flex-wrap items-center gap-2 font-landing-mono text-[11px] uppercase tracking-wider text-v-muted">
         {review.rating != null && (
-          <span className="text-[#ff8adf]">{'★'.repeat(review.rating)}</span>
+          <span className="text-v-warn" aria-label={`${review.rating} stars`}>
+            {'★'.repeat(review.rating)}
+          </span>
         )}
         <span>{review.product}</span>
         <span>{review.source.toUpperCase()}</span>
       </div>
-      <p className="text-sm leading-relaxed text-[#e5e1e4]">{review.text}</p>
-    </div>
+      <p className="text-sm leading-relaxed text-v-on">{review.text}</p>
+    </article>
   )
 }
 
 function ReviewSkeleton() {
   return (
-    <div className="space-y-2 rounded-xl border border-white/8 p-4">
+    <div className="space-y-2 border-b border-white/[0.06] py-4">
       <div className="h-3 w-24 animate-pulse rounded bg-white/10" />
       <div className="h-3 w-full animate-pulse rounded bg-white/10" />
       <div className="h-3 w-4/5 animate-pulse rounded bg-white/10" />
@@ -142,36 +145,50 @@ export function LibraryEvidence({ slug, initialClusterId }: LibraryEvidenceProps
 
   return (
     <div>
-      <p className="mb-4 text-sm leading-relaxed text-[#cbc3d7]">
+      <p className="mb-4 text-sm leading-relaxed text-v-muted">
         Every negative review collected for this analysis — anonymized, no authors or personal data.
         Reviews load in batches as you scroll.
       </p>
 
-      <div className="mb-6 flex flex-wrap gap-2">
-        <select value={rating} onChange={(e) => setRating(e.target.value)} className={fieldClass}>
-          <option value="">All ratings</option>
-          <option value="1">★1 only</option>
-          <option value="2">★2 only</option>
-          <option value="3">★3 only</option>
-        </select>
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search reviews…"
-          className={`min-w-[180px] flex-1 ${fieldClass} placeholder:text-[#958ea0]`}
-        />
+      <div className="mb-4 space-y-2 border-b border-white/[0.06] pb-4">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch">
+          <label className="relative min-w-0 flex-1">
+            <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-v-muted">
+              <MagnifyingGlass size={16} weight="bold" aria-hidden />
+            </span>
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search reviews…"
+              aria-label="Search reviews"
+              type="search"
+              className={`${fieldClass} pr-3 pl-9 placeholder:text-v-muted`}
+            />
+          </label>
+          <select
+            value={rating}
+            onChange={(e) => setRating(e.target.value)}
+            aria-label="Filter by rating"
+            className={`${fieldClass} sm:w-40 sm:shrink-0`}
+          >
+            <option value="">All ratings</option>
+            <option value="1">★1 only</option>
+            <option value="2">★2 only</option>
+            <option value="3">★3 only</option>
+          </select>
+        </div>
         {clusterId && (
           <button
             type="button"
             onClick={() => setClusterId('')}
-            className="text-xs text-[#958ea0] underline transition-colors hover:text-[#d0bcff]"
+            className="h-8 text-xs text-v-muted underline underline-offset-2 transition-colors hover:text-v-on"
           >
             Clear pain filter
           </button>
         )}
       </div>
 
-      <p className="mb-4 font-mono text-xs text-[#958ea0]">
+      <p className="mb-3 font-landing-mono text-[11px] uppercase tracking-wider text-v-muted">
         {loading && shown === 0
           ? 'Loading evidence…'
           : total > 0
@@ -179,9 +196,9 @@ export function LibraryEvidence({ slug, initialClusterId }: LibraryEvidenceProps
             : 'No reviews'}
       </p>
 
-      <div className="space-y-3">
+      <div className="border-y border-white/[0.06]">
         {reviews.map((review) => (
-          <ReviewCard key={review.id} review={review} />
+          <ReviewRow key={review.id} review={review} />
         ))}
 
         {loading && shown === 0 && (
@@ -200,14 +217,16 @@ export function LibraryEvidence({ slug, initialClusterId }: LibraryEvidenceProps
         )}
 
         {!loading && shown === 0 && (
-          <p className="py-8 text-center text-sm text-[#cbc3d7]">No reviews match your filters.</p>
+          <p className="py-10 text-center text-sm text-v-muted">No reviews match your filters.</p>
         )}
       </div>
 
       <div ref={sentinelRef} className="h-4" aria-hidden />
 
       {!loading && !hasMore && shown > 0 && (
-        <p className="mt-6 text-center font-mono text-xs text-[#958ea0]">All reviews loaded</p>
+        <p className="mt-6 text-center font-landing-mono text-[11px] text-v-muted">
+          All reviews loaded
+        </p>
       )}
     </div>
   )

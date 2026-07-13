@@ -4,12 +4,17 @@ import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { AuthAlert } from '@/components/auth-alert'
+import { AuthOtpForm } from '@/components/auth-otp-form'
 import { AuthPageShell } from '@/components/auth-page-shell'
+import {
+  authErrorClass,
+  authFieldClass,
+  authLabelClass,
+  authLinkClass,
+  authMutedLinkClass,
+  authPrimaryBtnClass,
+} from '@/components/auth-styles'
 import { createClient } from '@/lib/supabase/client'
-
-const fieldClass =
-  'flex h-10 w-full rounded-lg border border-white/12 bg-[#131315] px-3 text-sm text-[#e5e1e4] placeholder:text-[#958ea0] outline-none transition-colors focus:border-[#d0bcff]/50 focus:ring-1 focus:ring-[#d0bcff]/25'
-const labelClass = 'text-sm font-medium text-[#cbc3d7]'
 
 export function LoginForm() {
   const router = useRouter()
@@ -18,6 +23,7 @@ export function LoginForm() {
   const confirmed = searchParams.get('confirmed') === 'true'
   const resetDone = searchParams.get('reset') === 'true'
   const authError = searchParams.get('error')
+  const showOtpByDefault = authError === 'confirmation_failed'
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -25,6 +31,7 @@ export function LoginForm() {
   const [loading, setLoading] = useState(false)
   const [showConfirmedBanner, setShowConfirmedBanner] = useState(confirmed)
   const [showResetBanner, setShowResetBanner] = useState(resetDone)
+  const [showConfirmOtp, setShowConfirmOtp] = useState(showOtpByDefault)
 
   useEffect(() => {
     setShowConfirmedBanner(confirmed)
@@ -35,12 +42,20 @@ export function LoginForm() {
   }, [resetDone])
 
   useEffect(() => {
+    if (authError === 'confirmation_failed') setShowConfirmOtp(true)
+  }, [authError])
+
+  useEffect(() => {
     if (!confirmed && !authError && !resetDone) return
     const url = new URL(window.location.href)
     url.searchParams.delete('confirmed')
     url.searchParams.delete('error')
     url.searchParams.delete('reset')
-    window.history.replaceState({}, '', url.pathname + (url.searchParams.toString() ? `?${url.searchParams}` : ''))
+    window.history.replaceState(
+      {},
+      '',
+      url.pathname + (url.searchParams.toString() ? `?${url.searchParams}` : ''),
+    )
   }, [confirmed, authError, resetDone])
 
   async function handleSubmit(e: React.FormEvent) {
@@ -66,9 +81,9 @@ export function LoginForm() {
       title="Sign in"
       subtitle="Access your research workspace"
       footer={
-        <p className="mt-6 text-center text-sm text-[#cbc3d7]">
+        <p className="mt-6 text-center text-sm text-v-muted">
           No account?{' '}
-          <Link href="/signup" className="font-medium text-[#d0bcff] hover:underline">
+          <Link href="/signup" className={authLinkClass}>
             Create one
           </Link>
         </p>
@@ -96,7 +111,7 @@ export function LoginForm() {
         <AuthAlert
           variant="error"
           title="Confirmation link invalid or expired"
-          description="Please sign up again or request a new confirmation email."
+          description="Enter the one-time code from the email below, or request a new confirmation by signing up again."
           className="mb-6"
         />
       )}
@@ -105,14 +120,14 @@ export function LoginForm() {
         <AuthAlert
           variant="error"
           title="Password reset link invalid or expired"
-          description="Request a new reset link from the forgot password page."
+          description="Request a new reset link, or open Reset password and enter the one-time code from the email."
           className="mb-6"
         />
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
-          <label htmlFor="email" className={labelClass}>
+          <label htmlFor="email" className={authLabelClass}>
             Email
           </label>
           <input
@@ -123,18 +138,15 @@ export function LoginForm() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="you@company.com"
-            className={fieldClass}
+            className={authFieldClass}
           />
         </div>
         <div className="space-y-2">
           <div className="flex items-center justify-between gap-3">
-            <label htmlFor="password" className={labelClass}>
+            <label htmlFor="password" className={authLabelClass}>
               Password
             </label>
-            <Link
-              href="/forgot-password"
-              className="text-xs font-medium text-[#d0bcff] hover:underline"
-            >
+            <Link href="/forgot-password" className={authMutedLinkClass}>
               Forgot password?
             </Link>
           </div>
@@ -145,20 +157,54 @@ export function LoginForm() {
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className={fieldClass}
+            className={authFieldClass}
           />
         </div>
 
-        {error && <p className="text-sm text-[#ffb4ab]">{error}</p>}
+        {error && <p className={authErrorClass}>{error}</p>}
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="landing-primary-glow inline-flex h-10 w-full items-center justify-center rounded-lg bg-[#d0bcff] text-sm font-bold text-[#3c0091] transition-transform hover:-translate-y-0.5 disabled:pointer-events-none disabled:opacity-50"
-        >
+        <button type="submit" disabled={loading} className={authPrimaryBtnClass}>
           {loading ? 'Signing in…' : 'Sign in'}
         </button>
       </form>
+
+      <div className="mt-8 border-t border-white/[0.08] pt-6">
+        {!showConfirmOtp ? (
+          <button
+            type="button"
+            onClick={() => setShowConfirmOtp(true)}
+            className="text-sm text-v-muted transition-colors hover:text-v-on"
+          >
+            Have a confirmation code?
+          </button>
+        ) : (
+          <div>
+            <h2 className="mb-1 text-sm font-semibold text-v-on">Confirm with email code</h2>
+            <p className="mb-4 text-xs leading-relaxed text-v-muted">
+              If the confirmation link expired, enter the email and one-time code from the message.
+            </p>
+            <AuthOtpForm
+              type="signup"
+              defaultEmail={email}
+              submitLabel="Confirm email"
+              onVerified={async () => {
+                const supabase = createClient()
+                await supabase.auth.signOut()
+                setShowConfirmOtp(false)
+                setShowConfirmedBanner(true)
+                setShowResetBanner(false)
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => setShowConfirmOtp(false)}
+              className="mt-3 text-xs text-v-muted transition-colors hover:text-v-on"
+            >
+              Hide code form
+            </button>
+          </div>
+        )}
+      </div>
     </AuthPageShell>
   )
 }

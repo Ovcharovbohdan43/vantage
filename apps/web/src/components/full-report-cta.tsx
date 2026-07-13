@@ -72,22 +72,22 @@ export function FullReportCta({ projectId, credits }: FullReportCtaProps) {
         initial={{ opacity: 0, y: 6 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35 }}
-        className="mb-8 rounded-xl border border-[#d0bcff]/30 bg-gradient-to-br from-[#201f22] via-[#1c1b1d] to-[#2a1a28] p-6"
+        className="mb-8 rounded-xl border border-v-primary/30 bg-gradient-to-br from-v-surface-high via-v-surface to-v-surface-high p-6"
       >
         <div className="flex flex-col items-stretch justify-between gap-4 sm:flex-row sm:flex-wrap sm:items-start">
           <div className="min-w-0 max-w-xl">
-            <p className="mb-2 font-mono text-xs uppercase tracking-widest text-[#958ea0]">
+            <p className="mb-2 font-landing-mono text-xs uppercase tracking-widest text-v-muted">
               Worth building?
             </p>
-            <h3 className="mb-2 text-base font-semibold text-[#e5e1e4]">
+            <h3 className="mb-2 text-base font-semibold text-v-on">
               Find out if your idea is worth the next 3 months
             </h3>
-            <p className="mb-4 text-sm leading-relaxed text-[#cbc3d7]">
+            <p className="mb-4 text-sm leading-relaxed text-v-muted">
               Full report: user quotes, pain map with severity scores, opportunity direction, and a
               build / pivot / don&apos;t-build recommendation.
             </p>
 
-            <p className="mb-2 font-mono text-xs uppercase tracking-widest text-[#958ea0]">
+            <p className="mb-2 font-landing-mono text-xs uppercase tracking-widest text-v-muted">
               Choose depth
             </p>
             <div className="mb-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
@@ -102,12 +102,12 @@ export function FullReportCta({ projectId, credits }: FullReportCtaProps) {
                     className={cn(
                       'rounded-lg border p-2.5 text-left transition-colors',
                       selected
-                        ? 'border-[#d0bcff]/45 bg-[#d0bcff]/15'
-                        : 'border-white/10 hover:border-[#d0bcff]/30',
+                        ? 'border-v-primary/45 bg-v-primary/15'
+                        : 'border-white/10 hover:border-v-primary/30',
                     )}
                   >
-                    <div className="text-xs font-medium text-[#e5e1e4]">{option.label}</div>
-                    <div className="mt-0.5 font-mono text-[10px] text-[#958ea0]">
+                    <div className="text-xs font-medium text-v-on">{option.label}</div>
+                    <div className="mt-0.5 font-landing-mono text-[10px] text-v-muted">
                       {optionCost} cr · {option.competitors}×{option.reviews}
                     </div>
                   </button>
@@ -115,13 +115,13 @@ export function FullReportCta({ projectId, credits }: FullReportCtaProps) {
               })}
             </div>
 
-            {error && <p className="mt-2 text-sm text-[#ff8adf]">{error}</p>}
+            {error && <p className="mt-2 text-sm text-v-error">{error}</p>}
           </div>
           <button
             type="button"
             onClick={handleUnlock}
             disabled={unlockMutation.isPending}
-            className="landing-primary-glow inline-flex w-full shrink-0 items-center justify-center gap-1.5 rounded-lg bg-[#d0bcff] px-4 py-2.5 text-sm font-semibold text-[#3c0091] transition-transform hover:-translate-y-0.5 disabled:opacity-60 sm:w-auto"
+            className="inline-flex w-full shrink-0 items-center justify-center gap-1.5 rounded-lg bg-v-on px-4 py-2.5 text-sm font-semibold text-v-bg transition-transform hover:-translate-y-0.5 disabled:opacity-60 sm:w-auto"
           >
             <Lock size={14} />
             {unlockMutation.isPending

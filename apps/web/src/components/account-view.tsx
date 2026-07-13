@@ -33,53 +33,44 @@ export function AccountView({ userEmail }: AccountViewProps) {
   }
 
   return (
-    <div className="relative mx-auto max-w-2xl px-4 py-6 sm:px-6 sm:py-8 md:px-8">
-      <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-        <div className="absolute top-0 right-1/4 h-48 w-48 rounded-full bg-[#d0bcff]/10 blur-[90px]" />
-      </div>
+    <div className="mx-auto max-w-2xl px-4 py-6 sm:px-6 sm:py-8 md:px-8">
+      <h1 className="mb-6 text-xl font-semibold tracking-tight text-v-on">Account</h1>
 
-      <h1 className="mb-6 text-xl font-semibold tracking-tight text-[#e5e1e4]">Account</h1>
-
-      <section className="mb-6 rounded-xl border border-white/10 bg-[#1c1b1d]/80 p-5">
-        <p className="mb-3 font-mono text-[11px] uppercase tracking-[0.18em] text-[#958ea0]">
-          Profile
-        </p>
-        <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#d0bcff]/20">
-            <span className="text-sm font-medium text-[#d0bcff]">{getInitials(userEmail)}</span>
+      <section className="mb-6 overflow-hidden rounded-md border border-white/[0.08] bg-v-surface">
+        <div className="border-b border-white/[0.06] px-4 py-3 sm:px-5">
+          <p className="text-sm font-semibold text-v-on">Profile</p>
+          <p className="mt-0.5 text-xs text-v-muted">Signed in with email</p>
+        </div>
+        <div className="flex items-center gap-3 px-4 py-4 sm:px-5">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-v-primary/15">
+            <span className="text-sm font-medium text-v-primary">{getInitials(userEmail)}</span>
           </div>
-          <div className="min-w-0">
-            <p className="truncate text-sm font-medium text-[#e5e1e4]">{userEmail}</p>
-            <p className="mt-0.5 text-xs text-[#958ea0]">Signed in with email</p>
-          </div>
+          <p className="min-w-0 truncate text-sm font-medium text-v-on">{userEmail}</p>
         </div>
       </section>
 
-      {credits && <CreditsMeter credits={credits} className="mb-6" />}
+      {credits && (
+        <CreditsMeter
+          credits={credits}
+          className="mb-6"
+          onBuyCredits={() => setPricingOpen(true)}
+        />
+      )}
 
-      <div className="flex flex-col gap-3 sm:flex-row">
-        <button
-          type="button"
-          onClick={() => setPricingOpen(true)}
-          className="landing-primary-glow inline-flex items-center justify-center rounded-lg bg-[#d0bcff] px-4 py-2.5 text-sm font-semibold text-[#3c0091] transition-transform hover:-translate-y-0.5"
-        >
-          Buy credits
-        </button>
-        <button
-          type="button"
-          onClick={handleSignOut}
-          disabled={signingOut}
-          className="inline-flex items-center justify-center rounded-lg border border-white/12 bg-[#1c1b1d] px-4 py-2.5 text-sm text-[#cbc3d7] transition-colors hover:border-[#d0bcff]/35 hover:text-[#d0bcff] disabled:opacity-60"
-        >
-          {signingOut ? 'Signing out…' : 'Sign out'}
-        </button>
-      </div>
+      <button
+        type="button"
+        onClick={handleSignOut}
+        disabled={signingOut}
+        className="inline-flex h-9 items-center justify-center rounded-md border border-white/14 bg-white/[0.03] px-4 text-sm font-medium text-v-muted transition-colors hover:border-white/28 hover:text-v-on disabled:opacity-60"
+      >
+        {signingOut ? 'Signing out…' : 'Sign out'}
+      </button>
 
       <PricingModal
         open={pricingOpen}
         onClose={() => setPricingOpen(false)}
         title="Buy research credits"
-        message="Credits power full market analyses. One credit = one shallow analysis; deeper runs cost more."
+        message="Pick a pack. One credit = one shallow analysis; deeper runs cost more. Credits never expire."
         highlightPack="founder"
       />
     </div>

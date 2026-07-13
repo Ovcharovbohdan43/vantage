@@ -1,0 +1,31 @@
+Vantage — your workspace is ready
+
+Hi,
+
+Thanks for joining Vantage. We added {{ .Credits }} research credits to your account so you can run full market analyses and see real customer pain evidence before you build.
+
+Account: {{ .Email }}
+Starter balance: {{ .Credits }} credits
+
+Start your first research:
+{{ .SiteURL }}/research/new
+
+Open your workspace:
+{{ .SiteURL }}/dashboard
+
+Useful links
+------------
+Dashboard: {{ .SiteURL }}/dashboard
+Buy credits: {{ .SiteURL }}/account
+Research Library: {{ .SiteURL }}/library
+Support & FAQ: {{ .SiteURL }}/support
+
+---
+You received this because you created a Vantage account for {{ .Email }}.
+
+Email preferences: {{ .SiteURL }}/settings/notifications
+Unsubscribe from product updates: {{ .SiteURL }}/unsubscribe?email={{ .Email }}
+
+Vantage — market pain research
+{{ .SiteURL }}
+Vantage Research

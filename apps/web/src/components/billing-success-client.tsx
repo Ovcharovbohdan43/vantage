@@ -3,14 +3,9 @@
 import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
-import { motion } from 'framer-motion'
-import { PiggyBank } from '@phosphor-icons/react'
-import { Check, Loader2 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 import { fulfillCheckoutSession } from '@/lib/api/billing'
 import { ApiError } from '@/lib/api/client'
 import type { ResearchPack } from '@/lib/api/types'
-import { cn } from '@/lib/utils'
 
 const PACK_COPY: Record<ResearchPack, { label: string; tagline: string }> = {
   starter: {
@@ -83,96 +78,33 @@ export function BillingSuccessClient() {
   const isBusy = isLoading || navigatingTo != null
 
   return (
-    <div className="min-h-[calc(100vh-3.5rem)] flex items-center justify-center px-6 py-16">
-      <div className="absolute inset-0 -z-10 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[480px] h-[480px] rounded-full bg-emerald-100/40 blur-3xl" />
-        <div className="absolute bottom-1/4 right-1/4 w-64 h-64 rounded-full bg-amber-100/30 blur-3xl" />
-      </div>
-
-      <motion.div
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.45, ease: 'easeOut' }}
-        className="w-full max-w-md"
-      >
-        <div className="border border-zinc-200 bg-white shadow-sm overflow-hidden">
-          {/* Hero */}
-          <div
-            className={cn(
-              'relative px-8 pt-10 pb-8 text-center border-b border-zinc-100',
-              isError ? 'bg-red-50/50' : 'bg-gradient-to-b from-emerald-50/80 to-white',
-            )}
-          >
-            <motion.div
-              initial={{ scale: 0.85, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ delay: 0.1, duration: 0.4, type: 'spring', stiffness: 260, damping: 20 }}
-              className="relative mx-auto mb-5 w-fit"
-            >
-              <div
-                className={cn(
-                  'w-20 h-20 flex items-center justify-center border-2',
-                  isError
-                    ? 'border-red-200 bg-red-50 text-red-600'
-                    : 'border-emerald-200 bg-emerald-50 text-emerald-700',
-                )}
-              >
-                {isLoading ? (
-                  <Loader2 size={32} className="animate-spin text-emerald-700" aria-hidden />
-                ) : (
-                  <PiggyBank size={40} weight="duotone" aria-hidden />
-                )}
-              </div>
-              {!isLoading && !isError && (
-                <motion.span
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ delay: 0.35, type: 'spring', stiffness: 400 }}
-                  className="absolute -bottom-1 -right-1 w-7 h-7 bg-emerald-600 text-white flex items-center justify-center border-2 border-white"
-                  aria-hidden
-                >
-                  <Check size={14} strokeWidth={2.5} />
-                </motion.span>
-              )}
-            </motion.div>
-
-            <p
-              className={cn(
-                'text-xs font-mono uppercase tracking-widest mb-2',
-                isError ? 'text-red-600' : 'text-emerald-700',
-              )}
-            >
+    <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center px-5 py-16">
+      <div className="w-full max-w-md">
+        <div className="overflow-hidden rounded-xl border border-white/[0.08] bg-v-surface">
+          <div className="border-b border-white/[0.06] px-6 py-8 text-center">
+            <p className="mb-2 font-landing-mono text-[11px] uppercase tracking-[0.14em] text-v-muted">
               {isLoading ? 'Processing payment' : isError ? 'Confirmation issue' : 'Payment received'}
             </p>
-
-            <h1 className="text-2xl font-semibold text-zinc-950 tracking-tight">
+            <h1 className="text-2xl font-semibold tracking-tight text-v-on">
               {isLoading && 'Adding your credits…'}
               {isError && 'Almost there'}
               {!isLoading && !isError && 'Credits added'}
             </h1>
           </div>
 
-          {/* Body */}
-          <div className="px-8 py-7">
+          <div className="px-6 py-7">
             {isLoading && (
-              <div className="space-y-3 text-center">
-                <div className="h-1.5 bg-zinc-100 overflow-hidden">
-                  <motion.div
-                    className="h-full bg-emerald-600"
-                    initial={{ width: '0%' }}
-                    animate={{ width: '70%' }}
-                    transition={{ duration: 1.2, ease: 'easeInOut', repeat: Infinity, repeatType: 'reverse' }}
-                  />
-                </div>
-                <p className="text-sm text-zinc-500">Confirming with Stripe — usually takes a few seconds.</p>
-              </div>
+              <p className="text-center text-sm text-v-muted">
+                Confirming with Stripe — usually takes a few seconds.
+              </p>
             )}
 
             {isError && (
-              <p className="text-sm text-red-700 text-center leading-relaxed mb-6">
+              <p className="mb-6 text-center text-sm leading-relaxed text-v-error">
                 {message ?? 'Something went wrong confirming your payment.'}
-                <span className="block mt-2 text-zinc-500 text-xs">
-                  If you were charged, credits may still arrive via webhook. Check your dashboard in a minute.
+                <span className="mt-2 block text-xs text-v-muted">
+                  If you were charged, credits may still arrive via webhook. Check your dashboard in
+                  a minute.
                 </span>
               </p>
             )}
@@ -180,83 +112,63 @@ export function BillingSuccessClient() {
             {!isLoading && !isError && (
               <div className="space-y-5">
                 {creditsAdded != null && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2 }}
-                    className="text-center py-4 border border-emerald-200 bg-emerald-50/60"
-                  >
-                    <p className="text-3xl font-semibold tabular-nums text-zinc-950 leading-none">
+                  <div className="border border-v-tertiary/25 bg-v-tertiary/8 py-4 text-center">
+                    <p className="text-3xl font-semibold tabular-nums leading-none text-v-on">
                       +{creditsAdded}
                     </p>
-                    <p className="text-xs text-zinc-500 mt-2">
+                    <p className="mt-2 text-xs text-v-muted">
                       credit{creditsAdded === 1 ? '' : 's'} added
                       {totalCredits != null && (
-                        <span className="text-zinc-400"> · {totalCredits} total</span>
+                        <span className="text-v-muted/80"> · {totalCredits} total</span>
                       )}
                     </p>
-                  </motion.div>
+                  </div>
                 )}
 
                 {packInfo && (
                   <div className="text-center">
-                    <p className="text-sm font-medium text-zinc-950">{packInfo.label}</p>
-                    <p className="text-xs text-zinc-500 mt-1 leading-relaxed">{packInfo.tagline}</p>
+                    <p className="text-sm font-medium text-v-on">{packInfo.label}</p>
+                    <p className="mt-1 text-xs leading-relaxed text-v-muted">{packInfo.tagline}</p>
                   </div>
                 )}
 
                 {!sessionId && (
-                  <p className="text-sm text-zinc-500 text-center leading-relaxed">
+                  <p className="text-center text-sm leading-relaxed text-v-muted">
                     Payment received. Credits may take a moment if the webhook is still processing.
                   </p>
                 )}
 
-                <p className="text-sm text-zinc-600 text-center leading-relaxed border-t border-zinc-100 pt-5">
+                <p className="border-t border-white/[0.06] pt-5 text-center text-sm leading-relaxed text-v-muted">
                   You&apos;re ready to find out if your next idea is worth building.
                 </p>
               </div>
             )}
 
-            <div className="flex flex-col gap-2.5 mt-7">
-              <Button
+            <div className="mt-7 flex flex-col gap-2.5">
+              <button
                 type="button"
-                className="w-full h-11 gap-2"
+                className="inline-flex h-11 w-full items-center justify-center rounded-md bg-v-on text-sm font-medium text-v-bg transition-opacity hover:opacity-90 disabled:opacity-50"
                 disabled={isBusy}
                 onClick={() => goTo('new')}
               >
-                {navigatingTo === 'new' ? (
-                  <>
-                    <Loader2 size={16} className="animate-spin" aria-hidden />
-                    Opening…
-                  </>
-                ) : (
-                  'Validate an idea'
-                )}
-              </Button>
-              <Button
+                {navigatingTo === 'new' ? 'Opening…' : 'Validate an idea'}
+              </button>
+              <button
                 type="button"
-                variant="outline"
-                className="w-full h-11 gap-2"
+                className="inline-flex h-11 w-full items-center justify-center rounded-md border border-white/14 text-sm font-medium text-v-on transition-colors hover:border-white/28 disabled:opacity-50"
                 disabled={isBusy}
                 onClick={() => goTo('dashboard')}
               >
-                {navigatingTo === 'dashboard' ? (
-                  <>
-                    <Loader2 size={16} className="animate-spin" aria-hidden />
-                    Loading…
-                  </>
-                ) : (
-                  'Back to dashboard'
-                )}
-              </Button>
+                {navigatingTo === 'dashboard' ? 'Loading…' : 'Back to dashboard'}
+              </button>
             </div>
           </div>
         </div>
 
-        <p className="text-center text-[11px] text-zinc-400 mt-4 font-mono">
+        <p className="mt-4 text-center font-landing-mono text-[11px] text-v-muted">
           Secure payment via Stripe
         </p>
-      </motion.div>
+      </div>
     </div>
   )
 }

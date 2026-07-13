@@ -15,7 +15,8 @@ def render_supabase_template(template_name: str, **variables: str) -> tuple[str,
 
     html = _apply_variables(html_path.read_text(encoding="utf-8"), variables)
     text = _apply_variables(text_path.read_text(encoding="utf-8"), variables) if text_path.exists() else ""
-    subject = subject_path.read_text(encoding="utf-8").strip() if subject_path.exists() else ""
+    subject_raw = subject_path.read_text(encoding="utf-8").strip() if subject_path.exists() else ""
+    subject = _apply_variables(subject_raw, variables) if subject_raw else ""
     return subject, html, text
 
 

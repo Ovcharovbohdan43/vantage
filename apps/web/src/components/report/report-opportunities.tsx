@@ -32,42 +32,42 @@ function OpportunityCard({
   const requests = cluster.feature_requests ?? []
 
   return (
-    <article className="rounded-xl border border-white/10 bg-[#1c1b1d]/70 p-5 md:p-6">
+    <article className="rounded-xl border border-white/10 bg-v-surface/70 p-5 md:p-6">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <p className="mb-1 font-mono text-[10px] uppercase tracking-widest text-[#958ea0]">
+          <p className="mb-1 font-landing-mono text-[10px] uppercase tracking-widest text-v-muted">
             #{rank} · {mentionCount.toLocaleString()} mentions
             {share != null ? ` · ${share}%` : ''}
             {cluster.severity_score != null ? ` · severity ${cluster.severity_score.toFixed(1)}/10` : ''}
           </p>
-          <h3 className="text-lg font-semibold leading-snug text-[#e5e1e4] md:text-xl">
+          <h3 className="text-lg font-semibold leading-snug text-v-on md:text-xl">
             {cluster.title}
           </h3>
           {cluster.trend && (
-            <p className="mt-2 font-mono text-xs text-[#d0bcff]">{TREND_LABEL[cluster.trend]}</p>
+            <p className="mt-2 font-landing-mono text-xs text-v-primary">{TREND_LABEL[cluster.trend]}</p>
           )}
         </div>
       </div>
 
       {!isPreview && cluster.why_opportunity && (
-        <p className="mb-5 text-sm leading-relaxed text-[#cbc3d7]">{cluster.why_opportunity}</p>
+        <p className="mb-5 text-sm leading-relaxed text-v-muted">{cluster.why_opportunity}</p>
       )}
 
       {!isPreview && subThemes.length > 0 && (
         <div className="mb-5">
-          <p className="mb-2 font-mono text-[10px] uppercase tracking-widest text-[#958ea0]">
+          <p className="mb-2 font-landing-mono text-[10px] uppercase tracking-widest text-v-muted">
             What specifically irritates them
           </p>
           <ul className="space-y-1.5">
             {subThemes.map((theme) => (
-              <li key={`${theme.title}-${theme.frequency}`} className="flex gap-2 text-sm text-[#e5e1e4]">
-                <span className="shrink-0 text-[#d0bcff]">✔</span>
+              <li key={`${theme.title}-${theme.frequency}`} className="flex gap-2 text-sm text-v-on">
+                <span className="shrink-0 text-v-primary">✔</span>
                 <span>
-                  <span className="tabular-nums text-[#d0bcff]">{theme.frequency}</span>
+                  <span className="tabular-nums text-v-primary">{theme.frequency}</span>
                   {' — '}
                   {theme.title}
                   {theme.share_pct != null ? (
-                    <span className="text-[#958ea0]"> ({theme.share_pct}%)</span>
+                    <span className="text-v-muted"> ({theme.share_pct}%)</span>
                   ) : null}
                 </span>
               </li>
@@ -78,16 +78,16 @@ function OpportunityCard({
 
       {!isPreview && competitors.length > 0 && (
         <div className="mb-5 overflow-x-auto">
-          <p className="mb-2 font-mono text-[10px] uppercase tracking-widest text-[#958ea0]">
+          <p className="mb-2 font-landing-mono text-[10px] uppercase tracking-widest text-v-muted">
             Who gets these complaints
           </p>
           <table className="w-full min-w-[240px] text-left text-sm">
             <thead>
-              <tr className="border-b border-white/10 text-[#958ea0]">
-                <th className="py-1.5 font-mono text-[10px] font-normal uppercase tracking-widest">
+              <tr className="border-b border-white/10 text-v-muted">
+                <th className="py-1.5 font-landing-mono text-[10px] font-normal uppercase tracking-widest">
                   Competitor
                 </th>
-                <th className="py-1.5 font-mono text-[10px] font-normal uppercase tracking-widest">
+                <th className="py-1.5 font-landing-mono text-[10px] font-normal uppercase tracking-widest">
                   Complaints
                 </th>
               </tr>
@@ -95,8 +95,8 @@ function OpportunityCard({
             <tbody>
               {competitors.slice(0, 8).map((row) => (
                 <tr key={row.name} className="border-b border-white/5">
-                  <td className="py-1.5 text-[#e5e1e4]">{row.name}</td>
-                  <td className="py-1.5 tabular-nums text-[#cbc3d7]">{row.complaints}</td>
+                  <td className="py-1.5 text-v-on">{row.name}</td>
+                  <td className="py-1.5 tabular-nums text-v-muted">{row.complaints}</td>
                 </tr>
               ))}
             </tbody>
@@ -106,17 +106,17 @@ function OpportunityCard({
 
       {!isPreview && terms.length > 0 && (
         <div className="mb-5">
-          <p className="mb-2 font-mono text-[10px] uppercase tracking-widest text-[#958ea0]">
+          <p className="mb-2 font-landing-mono text-[10px] uppercase tracking-widest text-v-muted">
             Words customers repeat
           </p>
           <div className="flex flex-wrap gap-2">
             {terms.slice(0, 12).map((term) => (
               <span
                 key={term.term}
-                className="rounded border border-white/10 bg-[#201f22] px-2 py-1 font-mono text-xs text-[#cbc3d7]"
+                className="rounded border border-white/10 bg-v-surface-high px-2 py-1 font-landing-mono text-xs text-v-muted"
               >
                 {term.term}
-                <span className="ml-1 text-[#958ea0]">×{term.count}</span>
+                <span className="ml-1 text-v-muted">×{term.count}</span>
               </span>
             ))}
           </div>
@@ -125,13 +125,13 @@ function OpportunityCard({
 
       {!isPreview && requests.length > 0 && (
         <div className="mb-5">
-          <p className="mb-2 font-mono text-[10px] uppercase tracking-widest text-[#958ea0]">
+          <p className="mb-2 font-landing-mono text-[10px] uppercase tracking-widest text-v-muted">
             What users asked for instead
           </p>
           <ul className="space-y-1.5">
             {requests.map((req) => (
-              <li key={req.label} className="text-sm text-[#e5e1e4]">
-                <span className="tabular-nums text-[#d0bcff]">{req.count}</span>
+              <li key={req.label} className="text-sm text-v-on">
+                <span className="tabular-nums text-v-primary">{req.count}</span>
                 {' — '}
                 {req.label}
               </li>
@@ -143,14 +143,14 @@ function OpportunityCard({
       {!isPreview && quotes.length > 0 && (
         <div>
           <div className="mb-2 flex items-center justify-between gap-2">
-            <p className="font-mono text-[10px] uppercase tracking-widest text-[#958ea0]">
+            <p className="font-landing-mono text-[10px] uppercase tracking-widest text-v-muted">
               Customer quotes ({quotes.length})
             </p>
             {onReadEvidence && (
               <button
                 type="button"
                 onClick={() => onReadEvidence(cluster.id)}
-                className="font-mono text-[10px] uppercase tracking-widest text-[#d0bcff] hover:underline"
+                className="font-landing-mono text-[10px] uppercase tracking-widest text-v-primary hover:underline"
               >
                 Open evidence
               </button>
@@ -160,10 +160,10 @@ function OpportunityCard({
             {visibleQuotes.map((quote, index) => (
               <li
                 key={`${cluster.id}-q-${index}`}
-                className="border-l-2 border-[#d0bcff]/40 pl-3 text-sm leading-relaxed text-[#cbc3d7]"
+                className="border-l-2 border-v-primary/40 pl-3 text-sm leading-relaxed text-v-muted"
               >
                 “{quote.text}”
-                <span className="mt-1 block font-mono text-[10px] text-[#958ea0]">
+                <span className="mt-1 block font-landing-mono text-[10px] text-v-muted">
                   {[quote.competitor, quote.rating != null ? `${quote.rating}/5` : null, quote.source]
                     .filter(Boolean)
                     .join(' · ')}
@@ -176,7 +176,7 @@ function OpportunityCard({
               type="button"
               onClick={() => setShowAllQuotes((v) => !v)}
               className={cn(
-                'mt-3 font-mono text-[10px] uppercase tracking-widest text-[#d0bcff] hover:underline',
+                'mt-3 font-landing-mono text-[10px] uppercase tracking-widest text-v-primary hover:underline',
               )}
             >
               {showAllQuotes ? 'Show fewer quotes' : `Show all ${quotes.length} quotes`}
@@ -186,7 +186,7 @@ function OpportunityCard({
       )}
 
       {isPreview && (
-        <p className="text-sm text-[#958ea0]">
+        <p className="text-sm text-v-muted">
           Unlock to see sub-themes, competitor split, repeated words, feature asks, and quotes.
         </p>
       )}
@@ -208,20 +208,20 @@ export function ReportBiggestOpportunities({
   if (clusters.length === 0) {
     return (
       <section className="mb-8">
-        <h2 className="mb-3 font-mono text-xs uppercase tracking-widest text-[#958ea0]">
+        <h2 className="mb-3 font-landing-mono text-xs uppercase tracking-widest text-v-muted">
           Biggest opportunities
         </h2>
-        <p className="text-sm text-[#958ea0]">No recurring pain patterns were identified.</p>
+        <p className="text-sm text-v-muted">No recurring pain patterns were identified.</p>
       </section>
     )
   }
 
   return (
     <section className="mb-8">
-      <h2 className="mb-2 font-mono text-xs uppercase tracking-widest text-[#958ea0]">
+      <h2 className="mb-2 font-landing-mono text-xs uppercase tracking-widest text-v-muted">
         Biggest opportunities
       </h2>
-      <p className="mb-4 max-w-2xl text-sm text-[#958ea0]">
+      <p className="mb-4 max-w-2xl text-sm text-v-muted">
         Ranked by how often unhappy customers raised each issue — not by AI opinion.
       </p>
       <div className="space-y-5">
@@ -249,21 +249,21 @@ export function ReportYearTrends({ report, isPreview }: { report: ResearchReport
 
   return (
     <section className="mb-8">
-      <h2 className="mb-3 font-mono text-xs uppercase tracking-widest text-[#958ea0]">
+      <h2 className="mb-3 font-landing-mono text-xs uppercase tracking-widest text-v-muted">
         How complaints changed over time
       </h2>
       <div className="space-y-4">
         {clustersWithTrend.slice(0, 4).map((cluster) => (
-          <div key={cluster.id} className="rounded-xl border border-white/10 bg-[#1c1b1d]/60 p-4">
-            <p className="mb-3 text-sm font-medium text-[#e5e1e4]">{cluster.title}</p>
+          <div key={cluster.id} className="rounded-xl border border-white/10 bg-v-surface/60 p-4">
+            <p className="mb-3 text-sm font-medium text-v-on">{cluster.title}</p>
             <div className="flex flex-wrap gap-3">
               {(cluster.year_counts ?? []).map((row) => (
                 <div
                   key={`${cluster.id}-${row.year}`}
-                  className="min-w-[72px] rounded-lg border border-white/8 bg-[#201f22] px-3 py-2 text-center"
+                  className="min-w-[72px] rounded-lg border border-white/8 bg-v-surface-high px-3 py-2 text-center"
                 >
-                  <p className="font-mono text-[10px] text-[#958ea0]">{row.year}</p>
-                  <p className="text-lg font-semibold tabular-nums text-[#d0bcff]">{row.count}</p>
+                  <p className="font-landing-mono text-[10px] text-v-muted">{row.year}</p>
+                  <p className="text-lg font-semibold tabular-nums text-v-primary">{row.count}</p>
                 </div>
               ))}
             </div>
@@ -277,11 +277,11 @@ export function ReportYearTrends({ report, isPreview }: { report: ResearchReport
 export function ReportAiSummary({ report, isPreview }: { report: ResearchReport; isPreview: boolean }) {
   return (
     <section className="mb-8">
-      <h2 className="mb-3 font-mono text-xs uppercase tracking-widest text-[#958ea0]">
+      <h2 className="mb-3 font-landing-mono text-xs uppercase tracking-widest text-v-muted">
         Short AI summary
       </h2>
-      <div className="rounded-xl border border-white/10 bg-[#1c1b1d]/60 p-5">
-        <p className="text-sm leading-relaxed whitespace-pre-line text-[#cbc3d7]">
+      <div className="rounded-xl border border-white/10 bg-v-surface/60 p-5">
+        <p className="text-sm leading-relaxed whitespace-pre-line text-v-muted">
           {isPreview
             ? 'Unlock the full report to read the grounded summary of what customers actually said.'
             : report.summary}

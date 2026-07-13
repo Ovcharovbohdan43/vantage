@@ -58,13 +58,18 @@ export default async function LibraryArticlePage({ params }: PageProps) {
   const jsonLd = article.seo.json_ld
 
   return (
-    <div className="mx-auto max-w-3xl px-6 py-10">
-      <Link
-        href="/library"
-        className="mb-6 inline-block text-sm text-[#958ea0] transition-colors hover:text-[#d0bcff]"
-      >
-        Research Library
-      </Link>
+    <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-5 sm:py-10 md:px-8">
+      <nav className="mb-5 flex min-w-0 items-center gap-2 text-sm sm:mb-6" aria-label="Breadcrumb">
+        <Link
+          href="/library"
+          className="shrink-0 text-v-muted transition-colors hover:text-v-on"
+        >
+          <span className="sm:hidden">Library</span>
+          <span className="hidden sm:inline">Research Library</span>
+        </Link>
+        <span className="shrink-0 text-white/20">/</span>
+        <span className="truncate text-v-on">{article.title}</span>
+      </nav>
 
       {jsonLd && (
         <script

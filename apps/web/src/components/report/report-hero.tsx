@@ -13,17 +13,17 @@ const SATURATION_LABEL: Record<MarketSaturation, string> = {
 type MetricTone = 'good' | 'caution' | 'bad' | 'neutral'
 
 const TONE_SURFACE: Record<MetricTone, string> = {
-  good: 'border-emerald-400/25 bg-gradient-to-b from-emerald-400/12 to-[#1c1b1d]',
-  caution: 'border-[#d0bcff]/30 bg-gradient-to-b from-[#d0bcff]/14 to-[#1c1b1d]',
-  bad: 'border-[#ff4ec8]/30 bg-gradient-to-b from-[#ff4ec8]/14 to-[#1c1b1d]',
-  neutral: 'border-white/10 bg-gradient-to-b from-white/[0.06] to-[#1c1b1d]',
+  good: 'border-emerald-400/25 bg-gradient-to-b from-emerald-400/12 to-v-surface',
+  caution: 'border-v-primary/30 bg-gradient-to-b from-v-primary/14 to-v-surface',
+  bad: 'border-v-error/30 bg-gradient-to-b from-v-error/14 to-v-surface',
+  neutral: 'border-white/10 bg-gradient-to-b from-white/[0.06] to-v-surface',
 }
 
 const TONE_DOT: Record<MetricTone, string> = {
   good: 'bg-emerald-400',
-  caution: 'bg-[#d0bcff]',
-  bad: 'bg-[#ff4ec8]',
-  neutral: 'bg-[#958ea0]',
+  caution: 'bg-v-primary',
+  bad: 'bg-v-error',
+  neutral: 'bg-v-muted',
 }
 
 function competitionLevel(risk: number, saturation: MarketSaturation): 'High' | 'Medium' | 'Low' {
@@ -64,15 +64,15 @@ function MetricCard({
         TONE_SURFACE[tone],
       )}
     >
-      <p className="mb-2 font-mono text-[10px] uppercase tracking-widest text-[#958ea0]">{label}</p>
+      <p className="mb-2 font-landing-mono text-[10px] uppercase tracking-widest text-v-muted">{label}</p>
       <div>
-        <p className="flex items-center gap-2 text-base leading-tight font-semibold text-[#e5e1e4] sm:text-lg">
+        <p className="flex items-center gap-2 text-base leading-tight font-semibold text-v-on sm:text-lg">
           {showDot && (
             <span className={cn('size-2 shrink-0 rounded-full', TONE_DOT[tone])} aria-hidden />
           )}
           {value}
         </p>
-        {sub && <p className="mt-1 text-xs text-[#958ea0]">{sub}</p>}
+        {sub && <p className="mt-1 text-xs text-v-muted">{sub}</p>}
       </div>
     </div>
   )
@@ -86,16 +86,16 @@ export function ReportTimeSavedBanner({ report }: { report: ResearchReport }) {
     : 'under 3 min'
 
   return (
-    <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#d0bcff]/25 bg-[#201f22]/80 px-5 py-4">
+    <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-v-primary/25 bg-v-surface-high/80 px-5 py-4">
       <div>
-        <p className="mb-1 font-mono text-[10px] uppercase tracking-widest text-[#958ea0]">
+        <p className="mb-1 font-landing-mono text-[10px] uppercase tracking-widest text-v-muted">
           Estimated time saved
         </p>
-        <p className="text-2xl font-semibold tabular-nums text-[#d0bcff]">
+        <p className="text-2xl font-semibold tabular-nums text-v-primary">
           ~{stats.time_saved_hours} hours
         </p>
       </div>
-      <p className="max-w-md text-sm leading-relaxed text-[#cbc3d7]">
+      <p className="max-w-md text-sm leading-relaxed text-v-muted">
         Instead of reading {stats.reviews_analyzed.toLocaleString()} reviews manually, Vantage
         extracted the key patterns in {durationLabel}.
       </p>
@@ -123,7 +123,7 @@ export function ReportExecutiveSummary({
 
   return (
     <section className="mb-8">
-      <h2 className="mb-3 font-mono text-xs uppercase tracking-widest text-[#958ea0]">
+      <h2 className="mb-3 font-landing-mono text-xs uppercase tracking-widest text-v-muted">
         Market snapshot
       </h2>
       <div className="flex flex-wrap gap-2">
@@ -184,25 +184,25 @@ export function ReportAnalysisTimeline({ report }: { report: ResearchReport }) {
 
   return (
     <section className="mb-8">
-      <h2 className="mb-3 font-mono text-xs uppercase tracking-widest text-[#958ea0]">
+      <h2 className="mb-3 font-landing-mono text-xs uppercase tracking-widest text-v-muted">
         Analysis pipeline
       </h2>
-      <div className="rounded-xl border border-white/10 bg-[#1c1b1d]/60 p-5">
+      <div className="rounded-xl border border-white/10 bg-v-surface/60 p-5">
         <div className="flex flex-col items-start gap-1">
           {steps.map((step, i) => (
             <div key={step.label} className="flex flex-col items-start">
               <span
                 className={cn(
-                  'rounded-lg border px-3 py-2 font-mono text-xs',
+                  'rounded-lg border px-3 py-2 font-landing-mono text-xs',
                   step.active
-                    ? 'border-[#d0bcff]/40 bg-[#d0bcff]/15 text-[#d0bcff]'
-                    : 'border-white/10 text-[#958ea0]',
+                    ? 'border-v-primary/40 bg-v-primary/15 text-v-primary'
+                    : 'border-white/10 text-v-muted',
                 )}
               >
                 {step.label}
               </span>
               {i < steps.length - 1 && (
-                <span className="py-1 pl-4 text-sm text-[#d0bcff]/40" aria-hidden>
+                <span className="py-1 pl-4 text-sm text-v-primary/40" aria-hidden>
                   ↓
                 </span>
               )}

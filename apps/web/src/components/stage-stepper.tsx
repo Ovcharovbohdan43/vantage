@@ -1,6 +1,5 @@
 'use client'
 
-import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import type { ResearchStage } from '@/lib/api/types'
 import { STAGE_LABELS } from '@/lib/api/types'
@@ -29,7 +28,7 @@ export function StageStepper({ currentStage, failed }: StageStepperProps) {
   const currentIdx = stageIndex(currentStage)
 
   return (
-    <ol className="space-y-3">
+    <ol className="divide-y divide-white/[0.06] border-y border-white/[0.06]">
       {PIPELINE_STAGES.filter((s) => s !== 'queued' && s !== 'cancelled').map((stage, i) => {
         const idx = i + 1
         const isActive = !failed && currentIdx === idx
@@ -37,36 +36,32 @@ export function StageStepper({ currentStage, failed }: StageStepperProps) {
         const isPending = !failed && currentIdx < idx
 
         return (
-          <motion.li
+          <li
             key={stage}
-            initial={{ opacity: 0, x: -8 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: i * 0.05 }}
             className={cn(
-              'flex items-center gap-3 rounded-xl border px-3 py-2.5 text-sm transition-colors',
-              isActive && 'border-[#d0bcff]/40 bg-[#d0bcff]/10',
-              isDone && 'border-white/10 text-[#cbc3d7]',
-              isPending && 'border-white/8 text-[#958ea0]',
-              failed && 'border-[#ffb4ab]/25 bg-[#ffb4ab]/8 text-[#ffb4ab]',
+              'flex items-center gap-3 px-1 py-2.5 text-sm transition-colors',
+              isActive && 'text-v-on',
+              isDone && 'text-v-muted',
+              isPending && 'text-v-muted/70',
+              failed && 'text-v-error',
             )}
           >
             <span
               className={cn(
-                'flex h-6 w-6 shrink-0 items-center justify-center rounded-md border font-mono text-xs',
-                isActive && 'border-[#d0bcff] bg-[#d0bcff] text-[#3c0091]',
-                isDone && 'border-[#4edea3]/30 bg-[#4edea3]/10 text-[#4edea3]',
-                isPending && 'border-white/15 text-[#958ea0]',
+                'flex h-6 w-6 shrink-0 items-center justify-center rounded-md border font-landing-mono text-xs',
+                isActive && 'border-v-primary bg-v-primary text-v-bg',
+                isDone && 'border-v-tertiary/30 bg-v-tertiary/10 text-v-tertiary',
+                isPending && 'border-white/15 text-v-muted',
+                failed && 'border-v-error/30 bg-v-error/10 text-v-error',
               )}
             >
               {isDone ? '✓' : idx}
             </span>
-            <span className={cn(isActive && 'font-medium text-[#e5e1e4]')}>
-              {STAGE_LABELS[stage]}
-            </span>
+            <span className={cn(isActive && 'font-medium')}>{STAGE_LABELS[stage]}</span>
             {isActive && (
-              <span className="ml-auto font-mono text-xs text-[#ff8adf]">In progress</span>
+              <span className="ml-auto font-landing-mono text-xs text-v-primary">In progress</span>
             )}
-          </motion.li>
+          </li>
         )
       })}
     </ol>

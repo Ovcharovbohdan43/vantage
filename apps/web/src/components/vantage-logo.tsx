@@ -1,20 +1,11 @@
-import Image from 'next/image'
-import { cn } from '@/lib/utils'
+import { VantageMark } from '@/components/vantage-mark'
 
 interface VantageLogoProps {
   size?: number
   className?: string
 }
 
+/** In-product logo mark (inherits parent text color via currentColor). */
 export function VantageLogo({ size = 20, className }: VantageLogoProps) {
-  return (
-    <Image
-      src="/brand/logo-mark.webp"
-      alt=""
-      width={size}
-      height={size}
-      className={cn('shrink-0', className)}
-      aria-hidden
-    />
-  )
+  return <VantageMark size={size} className={className} />
 }

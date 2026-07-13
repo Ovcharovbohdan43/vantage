@@ -41,7 +41,6 @@ export default async function LibraryPage({ searchParams }: LibraryPageProps) {
   }
 
   try {
-    // Prefer Supabase (same prod DB, RLS) so the library does not depend on Railway API URL wiring.
     const data = await listLibraryArticlesFromSupabase(filters)
     items = data.items
     total = data.total
@@ -59,20 +58,18 @@ export default async function LibraryPage({ searchParams }: LibraryPageProps) {
   }
 
   return (
-    <div className="relative mx-auto max-w-6xl px-6 py-10">
-      <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-        <div className="absolute top-0 right-1/4 h-56 w-56 rounded-full bg-[#d0bcff]/10 blur-[100px]" />
-      </div>
-
-      <div className="mb-10 max-w-2xl">
-        <h1 className="mb-2 text-2xl font-semibold tracking-tight text-[#e5e1e4]">Research Library</h1>
-        <p className="text-sm leading-relaxed text-[#cbc3d7]">
+    <div className="mx-auto w-full max-w-[1120px] px-4 py-8 sm:px-5 sm:py-10 md:px-8 md:py-12">
+      <div className="mb-6 max-w-2xl border-b border-white/[0.06] pb-6 sm:mb-8 sm:pb-8">
+        <h1 className="mb-2 text-xl font-semibold tracking-tight text-v-on sm:text-2xl">
+          Research Library
+        </h1>
+        <p className="text-sm leading-relaxed text-v-muted md:text-[15px]">
           A living archive of market pain research — built from real negative reviews on G2 and
           Capterra. Not a blog. Evidence you can verify.
         </p>
       </div>
 
-      <Suspense fallback={<p className="text-sm text-[#958ea0]">Loading library…</p>}>
+      <Suspense fallback={<p className="text-sm text-v-muted">Loading library…</p>}>
         <LibraryIndexClient
           items={items}
           total={total}

@@ -11,6 +11,7 @@ import { AppFeedbackPrompt } from '@/components/app-feedback-prompt'
 import { FullReportCta } from '@/components/full-report-cta'
 import { PricingModal } from '@/components/pricing-modal'
 import { ProjectEvidence } from '@/components/project-evidence'
+import { StateScreen } from '@/components/state-screen'
 import {
   ReportCompetitorsSection,
   ReportCustomerVoicePreview,
@@ -41,13 +42,13 @@ interface ReportViewProps {
 }
 
 const SATURATION_COLORS: Record<MarketSaturation, string> = {
-  HIGH: 'border-[#ff4ec8]/40 bg-[#ff4ec8]/12 text-[#ff8adf]',
-  MEDIUM: 'border-[#d0bcff]/35 bg-[#d0bcff]/10 text-[#d0bcff]',
+  HIGH: 'border-v-warn/40 bg-v-warn/12 text-v-warn',
+  MEDIUM: 'border-v-primary/35 bg-v-primary/10 text-v-primary',
   LOW: 'border-emerald-400/35 bg-emerald-400/10 text-emerald-300',
 }
 
 const ghostBtn =
-  'inline-flex items-center gap-1.5 rounded-lg border border-white/12 bg-[#1c1b1d] px-3 py-1.5 text-sm text-[#e5e1e4] transition-colors hover:border-[#d0bcff]/35 hover:text-[#d0bcff] disabled:opacity-50'
+  'inline-flex items-center gap-1.5 rounded-lg border border-white/12 bg-v-surface px-3 py-1.5 text-sm text-v-on transition-colors hover:border-v-primary/35 hover:text-v-primary disabled:opacity-50'
 
 export function ReportView({ projectId }: ReportViewProps) {
   const router = useRouter()
@@ -90,16 +91,19 @@ export function ReportView({ projectId }: ReportViewProps) {
 
   if (isError || !data) {
     return (
-      <div className="mx-auto max-w-3xl px-4 py-16 text-center sm:px-6 md:px-8">
-        <p className="mb-4 text-sm text-[#ff8adf]">Report is not available yet.</p>
-        <div className="flex flex-wrap items-center justify-center gap-3">
-          <button type="button" onClick={() => refetch()} className={ghostBtn}>
-            Retry
-          </button>
-          <Link href={`/research/${projectId}`} className={ghostBtn}>
-            Back to progress
-          </Link>
-        </div>
+      <div className="mx-auto max-w-3xl px-4 sm:px-6 md:px-8">
+        <StateScreen
+          figure="report"
+          title="Report isn’t ready yet"
+          description="This analysis doesn’t have a report to show right now. Check progress, or try loading again in a moment."
+          primaryAction={{
+            label: 'Try again',
+            onClick: () => {
+              void refetch()
+            },
+          }}
+          secondaryAction={{ label: 'Back to progress', href: `/research/${projectId}` }}
+        />
       </div>
     )
   }
@@ -109,18 +113,13 @@ export function ReportView({ projectId }: ReportViewProps) {
 
   return (
     <div className="relative mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-8 md:px-8">
-      <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-        <div className="absolute top-0 right-1/4 h-56 w-56 rounded-full bg-[#d0bcff]/10 blur-[100px]" />
-        <div className="absolute bottom-1/4 left-0 h-40 w-40 rounded-full bg-[#ff4ec8]/8 blur-[80px]" />
-      </div>
-
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3 text-sm">
-          <Link href="/dashboard" className="text-[#958ea0] transition-colors hover:text-[#d0bcff]">
+          <Link href="/dashboard" className="text-v-muted transition-colors hover:text-v-primary">
             Dashboard
           </Link>
           <span className="text-white/20">/</span>
-          <span className="font-medium text-[#e5e1e4]">Report</span>
+          <span className="font-medium text-v-on">Report</span>
         </div>
         <div className="flex items-center gap-2">
           <button type="button" onClick={() => downloadReportMarkdown(data)} className={ghostBtn}>
@@ -145,7 +144,7 @@ export function ReportView({ projectId }: ReportViewProps) {
         className="mb-4"
       >
         <div className="mb-2 flex flex-wrap items-center gap-2">
-          <span className="font-mono text-xs uppercase tracking-widest text-[#958ea0]">
+          <span className="font-landing-mono text-xs uppercase tracking-widest text-v-muted">
             {idea.category}
           </span>
           <span
@@ -157,7 +156,7 @@ export function ReportView({ projectId }: ReportViewProps) {
             {scores.market_saturation} saturation
           </span>
         </div>
-        <h1 className="text-2xl font-semibold tracking-tight text-[#e5e1e4]">{idea.title}</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-v-on">{idea.title}</h1>
       </motion.header>
 
       <ReportTimeSavedBanner report={data} />
@@ -167,10 +166,10 @@ export function ReportView({ projectId }: ReportViewProps) {
           type="button"
           onClick={() => setTab('report')}
           className={cn(
-            'rounded-lg border px-3 py-1.5 font-mono text-xs uppercase tracking-widest transition-colors',
+            'rounded-lg border px-3 py-1.5 font-landing-mono text-xs uppercase tracking-widest transition-colors',
             tab === 'report'
-              ? 'border-[#d0bcff]/45 bg-[#d0bcff]/15 text-[#d0bcff]'
-              : 'border-white/10 text-[#958ea0] hover:border-[#d0bcff]/30 hover:text-[#cbc3d7]',
+              ? 'border-v-primary/45 bg-v-primary/15 text-v-primary'
+              : 'border-white/10 text-v-muted hover:border-v-primary/30 hover:text-v-muted',
           )}
         >
           Report
@@ -179,10 +178,10 @@ export function ReportView({ projectId }: ReportViewProps) {
           type="button"
           onClick={() => openEvidence()}
           className={cn(
-            'rounded-lg border px-3 py-1.5 font-mono text-xs uppercase tracking-widest transition-colors',
+            'rounded-lg border px-3 py-1.5 font-landing-mono text-xs uppercase tracking-widest transition-colors',
             tab === 'evidence'
-              ? 'border-[#d0bcff]/45 bg-[#d0bcff]/15 text-[#d0bcff]'
-              : 'border-white/10 text-[#958ea0] hover:border-[#d0bcff]/30 hover:text-[#cbc3d7]',
+              ? 'border-v-primary/45 bg-v-primary/15 text-v-primary'
+              : 'border-white/10 text-v-muted hover:border-v-primary/30 hover:text-v-muted',
           )}
         >
           Customer voice
@@ -199,8 +198,8 @@ export function ReportView({ projectId }: ReportViewProps) {
       ) : (
         <>
           {isPreview && (
-            <div className="mb-6 rounded-xl border border-[#d0bcff]/25 bg-[#d0bcff]/8 p-4 text-sm text-[#cbc3d7]">
-              <span className="mb-1 block font-mono text-xs uppercase tracking-widest text-[#d0bcff]">
+            <div className="mb-6 rounded-xl border border-v-primary/25 bg-v-primary/8 p-4 text-sm text-v-muted">
+              <span className="mb-1 block font-landing-mono text-xs uppercase tracking-widest text-v-primary">
                 Free preview
               </span>
               First screen shows market signals. Unlock for complaint breakdowns, competitor tables,
@@ -221,7 +220,7 @@ export function ReportView({ projectId }: ReportViewProps) {
           <ReportAnalysisTimeline report={data} />
 
           <section className="mb-8">
-            <h2 className="mb-3 font-mono text-xs uppercase tracking-widest text-[#958ea0]">Pain map</h2>
+            <h2 className="mb-3 font-landing-mono text-xs uppercase tracking-widest text-v-muted">Pain map</h2>
             <ReportPainMap
               clusters={data.pain_clusters}
               isPreview={isPreview}

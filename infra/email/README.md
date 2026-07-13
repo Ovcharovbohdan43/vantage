@@ -1,111 +1,90 @@
 # Vantage email templates
 
-Transactional HTML for Supabase Auth (via Resend SMTP) and the Resend API.
+Transactional HTML styled like GitHub account emails: light canvas, bordered card,
+system fonts, green/dark CTAs, security notices, and a full professional footer.
 
 Auth emails (confirm signup, reset password) go through **Supabase → Resend SMTP**.
-App emails (support, product) go through **`POST /api/v1/email/send` → Resend API**.
+App emails (welcome, support) go through **Resend API** (`apps/api`).
 
-## Confirm signup
-
-| File | Purpose |
-|------|---------|
-| `templates/confirm-signup.html` | HTML body (paste into Supabase) |
-| `templates/confirm-signup.txt` | Plain-text fallback (Resend multipart / reference) |
-| `templates/confirm-signup.subject.txt` | Suggested subject line |
-
-## Reset password
+## Templates
 
 | File | Purpose |
 |------|---------|
-| `templates/reset-password.html` | HTML body (paste into Supabase → Reset password) |
+| `templates/confirm-signup.html` | Confirm signup (paste into Supabase) |
+| `templates/confirm-signup.txt` | Plain-text fallback |
+| `templates/confirm-signup.subject.txt` | `Confirm your Vantage account` |
+| `templates/reset-password.html` | Reset password (paste into Supabase) |
 | `templates/reset-password.txt` | Plain-text fallback |
-| `templates/reset-password.subject.txt` | Suggested subject: `Reset your Vantage password` |
+| `templates/reset-password.subject.txt` | `Reset your Vantage password` |
+| `templates/welcome-credits.html` | Signup welcome + credits (API) |
+| `templates/welcome-credits.txt` | Plain-text fallback |
+| `templates/welcome-credits.subject.txt` | Subject with `{{ .Credits }}` |
 
-App flow:
+### Variables (Supabase Go / API renderer)
 
-1. User clicks **Forgot password?** on `/login` → `/forgot-password`
-2. Supabase `resetPasswordForEmail` sends email via Resend SMTP
-3. Link hits `/auth/callback?flow=recovery` → `/reset-password`
-4. User sets a new password with `updateUser({ password })`
+| Token | Used in | Meaning |
+|-------|---------|---------|
+| `{{ .ConfirmationURL }}` | confirm, reset | Primary action link |
+| `{{ .Token }}` | confirm, reset | 6-digit OTP fallback |
+| `{{ .Email }}` | all | Recipient address |
+| `{{ .SiteURL }}` | all | App base URL |
+| `{{ .Credits }}` | welcome | Credit grant amount |
+
+### Links included in every footer / body
+
+- Site home: `{{ .SiteURL }}`
+- Sign in / Forgot password / Dashboard / Account / Research / Library / Support
+- Email preferences: `/settings/notifications`
+- Unsubscribe (product updates only): `/unsubscribe?email=`
+
+Security emails note that they cannot be unsubscribed.
+
+## Confirm signup / Reset password
+
+Email templates use **token_hash links** into the app (not Site URL alone):
+
+```
+{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=recovery
+{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=signup
+```
+
+`/auth/callback` calls `verifyOtp` / `exchangeCodeForSession`, then sends recovery to `/reset-password`.
+
+1. User signs up or clicks **Forgot password?** → Supabase sends via Resend SMTP
+2. Link hits `/auth/callback?token_hash=…&type=recovery|signup`
+3. Recovery continues to `/reset-password`
 
 ### Supabase setup
 
 1. **Authentication → URL configuration**
-   - **Site URL:** `https://your-domain.com` (or `http://localhost:3000` in dev)
+   - **Site URL:** your app origin (e.g. `https://your-domain.com` or `http://localhost:3000`) — not a blank path that drops users on marketing home without auth handling
    - **Redirect URLs** must include:
      - `https://your-domain.com/auth/callback`
      - `https://your-domain.com/auth/callback?flow=confirm`
      - `https://your-domain.com/auth/callback?flow=recovery`
-     - `http://localhost:3000/auth/callback**` (dev)
-2. **Authentication → SMTP** — Resend:
-   - Host: `smtp.resend.com`
-   - Port: `587`
-   - User: `resend`
-   - Password: your `RESEND_API_KEY`
-   - Sender: same as `RESEND_FROM_EMAIL` (e.g. `Vantage <noreply@vantageserch.app>`)
-3. **Authentication → Email templates → Confirm signup**
-   - **Subject:** `Confirm your Vantage account`
-   - **Body:** paste `confirm-signup.html`
-4. **Authentication → Email templates → Reset password**
-   - **Subject:** `Reset your Vantage password`
-   - **Body:** paste `reset-password.html`
+2. **Authentication → SMTP** — Resend (`smtp.resend.com`, user `resend`, password = API key)
+3. Paste HTML bodies into **Email templates → Confirm signup** and **Reset password** (use the files in `templates/`)
 
-Variables used (Supabase Go templates):
+### Deliverability
 
-- `{{ .ConfirmationURL }}` — primary action link
-- `{{ .Token }}` — 6-digit OTP fallback (recommended when link prefetch breaks)
-- `{{ .Email }}` — recipient
-- `{{ .SiteURL }}` — app base URL
+- Verify domain SPF + DKIM + DMARC in Resend
+- From mailbox on that domain (`noreply@…`)
+- Auth/support are **transactional** — no promo, no tracking pixels
+- Keep `{{ .Token }}` as OTP fallback for link-prefetching filters
 
-### Deliverability checklist (avoid spam)
+## Welcome credits (API)
 
-- **Domain in Resend:** verify `vantageserch.app` (or your domain) with **SPF + DKIM**. Add **DMARC** (`p=none` → `quarantine`) at your DNS host.
-- **From address:** use a mailbox on the verified domain (`noreply@…` / `auth@…`). Never send auth from `@gmail.com` or `resend.dev` in production.
-- **Consistency:** `RESEND_FROM_EMAIL` must match the Supabase SMTP sender name/address.
-- **Warm-up:** don’t blast marketing from a brand-new domain; keep volume low at first.
-- **Transactional vs marketing:** auth/support are **security / transactional** — no promo copy, no tracking pixels in auth templates.
-- **Multipart:** Resend API always sends **HTML + plain text** (`apps/api/app/services/resend_email.py`). For Supabase SMTP, paste a clean HTML template and keep the matching `.txt` as the reference text part if you send via API.
-- **Headers (API sends):**
-  - transactional → `Auto-Submitted`, `X-Auto-Response-Suppress`, tags `category=transactional`
-  - marketing → `List-Unsubscribe` + `List-Unsubscribe-Post`, tags `category=marketing`
-- **Unsubscribe:** security emails are exempt; footer links go to product updates only (`/unsubscribe`, `/settings/notifications`).
-- **Physical address:** put a real postal address in templates when you send marketing (CAN-SPAM).
-- **Link prefetch:** enterprise filters may consume `ConfirmationURL` — keep `{{ .Token }}` as OTP fallback.
-- **Test:** use Resend’s “delivered / bounced / complained” webhooks and send yourself a confirm + reset before launch.
+Rendered by `app.services.welcome_email` from `welcome-credits.*` on first successful profile touch. No vendor/tool brand names in copy.
 
-### Footer links to implement in the app
+## Support tickets (API)
 
-| Path | Purpose |
-|------|---------|
-| `/settings/notifications` | Email preference center |
-| `/unsubscribe?email=` | One-click unsubscribe from product updates |
-| `/forgot-password` | Request password reset |
-| `/reset-password` | Set new password after recovery link |
+Inbox emails use the same GitHub card layout with user id, email, deep links, and reply instructions.
 
-Account security emails (confirm, reset password) must still be sent regardless of marketing opt-out.
+## Preview
 
-### Support reply bridge (official From)
+Open `preview/index.html` in a browser, or open `*-filled.html` directly.
 
-When a user submits **Support** in the app:
-
-1. API emails `SUPPORT_INBOX_EMAIL` from `RESEND_FROM_EMAIL`.
-2. **Reply-To** is `support+{user_id}@{SUPPORT_REPLY_DOMAIN}` (Resend Receiving).
-3. Reply in Gmail as usual — Resend webhook receives it and relays the body to the user **from** `RESEND_FROM_EMAIL` (official Vantage).
-4. If the user replies again, the same address forwards back to the support inbox.
-
-**Resend setup required**
-
-1. Verify domain `vantageserch.app` (SPF/DKIM/DMARC) and set:
-   - `RESEND_FROM_EMAIL=Vantage <noreply@vantageserch.app>`
-   - `SUPPORT_INBOX_EMAIL=…`
-   - `SUPPORT_REPLY_DOMAIN=vantageserch.app`
-   - `APP_WEB_URL=https://your-domain.com` (used for List-Unsubscribe URLs)
-2. Enable **Receiving** / MX for that domain in Resend.
-3. Webhook URL: `POST {API_URL}/api/v1/email/webhook` — event `email.received` (+ keep `RESEND_WEBHOOK_SECRET`).
-
-Agent tip: always use **Reply** on the ticket email so the `support+…` address is preserved.
-
-### Send via API (multipart)
+## Send via API
 
 ```python
 from app.services.email_templates import render_supabase_template
@@ -129,7 +108,3 @@ await send_email(
     tags=[{"name": "type", "value": "confirm_signup"}],
 )
 ```
-
-### Preview
-
-Open `preview/confirm-signup-preview.html` in a browser (static iframe; replace `{{ .… }}` manually for a full visual check).

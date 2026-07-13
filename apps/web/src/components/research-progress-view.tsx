@@ -4,8 +4,6 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { motion } from 'framer-motion'
-import { ChartLineUp, Quotes, UsersThree } from '@phosphor-icons/react'
 import { listCompetitors } from '@/lib/api/competitors'
 import { ApiError } from '@/lib/api/client'
 import { cancelProject, getProjectStatus, retryProject } from '@/lib/api/projects'
@@ -14,10 +12,16 @@ import { AnalysisTheater } from '@/components/analysis-theater'
 import { CompetitorList } from '@/components/competitor-list'
 import { ManualCompetitorForm } from '@/components/manual-competitor-form'
 import { StageStepper } from '@/components/stage-stepper'
+import { StateScreen } from '@/components/state-screen'
 
 interface ResearchProgressViewProps {
   projectId: string
 }
+
+const primaryBtn =
+  'inline-flex rounded-md bg-v-on px-5 py-2.5 text-sm font-medium text-v-bg transition-opacity hover:opacity-90'
+const secondaryBtn =
+  'inline-flex rounded-md border border-white/14 px-5 py-2.5 text-sm font-medium text-v-on transition-colors hover:border-white/28'
 
 export function ResearchProgressView({ projectId }: ResearchProgressViewProps) {
   const router = useRouter()
@@ -95,15 +99,19 @@ export function ResearchProgressView({ projectId }: ResearchProgressViewProps) {
 
   if (isError || !data) {
     return (
-      <div className="mx-auto max-w-3xl px-4 py-16 text-center sm:px-6 md:px-8">
-        <p className="mb-4 text-sm text-[#ffb4ab]">Could not load research status.</p>
-        <button
-          type="button"
-          onClick={() => refetch()}
-          className="rounded-lg border border-white/15 px-4 py-2 text-sm text-[#e5e1e4] transition-colors hover:border-[#d0bcff]/40"
-        >
-          Retry
-        </button>
+      <div className="mx-auto max-w-3xl px-4 sm:px-6 md:px-8">
+        <StateScreen
+          figure="error"
+          title="Couldn’t load this research"
+          description="We lost the connection to this analysis for a moment. Try again, or return to your workspace."
+          primaryAction={{
+            label: 'Try again',
+            onClick: () => {
+              void refetch()
+            },
+          }}
+          secondaryAction={{ label: 'Back to dashboard', href: '/dashboard' }}
+        />
       </div>
     )
   }
@@ -115,15 +123,10 @@ export function ResearchProgressView({ projectId }: ResearchProgressViewProps) {
   const isComplete = job.stage === 'completed'
   const jobAgeMs = Date.now() - new Date(job.created_at).getTime()
   const isStuckQueued =
-    job.stage === 'queued' &&
-    job.status === 'queued' &&
-    !job.started_at &&
-    jobAgeMs > 20_000
-  const insufficientCompetitors =
-    isFailed && job.error?.code === 'insufficient_competitors'
+    job.stage === 'queued' && job.status === 'queued' && !job.started_at && jobAgeMs > 20_000
+  const insufficientCompetitors = isFailed && job.error?.code === 'insufficient_competitors'
   const competitors = competitorsData?.items ?? []
-  const failureMessage =
-    typeof job.error?.message === 'string' ? job.error.message : null
+  const failureMessage = typeof job.error?.message === 'string' ? job.error.message : null
   const warnings = job.stats.warnings ?? []
   const hasInsufficientReviews = warnings.includes('insufficient_reviews')
   const hasNoReviews = warnings.includes('no_reviews_collected')
@@ -171,18 +174,15 @@ export function ResearchProgressView({ projectId }: ResearchProgressViewProps) {
   return (
     <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-8 md:px-8">
       <div className="mb-6 flex items-center gap-3">
-        <Link
-          href="/dashboard"
-          className="text-sm text-[#958ea0] transition-colors hover:text-[#d0bcff]"
-        >
+        <Link href="/dashboard" className="text-sm text-v-muted transition-colors hover:text-v-on">
           Dashboard
         </Link>
         <span className="text-white/20">/</span>
-        <span className="text-sm font-medium text-[#e5e1e4]">Research in progress</span>
+        <span className="text-sm font-medium text-v-on">Research in progress</span>
       </div>
 
       <div className="mb-8">
-        <h1 className="mb-1 text-xl font-semibold tracking-tight text-[#e5e1e4]">
+        <h1 className="mb-1 text-xl font-semibold tracking-tight text-v-on">
           {isComplete
             ? 'Analysis complete'
             : isCancelled
@@ -193,7 +193,7 @@ export function ResearchProgressView({ projectId }: ResearchProgressViewProps) {
                   ? 'Analysis did not start'
                   : 'Running market analysis'}
         </h1>
-        <p className="text-sm text-[#cbc3d7]">
+        <p className="text-sm text-v-muted">
           {isCancelled
             ? 'You can go back to the dashboard and start a new analysis with updated inputs.'
             : isStuckQueued
@@ -202,24 +202,18 @@ export function ResearchProgressView({ projectId }: ResearchProgressViewProps) {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_280px]">
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_240px]">
         <div className="space-y-6">
           {isCancelled && (
-            <div className="space-y-4 rounded-xl border border-white/10 bg-[#1c1b1d]/80 p-5">
-              <p className="text-sm leading-relaxed text-[#cbc3d7]">
+            <div className="space-y-4 rounded-lg border border-white/[0.08] bg-v-surface p-5">
+              <p className="text-sm leading-relaxed text-v-muted">
                 This run was stopped. Start fresh when you are ready to change your idea or settings.
               </p>
               <div className="flex flex-wrap gap-2">
-                <Link
-                  href="/research/new"
-                  className="landing-primary-glow inline-flex rounded-lg bg-[#d0bcff] px-5 py-2.5 text-sm font-semibold text-[#3c0091]"
-                >
+                <Link href="/research/new" className={primaryBtn}>
                   Start new analysis
                 </Link>
-                <Link
-                  href="/dashboard"
-                  className="inline-flex rounded-lg border border-white/15 px-5 py-2.5 text-sm font-medium text-[#e5e1e4] transition-colors hover:border-[#d0bcff]/40"
-                >
+                <Link href="/dashboard" className={secondaryBtn}>
                   Back to dashboard
                 </Link>
               </div>
@@ -227,22 +221,20 @@ export function ResearchProgressView({ projectId }: ResearchProgressViewProps) {
           )}
 
           {!isRunning && !isCancelled && (
-            <div className="rounded-xl border border-white/10 bg-[#1c1b1d]/80 p-5">
+            <div className="rounded-lg border border-white/[0.08] bg-v-surface p-5">
               <div className="mb-3 flex items-center justify-between">
-                <span className="font-mono text-xs uppercase tracking-widest text-[#958ea0]">
+                <span className="font-landing-mono text-xs uppercase tracking-widest text-v-muted">
                   Progress
                 </span>
-                <span className="text-sm text-[#cbc3d7]">{job.progress_pct}%</span>
+                <span className="text-sm text-v-muted">{job.progress_pct}%</span>
               </div>
               <div className="mb-2 h-1.5 overflow-hidden rounded-full bg-white/10">
-                <motion.div
-                  className="h-1.5 rounded-full bg-gradient-to-r from-[#ff4ec8] to-[#d0bcff]"
-                  initial={{ width: 0 }}
-                  animate={{ width: `${job.progress_pct}%` }}
-                  transition={{ duration: 0.6, ease: 'easeOut' }}
+                <div
+                  className="h-1.5 rounded-full bg-v-primary transition-all"
+                  style={{ width: `${job.progress_pct}%` }}
                 />
               </div>
-              <p className="text-sm text-[#cbc3d7]">{STAGE_LABELS[job.stage]}</p>
+              <p className="text-sm text-v-muted">{STAGE_LABELS[job.stage]}</p>
             </div>
           )}
 
@@ -264,14 +256,14 @@ export function ResearchProgressView({ projectId }: ResearchProgressViewProps) {
           )}
 
           {hasNoReviews && !isFailed && (
-            <div className="rounded-xl border border-[#ffcc80]/25 bg-[#ffcc80]/8 p-4 text-sm text-[#ffcc80]">
+            <div className="rounded-lg border border-v-warn/25 bg-v-warn/8 p-4 text-sm text-v-warn">
               We could not collect enough customer feedback this time. The report may be less
               detailed — try running the analysis again later.
             </div>
           )}
 
           {(hasPartialReviews || scraperBlocked) && !hasNoReviews && !isFailed && (
-            <div className="rounded-xl border border-[#ffcc80]/25 bg-[#ffcc80]/8 p-4 text-sm text-[#ffcc80]">
+            <div className="rounded-lg border border-v-warn/25 bg-v-warn/8 p-4 text-sm text-v-warn">
               We only collected part of the available feedback (
               {job.stats.reviews_collected.toLocaleString()} reviews). Results may be directional
               rather than complete.
@@ -279,110 +271,63 @@ export function ResearchProgressView({ projectId }: ResearchProgressViewProps) {
           )}
 
           {hasInsufficientReviews && !hasNoReviews && !hasPartialReviews && !isFailed && (
-            <div className="rounded-xl border border-[#ffcc80]/25 bg-[#ffcc80]/8 p-4 text-sm text-[#ffcc80]">
+            <div className="rounded-lg border border-v-warn/25 bg-v-warn/8 p-4 text-sm text-v-warn">
               Collected {job.stats.reviews_collected.toLocaleString()} reviews — fewer than the
               recommended 100. The report will note limited data confidence.
             </div>
           )}
 
           {isStuckQueued && (
-            <div className="space-y-3 rounded-xl border border-[#ffcc80]/25 bg-[#ffcc80]/8 p-4">
-              <p className="text-sm text-[#ffcc80]">
+            <div className="space-y-3 rounded-lg border border-v-warn/25 bg-v-warn/8 p-4">
+              <p className="text-sm text-v-warn">
                 The analysis did not start on its own. Tap below to run it again.
               </p>
-              {retryError && <p className="text-sm text-[#ffb4ab]">{retryError}</p>}
-              <button
-                type="button"
-                onClick={handleRetry}
-                className="landing-primary-glow inline-flex rounded-lg bg-[#d0bcff] px-5 py-2.5 text-sm font-semibold text-[#3c0091]"
-              >
+              {retryError && <p className="text-sm text-v-error">{retryError}</p>}
+              <button type="button" onClick={handleRetry} className={primaryBtn}>
                 Restart analysis
               </button>
             </div>
           )}
 
-          {isFailed && failureMessage && (
-            <p className="text-sm text-[#ffb4ab]">{failureMessage}</p>
-          )}
+          {isFailed && failureMessage && <p className="text-sm text-v-error">{failureMessage}</p>}
 
           {isFailed && (
             <div className="space-y-3">
-              {retryError && <p className="text-sm text-[#ffb4ab]">{retryError}</p>}
-              <button
-                type="button"
-                onClick={handleRetry}
-                className="landing-primary-glow inline-flex rounded-lg bg-[#d0bcff] px-5 py-2.5 text-sm font-semibold text-[#3c0091]"
-              >
+              {retryError && <p className="text-sm text-v-error">{retryError}</p>}
+              <button type="button" onClick={handleRetry} className={primaryBtn}>
                 Retry analysis
               </button>
             </div>
           )}
 
           {isComplete && (
-            <motion.div
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="space-y-3 rounded-xl border border-[#4edea3]/25 bg-[#4edea3]/10 p-5"
-            >
-              <p className="text-sm text-[#4edea3]">
+            <div className="space-y-3 rounded-lg border border-v-tertiary/25 bg-v-tertiary/10 p-5">
+              <p className="text-sm text-v-tertiary">
                 Analysis finished — {job.stats.pain_clusters_found} pain cluster
                 {job.stats.pain_clusters_found === 1 ? '' : 's'} identified.
               </p>
-              <Link
-                href={`/research/${projectId}/report`}
-                className="landing-primary-glow inline-flex rounded-lg bg-[#d0bcff] px-5 py-2.5 text-sm font-semibold text-[#3c0091]"
-              >
+              <Link href={`/research/${projectId}/report`} className={primaryBtn}>
                 View report
               </Link>
-            </motion.div>
+            </div>
           )}
         </div>
 
         <div className="space-y-3">
-          <StatCard
-            icon={<UsersThree size={20} weight="duotone" />}
-            label="Competitors found"
-            value={job.stats.competitors_found}
-          />
-          <StatCard
-            icon={<Quotes size={20} weight="duotone" />}
-            label="Reviews collected"
-            value={job.stats.reviews_collected}
-          />
-          <StatCard
-            icon={<ChartLineUp size={20} weight="duotone" />}
-            label="Pain clusters"
-            value={job.stats.pain_clusters_found}
-          />
+          <StatCard label="Competitors found" value={job.stats.competitors_found} />
+          <StatCard label="Reviews collected" value={job.stats.reviews_collected} />
+          <StatCard label="Pain clusters" value={job.stats.pain_clusters_found} />
         </div>
       </div>
     </div>
   )
 }
 
-function StatCard({
-  icon,
-  label,
-  value,
-}: {
-  icon: React.ReactNode
-  label: string
-  value: number
-}) {
+function StatCard({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-xl border border-white/10 bg-[#1c1b1d]/80 p-4">
-      <div className="mb-2 flex items-center gap-2 text-[#958ea0]">
-        {icon}
-        <span className="font-mono text-xs uppercase tracking-wider">{label}</span>
-      </div>
-      <motion.p
-        key={value}
-        initial={{ opacity: 0.5, y: 4 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="text-3xl font-semibold tabular-nums text-[#d0bcff]"
-      >
-        {value.toLocaleString()}
-      </motion.p>
+    <div className="rounded-lg border border-white/[0.08] bg-v-surface p-4">
+      <p className="mb-2 font-landing-mono text-xs uppercase tracking-wider text-v-muted">{label}</p>
+      <p className="text-3xl font-semibold tabular-nums text-v-on">{value.toLocaleString()}</p>
     </div>
   )
 }
