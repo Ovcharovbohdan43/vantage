@@ -15,14 +15,13 @@ ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=0
 COPY apps/review-collector/package.json apps/review-collector/package-lock.json* ./
 COPY apps/review-collector/scripts/install-camoufox.mjs ./scripts/install-camoufox.mjs
 
-# camoufox-js fetch uses AdmZip, which silently drops large ZIP64 entries
-# (camoufox-bin). Download with the same resolver, extract with system unzip.
+# camoufox-js fetch uses AdmZip (drops ZIP64) and may pick fonts-only GitHub
+# zips. install-camoufox.mjs verifies camoufox-bin and falls back to older releases.
 RUN apt-get update \
   && apt-get install -y --no-install-recommends unzip \
   && rm -rf /var/lib/apt/lists/* \
   && npm install --include=dev \
   && node ./scripts/install-camoufox.mjs \
-  && (CAMOUFOX_INSTALL_DIR=/app/camoufox PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=0 npx camoufox-js fetch || true) \
   && test -e /app/camoufox/camoufox-bin \
   && ls -la /app/camoufox/camoufox-bin \
   && chmod -R a+rX /app/camoufox
