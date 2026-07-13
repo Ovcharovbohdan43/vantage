@@ -1,0 +1,148 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="x-apple-disable-message-reformatting" />
+  <title>Welcome to Vantage</title>
+  <style type="text/css">
+    body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+    table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+    body { margin: 0 !important; padding: 0 !important; width: 100% !important; }
+    a[x-apple-data-detectors] { color: inherit !important; text-decoration: none !important; }
+    @media only screen and (max-width: 620px) {
+      .email-container { width: 100% !important; max-width: 100% !important; }
+      .mobile-pad { padding-left: 20px !important; padding-right: 20px !important; }
+    }
+  </style>
+</head>
+<body style="margin:0;padding:0;background-color:#f6f8fa;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans',Helvetica,Arial,sans-serif;color:#1f2328;">
+  <div style="display:none;font-size:1px;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;mso-hide:all;">
+    Welcome to Vantage — {{ .Credits }} research credits are ready in your account.&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;
+  </div>
+
+  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color:#f6f8fa;">
+    <tr>
+      <td align="center" style="padding:40px 16px;">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="544" class="email-container" style="max-width:544px;width:100%;">
+
+          <tr>
+            <td align="center" style="padding:0 0 24px;">
+              <a href="{{ .SiteURL }}" target="_blank" style="text-decoration:none;">
+                <span style="font-size:20px;line-height:28px;font-weight:700;letter-spacing:-0.03em;color:#1f2328;">Vantage</span>
+              </a>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="background-color:#ffffff;border:1px solid #d0d7de;border-radius:6px;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                <tr>
+                  <td class="mobile-pad" style="padding:32px 32px 8px;">
+                    <p style="margin:0 0 8px;font-size:12px;line-height:18px;font-weight:600;color:#656d76;text-transform:uppercase;letter-spacing:0.04em;">
+                      Welcome
+                    </p>
+                    <h1 style="margin:0 0 12px;font-size:24px;line-height:32px;font-weight:600;letter-spacing:-0.02em;color:#1f2328;">
+                      Your workspace is ready
+                    </h1>
+                    <p style="margin:0 0 16px;font-size:14px;line-height:22px;color:#656d76;">
+                      Hi,
+                    </p>
+                    <p style="margin:0 0 16px;font-size:14px;line-height:22px;color:#656d76;">
+                      Thanks for joining Vantage. We added
+                      <strong style="color:#1f2328;">{{ .Credits }} research credits</strong>
+                      to your account so you can run full market analyses and see real customer pain evidence before you build.
+                    </p>
+                  </td>
+                </tr>
+
+                <tr>
+                  <td class="mobile-pad" style="padding:0 32px 24px;">
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color:#f6f8fa;border:1px solid #d0d7de;border-radius:6px;">
+                      <tr>
+                        <td style="padding:16px;">
+                          <p style="margin:0 0 4px;font-size:12px;line-height:18px;font-weight:600;color:#656d76;">Account</p>
+                          <p style="margin:0 0 12px;font-size:14px;line-height:20px;color:#1f2328;">{{ .Email }}</p>
+                          <p style="margin:0 0 4px;font-size:12px;line-height:18px;font-weight:600;color:#656d76;">Starter balance</p>
+                          <p style="margin:0;font-size:20px;line-height:28px;font-weight:700;color:#1f2328;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;">
+                            {{ .Credits }} credits
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+
+                <tr>
+                  <td align="center" class="mobile-pad" style="padding:0 32px 20px;">
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+                      <tr>
+                        <td align="center" bgcolor="#1f883d" style="border-radius:6px;">
+                          <a href="{{ .SiteURL }}/research/new" target="_blank" style="display:inline-block;padding:10px 20px;font-size:14px;line-height:20px;font-weight:600;color:#ffffff;text-decoration:none;background-color:#1f883d;border:1px solid rgba(27,31,36,0.15);border-radius:6px;">
+                            Start your first research
+                          </a>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+
+                <tr>
+                  <td class="mobile-pad" style="padding:0 32px 8px;">
+                    <p style="margin:0 0 6px;font-size:12px;line-height:18px;color:#656d76;">
+                      Or open your workspace:
+                    </p>
+                    <p style="margin:0;font-size:12px;line-height:18px;word-break:break-all;">
+                      <a href="{{ .SiteURL }}/dashboard" target="_blank" style="color:#0969da;text-decoration:none;">{{ .SiteURL }}/dashboard</a>
+                    </p>
+                  </td>
+                </tr>
+
+                <tr>
+                  <td class="mobile-pad" style="padding:20px 32px 28px;border-top:1px solid #d8dee4;">
+                    <p style="margin:0 0 8px;font-size:12px;line-height:18px;font-weight:600;color:#1f2328;">
+                      Useful links
+                    </p>
+                    <p style="margin:0;font-size:12px;line-height:20px;color:#656d76;">
+                      <a href="{{ .SiteURL }}/dashboard" target="_blank" style="color:#0969da;text-decoration:none;">Dashboard</a>
+                      &nbsp;·&nbsp;
+                      <a href="{{ .SiteURL }}/account" target="_blank" style="color:#0969da;text-decoration:none;">Buy credits</a>
+                      &nbsp;·&nbsp;
+                      <a href="{{ .SiteURL }}/library" target="_blank" style="color:#0969da;text-decoration:none;">Research Library</a>
+                      &nbsp;·&nbsp;
+                      <a href="{{ .SiteURL }}/support" target="_blank" style="color:#0969da;text-decoration:none;">Support &amp; FAQ</a>
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr>
+            <td align="center" style="padding:24px 8px 0;">
+              <p style="margin:0 0 8px;font-size:12px;line-height:18px;color:#656d76;">
+                You received this because you created a Vantage account for {{ .Email }}.
+              </p>
+              <p style="margin:0 0 12px;font-size:12px;line-height:20px;color:#656d76;">
+                <a href="{{ .SiteURL }}/settings/notifications" target="_blank" style="color:#0969da;text-decoration:none;">Email preferences</a>
+                &nbsp;·&nbsp;
+                <a href="{{ .SiteURL }}/unsubscribe?email={{ .Email }}" target="_blank" style="color:#0969da;text-decoration:none;">Unsubscribe from product updates</a>
+              </p>
+              <p style="margin:0 0 4px;font-size:12px;line-height:18px;color:#8c959f;">
+                Vantage — market pain research
+              </p>
+              <p style="margin:0 0 4px;font-size:12px;line-height:18px;color:#8c959f;">
+                <a href="{{ .SiteURL }}" target="_blank" style="color:#8c959f;text-decoration:underline;">{{ .SiteURL }}</a>
+              </p>
+              <p style="margin:0;font-size:12px;line-height:18px;color:#8c959f;">
+                Vantage Research
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

@@ -16,9 +16,12 @@ def _templates_dir() -> Path:
         raise FileNotFoundError(f"EMAIL_TEMPLATES_DIR is not a directory: {path}")
 
     here = Path(__file__).resolve()
-    candidates: list[Path] = []
+    candidates: list[Path] = [
+        # Bundled next to the Python package (Docker / local apps/api layout)
+        here.parents[1].parent / "email-templates",  # .../app/services -> .../email-templates
+    ]
 
-    # Docker image: WORKDIR /app, this file is /app/app/services/...
+    # Docker: WORKDIR /app, this file is /app/app/services/...
     if len(here.parents) > 2:
         candidates.append(here.parents[2] / "email-templates")
 

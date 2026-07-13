@@ -36,4 +36,6 @@ ENV NODE_ENV=production
 
 EXPOSE 8080
 
-CMD ["node", "dist/index.js"]
+# Force install dir at runtime so a Railway variable pointing at /opt/camoufox
+# (often an empty volume) cannot shadow the binary baked into the image.
+CMD ["sh", "-c", "export CAMOUFOX_INSTALL_DIR=/app/camoufox; exec node dist/index.js"]
