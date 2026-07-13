@@ -2,7 +2,7 @@
 
 import { AnimatePresence, motion } from 'framer-motion'
 import { useEffect, useState } from 'react'
-import { EnergyAnimation } from '@/components/energy-animation'
+import { PolygonSpinner } from '@/components/ui/polygon-spinner'
 import { cn } from '@/lib/utils'
 import { getAnalysisLoadingCopy, type LoadingContext } from '@/lib/analysis-messages'
 
@@ -41,7 +41,7 @@ export function AnalysisLoadingView({
     <div
       className={cn(
         isFullscreen
-          ? 'flex flex-col items-center justify-center min-h-[50vh] px-8 py-16'
+          ? 'flex min-h-[50vh] flex-col items-center justify-center px-8 py-16'
           : 'border border-zinc-200 bg-zinc-950 p-8',
         className,
       )}
@@ -49,24 +49,23 @@ export function AnalysisLoadingView({
       aria-live="polite"
       aria-busy="true"
     >
-      <div className={cn('text-center', isFullscreen ? 'max-w-md' : 'max-w-lg mx-auto')}>
-        <EnergyAnimation
-          className={cn(
-            'mx-auto mb-6 h-40 w-40 overflow-hidden rounded-full sm:h-48 sm:w-48',
-            isFullscreen && 'bg-zinc-950',
-          )}
+      <div className={cn('text-center', isFullscreen ? 'max-w-md' : 'mx-auto max-w-lg')}>
+        <PolygonSpinner
+          size={80}
+          className={cn('mx-auto mb-6', isFullscreen ? 'text-zinc-950' : 'text-v-primary')}
+          label={copy.title}
         />
 
         <h2
           className={cn(
-            'text-base font-semibold mb-3',
+            'mb-3 text-base font-semibold',
             isFullscreen ? 'text-zinc-950' : 'text-zinc-50',
           )}
         >
           {copy.title}
         </h2>
 
-        <div className="min-h-[3rem] flex items-center justify-center">
+        <div className="flex min-h-[3rem] items-center justify-center">
           <AnimatePresence mode="wait">
             <motion.p
               key={`${stage}-${tipIndex}`}
@@ -85,7 +84,7 @@ export function AnalysisLoadingView({
         </div>
 
         {typeof progressPct === 'number' && progressPct > 0 && (
-          <div className="mt-6 max-w-xs mx-auto">
+          <div className="mx-auto mt-6 max-w-xs">
             <div
               className={cn(
                 'h-1.5 overflow-hidden rounded-full',
@@ -95,7 +94,7 @@ export function AnalysisLoadingView({
               <motion.div
                 className={cn(
                   'h-full rounded-full',
-                  isFullscreen ? 'bg-blue-600' : 'bg-[#d0bcff]',
+                  isFullscreen ? 'bg-zinc-950' : 'bg-v-primary',
                 )}
                 initial={{ width: 0 }}
                 animate={{ width: `${Math.min(100, progressPct)}%` }}

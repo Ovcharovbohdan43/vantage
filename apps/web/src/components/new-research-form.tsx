@@ -11,6 +11,7 @@ import { ApiError } from '@/lib/api/client'
 import type { ResearchDepth, ResearchMode } from '@/lib/api/types'
 import { CreditsMeter } from '@/components/credits-meter'
 import { PricingModal } from '@/components/pricing-modal'
+import { PolygonSpinner } from '@/components/ui/polygon-spinner'
 import { cn } from '@/lib/utils'
 
 const INDUSTRIES = [
@@ -396,6 +397,8 @@ export function NewResearchForm() {
                 Before you start: you may need to complete a{' '}
                 <span className="font-medium text-v-on">captcha once</span> while we reach review
                 sources. After that, collection continues automatically — usually about 10 minutes.
+                You don’t have to stay on this screen; return to the dashboard anytime, and we’ll
+                email you when the results are ready.
               </p>
             </div>
             {submitError && <p className="mb-4 text-sm text-v-error">{submitError}</p>}
@@ -403,13 +406,18 @@ export function NewResearchForm() {
               <button
                 type="submit"
                 disabled={!canSubmit || isSubmitting}
-                className="inline-flex h-11 items-center justify-center rounded-md bg-v-on px-6 text-sm font-medium text-v-bg transition-opacity hover:opacity-90 disabled:pointer-events-none disabled:opacity-45"
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-v-on px-6 text-sm font-medium text-v-bg transition-opacity hover:opacity-90 disabled:pointer-events-none disabled:opacity-45"
               >
-                {isSubmitting
-                  ? 'Starting…'
-                  : isFirstResearch
-                    ? 'Run free preview'
-                    : `Start analysis — ${selectedCost} credit${selectedCost === 1 ? '' : 's'}`}
+                {isSubmitting ? (
+                  <>
+                    <PolygonSpinner size={18} className="text-v-bg" label="" />
+                    Starting…
+                  </>
+                ) : isFirstResearch ? (
+                  'Run free preview'
+                ) : (
+                  `Start analysis — ${selectedCost} credit${selectedCost === 1 ? '' : 's'}`
+                )}
               </button>
               <Link
                 href="/dashboard"

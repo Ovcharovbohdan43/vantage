@@ -92,6 +92,17 @@
   animation: landing-hero-float 7s ease-in-out infinite;
 }
 
+@keyframes vantage-log-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .landing-reveal {
     opacity: 1;
@@ -101,6 +112,14 @@
 
   .landing-hero-float {
     animation: none;
+  }
+
+  @keyframes vantage-log-in {
+    from,
+    to {
+      opacity: 1;
+      transform: none;
+    }
   }
 }
 

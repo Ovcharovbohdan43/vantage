@@ -17,6 +17,7 @@ from app.services.credits import mark_preview_used
 from app.tasks.library import enqueue_library_article
 from app.services.research_cancel import ResearchCancelled, is_job_cancelled
 from app.services.research_limits import MIN_COMPETITOR_SUCCESS_RATIO
+from app.services.research_ready_email import send_research_ready_email_sync
 from app.services.review_collection import collect_reviews_for_project
 
 
@@ -437,3 +438,17 @@ def run_research(self, job_id: str) -> None:
         elif project.research_mode == "full":
             enqueue_library_article(str(project.id))
         _update_progress(db, job, project, stage="completed", progress_pct=100, stats=base_stats)
+        stats = dict(job.stats or {})
+        if not stats.get("ready_email_sent"):
+            profile = db.get(Profile, project.user_id)
+            sent = False
+            if profile and profile.email:
+                sent = send_research_ready_email_sync(
+                    email=profile.email,
+                    title=project.title or "Your research",
+                    project_id=str(project.id),
+                )
+            if sent:
+                stats["ready_email_sent"] = True
+                job.stats = stats
+                db.flush()

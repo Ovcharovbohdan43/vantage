@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { getAnalysisLoadingCopy } from '@/lib/analysis-messages'
+import { PolygonSpinner } from '@/components/ui/polygon-spinner'
 import type { Competitor, ResearchStage } from '@/lib/api/types'
 import { STAGE_LABELS } from '@/lib/api/types'
 
@@ -33,7 +34,21 @@ interface AnalysisTheaterProps {
   onCancelDismiss?: () => void
 }
 
+type LogStatus = 'done' | 'active' | 'info'
+
+type LogEvent = {
+  id: string
+  text: string
+  status: LogStatus
+}
+
 function formatElapsed(totalSeconds: number): string {
+  const mins = Math.floor(totalSeconds / 60)
+  const secs = totalSeconds % 60
+  return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
+}
+
+function formatClock(totalSeconds: number): string {
   const mins = Math.floor(totalSeconds / 60)
   const secs = totalSeconds % 60
   return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
@@ -45,38 +60,127 @@ function stageRank(stage: ResearchStage): number {
   return idx === -1 ? 0 : idx
 }
 
-function logLines(stage: ResearchStage, stats: {
-  reviewsCollected: number
-  patternsFound: number
-  competitorsChecked: number
-  competitorsTotal: number
-}): string[] {
-  const lines: string[] = ['pipeline.start']
+function baseLogEvents(
+  stage: ResearchStage,
+  stats: {
+    reviewsCollected: number
+    patternsFound: number
+    competitorsChecked: number
+    competitorsTotal: number
+  },
+): LogEvent[] {
+  const events: LogEvent[] = [
+    { id: 'start', text: 'pipeline.start — job accepted', status: 'done' },
+  ]
+
   if (stage === 'queued') {
-    lines.push('queue.wait — waiting for worker')
-    return lines
+    events.push({
+      id: 'queue',
+      text: 'queue.wait — waiting for an available worker',
+      status: 'active',
+    })
+    return events
   }
-  lines.push('competitors.scan — mapping market')
+
+  events.push({
+    id: 'scan',
+    text: 'competitors.scan — mapping the market',
+    status: stageRank(stage) > 0 ? 'done' : 'active',
+  })
+
   if (stats.competitorsTotal > 0) {
-    lines.push(`competitors.found — ${stats.competitorsTotal} products`)
+    events.push({
+      id: 'found',
+      text: `competitors.found — ${stats.competitorsTotal} products on the map`,
+      status: 'done',
+    })
   }
+
   if (stageRank(stage) >= 1) {
-    lines.push(
-      `reviews.collect — ${stats.reviewsCollected.toLocaleString()} negatives pulled`,
-    )
+    events.push({
+      id: 'reviews',
+      text: `reviews.collect — ${stats.reviewsCollected.toLocaleString()} negatives pulled`,
+      status: stageRank(stage) > 1 ? 'done' : 'active',
+    })
   }
+
   if (stageRank(stage) >= 2) {
-    lines.push(`clusters.build — ${stats.patternsFound} pain groups`)
+    events.push({
+      id: 'clusters',
+      text: `clusters.build — ${stats.patternsFound} pain groups`,
+      status: stageRank(stage) > 2 ? 'done' : 'active',
+    })
   }
+
   if (stageRank(stage) >= 3) {
-    lines.push('report.write — assembling evidence')
+    events.push({
+      id: 'report',
+      text: 'report.write — assembling evidence into the brief',
+      status: stage === 'completed' ? 'done' : 'active',
+    })
   }
+
   if (stage === 'completed') {
-    lines.push('pipeline.done — report ready')
-  } else {
-    lines.push(`stage.active — ${STAGE_LABELS[stage] ?? stage}`)
+    events.push({
+      id: 'done',
+      text: 'pipeline.done — report ready · email queued',
+      status: 'done',
+    })
+  } else if (stage !== 'queued') {
+    events.push({
+      id: 'active-stage',
+      text: `stage.active — ${STAGE_LABELS[stage] ?? stage}`,
+      status: 'info',
+    })
   }
-  return lines
+
+  return events
+}
+
+const AMBIENT_BY_BUCKET: string[][] = [
+  [
+    'worker.heartbeat — collector process alive',
+    'session.warm — browser profile ready',
+  ],
+  [
+    'proxy.rotate — refreshing exit IP',
+    'source.pace — respecting review-site rate limits',
+    'captcha.pass — continuing collection',
+  ],
+  [
+    'dedupe.hash — skipping repeat complaints',
+    'sentiment.filter — keeping 1–2★ signal',
+    'evidence.link — attaching source quotes',
+  ],
+  [
+    'cluster.merge — collapsing near-duplicate pain',
+    'rank.score — weighting by frequency × severity',
+  ],
+  [
+    'brief.compose — writing the opportunity narrative',
+    'notify.email — will send when the report is ready',
+  ],
+]
+
+function ambientEvents(stage: ResearchStage, elapsedSec: number): LogEvent[] {
+  if (stage === 'completed') return []
+  const bucket =
+    stage === 'queued'
+      ? 0
+      : stage === 'finding_competitors'
+        ? 1
+        : stage === 'collecting_reviews'
+          ? 2
+          : stage === 'analyzing'
+            ? 3
+            : 4
+  const pool = AMBIENT_BY_BUCKET[bucket] ?? AMBIENT_BY_BUCKET[0]
+  const count = Math.min(pool.length, Math.floor(elapsedSec / 8) + 1)
+  return pool.slice(0, count).map((text, index) => ({
+    id: `ambient-${bucket}-${index}`,
+    text,
+    status: 'info' as const,
+  }))
 }
 
 export function AnalysisTheater({
@@ -93,6 +197,7 @@ export function AnalysisTheater({
 }: AnalysisTheaterProps) {
   const copy = getAnalysisLoadingCopy(stage)
   const [elapsedSec, setElapsedSec] = useState(0)
+  const [visibleCount, setVisibleCount] = useState(1)
   const currentRank = stageRank(stage)
 
   useEffect(() => {
@@ -112,7 +217,35 @@ export function AnalysisTheater({
     competitorsTotal: Math.max(stats?.competitorsTotal ?? 0, competitors.length),
   }
 
-  const events = useMemo(() => logLines(stage, liveStats), [stage, liveStats])
+  const allEvents = useMemo(() => {
+    const base = baseLogEvents(stage, liveStats)
+    const ambient = ambientEvents(stage, elapsedSec)
+    if (ambient.length === 0) return base
+    const head = base.slice(0, Math.min(2, base.length))
+    const tail = base.slice(head.length)
+    return [...head, ...ambient, ...tail]
+  }, [
+    stage,
+    elapsedSec,
+    liveStats.reviewsCollected,
+    liveStats.patternsFound,
+    liveStats.competitorsChecked,
+    liveStats.competitorsTotal,
+  ])
+
+  useEffect(() => {
+    setVisibleCount(1)
+  }, [stage])
+
+  useEffect(() => {
+    if (visibleCount >= allEvents.length) return
+    const timer = window.setTimeout(() => {
+      setVisibleCount((n) => Math.min(n + 1, allEvents.length))
+    }, 420)
+    return () => window.clearTimeout(timer)
+  }, [visibleCount, allEvents.length])
+
+  const visibleEvents = allEvents.slice(0, visibleCount)
 
   return (
     <div className="fixed inset-0 z-40 flex flex-col bg-v-bg text-v-on">
@@ -169,8 +302,12 @@ export function AnalysisTheater({
         <div className="rounded-lg border border-white/[0.08] bg-v-surface px-4 py-3 text-left sm:px-5">
           <p className="text-sm leading-relaxed text-v-muted">
             Collection usually takes about{' '}
-            <span className="font-medium text-v-on">10 minutes</span>. We pull real negative reviews
-            and cluster pain — not a skim.
+            <span className="font-medium text-v-on">10 minutes</span>. You don’t need to wait on
+            this page —{' '}
+            <Link href="/dashboard" className="font-medium text-v-on underline-offset-2 hover:underline">
+              return to the dashboard
+            </Link>{' '}
+            anytime. When the analysis finishes, we’ll also email you the results.
           </p>
         </div>
       </div>
@@ -182,11 +319,10 @@ export function AnalysisTheater({
           </p>
           <div className="min-h-0 flex-1 overflow-y-auto border-y border-white/[0.06] py-1">
             {competitorsLoading && competitors.length === 0 ? (
-              <ul className="space-y-3 py-3">
-                {[1, 2, 3].map((row) => (
-                  <li key={row} className="h-8 animate-pulse rounded bg-white/5" />
-                ))}
-              </ul>
+              <div className="flex flex-col items-center justify-center gap-3 py-10">
+                <PolygonSpinner size={40} className="text-v-muted" label="Loading competitors" />
+                <p className="text-xs text-v-muted">Scanning market…</p>
+              </div>
             ) : competitors.length === 0 ? (
               <p className="py-4 text-sm leading-relaxed text-v-muted">
                 Competitors will appear here as we find them.
@@ -215,22 +351,73 @@ export function AnalysisTheater({
         </aside>
 
         <section className="order-1 flex min-h-0 flex-col lg:order-2">
-          <h1 className="text-xl font-semibold tracking-tight text-v-on sm:text-2xl">{copy.title}</h1>
-          <p className="mt-2 max-w-xl text-sm leading-relaxed text-v-muted">
-            {copy.tips[0]}
-          </p>
-
-          <div className="mt-6 flex-1 overflow-hidden rounded-lg border border-white/[0.08] bg-v-surface">
-            <div className="flex items-center justify-between border-b border-white/[0.06] px-4 py-2">
-              <p className="font-landing-mono text-[11px] uppercase tracking-[0.14em] text-v-muted">
-                Event log
-              </p>
-              <p className="font-landing-mono text-[11px] text-v-primary">live</p>
+          <div className="flex items-start gap-4">
+            {stage !== 'completed' && (
+              <PolygonSpinner size={52} className="mt-0.5 shrink-0 text-v-primary" label="Analysis running" />
+            )}
+            <div className="min-w-0">
+              <h1 className="text-xl font-semibold tracking-tight text-v-on sm:text-2xl">{copy.title}</h1>
+              <p className="mt-2 max-w-xl text-sm leading-relaxed text-v-muted">{copy.tips[0]}</p>
             </div>
-            <ul className="max-h-[280px] space-y-1.5 overflow-y-auto p-4 font-landing-mono text-[12px] leading-relaxed sm:max-h-[360px]">
-              {events.map((line) => (
-                <li key={line} className="text-v-muted">
-                  <span className="text-v-primary/70">›</span> {line}
+          </div>
+
+          <div className="mt-6 flex-1 overflow-hidden rounded-lg border border-white/[0.08] bg-[#0d1117]">
+            <div className="flex items-center justify-between border-b border-white/[0.08] bg-[#161b22] px-4 py-2">
+              <div className="flex items-center gap-2">
+                <PolygonSpinner size={16} className="text-v-primary" label="" />
+                <p className="font-landing-mono text-[11px] uppercase tracking-[0.14em] text-[#8b949e]">
+                  Event log
+                </p>
+              </div>
+              <p className="flex items-center gap-1.5 font-landing-mono text-[11px] text-[#3fb950]">
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#3fb950] opacity-60" />
+                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#3fb950]" />
+                </span>
+                live
+              </p>
+            </div>
+            <ul className="max-h-[280px] space-y-0 overflow-y-auto p-3 font-landing-mono text-[12px] leading-relaxed sm:max-h-[360px]">
+              {visibleEvents.map((event, index) => (
+                <li
+                  key={event.id}
+                  className={cn(
+                    'flex gap-2 rounded-md px-2 py-1.5 transition-colors',
+                    event.status === 'active' && 'bg-[#238636]/15',
+                    event.status === 'info' && 'text-[#8b949e]',
+                  )}
+                  style={{
+                    animation: 'vantage-log-in 280ms ease-out both',
+                    animationDelay: `${Math.min(index, 6) * 30}ms`,
+                  }}
+                >
+                  <span className="shrink-0 tabular-nums text-[#484f58]">
+                    {formatClock(Math.max(0, elapsedSec - (visibleEvents.length - 1 - index) * 3))}
+                  </span>
+                  <span
+                    className={cn(
+                      'shrink-0 w-3 text-center',
+                      event.status === 'done' && 'text-[#3fb950]',
+                      event.status === 'active' && 'text-v-primary',
+                      event.status === 'info' && 'text-[#484f58]',
+                    )}
+                    aria-hidden
+                  >
+                    {event.status === 'done' ? '✓' : event.status === 'active' ? '●' : '·'}
+                  </span>
+                  <span
+                    className={cn(
+                      'min-w-0 break-words',
+                      event.status === 'done' && 'text-[#c9d1d9]',
+                      event.status === 'active' && 'text-[#e6edf3]',
+                      event.status === 'info' && 'text-[#8b949e]',
+                    )}
+                  >
+                    {event.text}
+                    {event.status === 'active' && (
+                      <span className="ml-1 inline-block animate-pulse text-v-primary">▌</span>
+                    )}
+                  </span>
                 </li>
               ))}
             </ul>

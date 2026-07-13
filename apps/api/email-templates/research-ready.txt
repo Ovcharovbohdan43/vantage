@@ -1,0 +1,17 @@
+Vantage — your analysis is ready
+
+Hi,
+
+Your market analysis for "{{ .Title }}" is finished. The report with negative-review evidence and pain clusters is ready in your workspace.
+
+Open the report:
+{{ .ReportURL }}
+
+Or go to your dashboard:
+{{ .SiteURL }}/dashboard
+
+---
+You received this because you ran a research job on Vantage for {{ .Email }}.
+
+Vantage — market pain research
+{{ .SiteURL }}

@@ -1,9 +1,12 @@
+'use client'
+
 import { cn } from '@/lib/utils'
 import { Skeleton } from '@/components/ui/skeleton'
+import { PolygonSpinner } from '@/components/ui/polygon-spinner'
 
 export function SkeletonCard({ className }: { className?: string }) {
   return (
-    <div className={cn('border border-zinc-200 p-4 space-y-3', className)}>
+    <div className={cn('space-y-3 border border-zinc-200 p-4', className)}>
       <Skeleton className="h-4 w-1/3" />
       <Skeleton className="h-3 w-full" />
       <Skeleton className="h-3 w-2/3" />
@@ -13,20 +16,11 @@ export function SkeletonCard({ className }: { className?: string }) {
 
 export function DashboardSkeleton() {
   return (
-    <div className="mx-auto max-w-5xl space-y-8 px-4 py-6 sm:px-6 sm:py-8 md:px-8">
-      <div className="flex items-center justify-between">
-        <div className="space-y-2">
-          <Skeleton className="h-6 w-48 bg-white/10" />
-          <Skeleton className="h-4 w-64 bg-white/10" />
-        </div>
-        <Skeleton className="h-9 w-32 bg-white/10" />
-      </div>
-      <Skeleton className="h-28 w-full rounded-xl bg-white/10" />
-      <div className="space-y-2">
-        <Skeleton className="h-3 w-24 bg-white/10" />
-        <Skeleton className="h-16 w-full rounded-xl bg-white/10" />
-        <Skeleton className="h-16 w-full rounded-xl bg-white/10" />
-      </div>
+    <div className="mx-auto flex min-h-[50vh] max-w-5xl flex-col items-center justify-center gap-4 px-4 py-16 sm:px-6 md:px-8">
+      <PolygonSpinner size={72} className="text-v-primary" label="Loading dashboard" />
+      <p className="font-landing-mono text-[11px] uppercase tracking-[0.14em] text-v-muted">
+        Loading workspace
+      </p>
     </div>
   )
 }

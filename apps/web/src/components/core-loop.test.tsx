@@ -232,8 +232,11 @@ describe('AnalysisTheater buttons', () => {
       />,
     )
 
-    expect(screen.getByRole('link', { name: 'Dashboard' })).toHaveAttribute('href', '/dashboard')
+    const dashboardLinks = screen.getAllByRole('link', { name: /dashboard/i })
+    expect(dashboardLinks[0]).toHaveAttribute('href', '/dashboard')
     expect(screen.getByText(/Event log/i)).toBeInTheDocument()
+    expect(screen.getByText(/return to the dashboard/i)).toBeInTheDocument()
+    expect(screen.getByText(/email you the results/i)).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Cancel' }))
     expect(onCancel).toHaveBeenCalled()
