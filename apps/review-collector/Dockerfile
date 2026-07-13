@@ -36,6 +36,5 @@ ENV NODE_ENV=production
 
 EXPOSE 8080
 
-# Force install dir at runtime so a Railway variable pointing at /opt/camoufox
-# (often an empty volume) cannot shadow the binary baked into the image.
-CMD ["sh", "-c", "export CAMOUFOX_INSTALL_DIR=/app/camoufox; exec node dist/index.js"]
+# Preload forces CAMOUFOX_INSTALL_DIR before camoufox-js reads it at import time.
+CMD ["node", "--import", "./dist/preload-camoufox-env.js", "dist/index.js"]

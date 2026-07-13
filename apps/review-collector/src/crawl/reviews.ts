@@ -1,4 +1,6 @@
 import { randomInt } from "node:crypto";
+import { existsSync } from "node:fs";
+import path from "node:path";
 import { launchOptions } from "camoufox-js";
 import { firefox, type Browser, type BrowserContext, type Page } from "playwright-core";
 import type { ScrapedReview, Source } from "../config.js";
@@ -207,7 +209,10 @@ async function extractReviewsFromDom(page: Page, source: Source): Promise<Scrape
 
 async function launchCamoufox(proxyUrl: string | null): Promise<Browser> {
   const proxy = proxyUrl ? proxyPartsFromUrl(proxyUrl) : undefined;
+  const executable_path = resolveCamoufoxBinary();
+  console.log(`[camoufox] executable=${executable_path}`);
   const opts = await launchOptions({
+    executable_path,
     headless: config.headless,
     humanize: true,
     geoip: Boolean(proxy),
@@ -226,8 +231,23 @@ async function launchCamoufox(proxyUrl: string | null): Promise<Browser> {
   });
   return firefox.launch({
     ...opts,
+    executablePath: executable_path,
     headless: config.headless,
   });
+}
+
+function resolveCamoufoxBinary(): string {
+  const dirs = [
+    process.env.CAMOUFOX_INSTALL_DIR?.trim(),
+    "/app/camoufox",
+  ].filter((d): d is string => Boolean(d));
+  for (const dir of dirs) {
+    const bin = path.join(dir, "camoufox-bin");
+    if (existsSync(bin)) return bin;
+  }
+  throw new Error(
+    `Camoufox binary missing (tried ${dirs.join(", ") || "none"}). Rebuild image with install-camoufox.mjs.`,
+  );
 }
 
 async function closeSession(session: Session | null): Promise<void> {
