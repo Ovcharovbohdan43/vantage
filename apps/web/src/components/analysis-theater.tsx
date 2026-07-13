@@ -126,7 +126,7 @@ function baseLogEvents(
       text: 'pipeline.done — report ready · email queued',
       status: 'done',
     })
-  } else if (stage !== 'queued') {
+  } else {
     events.push({
       id: 'active-stage',
       text: `stage.active — ${STAGE_LABELS[stage] ?? stage}`,
@@ -210,12 +210,21 @@ export function AnalysisTheater({
     return () => clearInterval(timer)
   }, [startedAt])
 
-  const liveStats = {
-    reviewsCollected: stats?.reviewsCollected ?? 0,
-    patternsFound: stats?.patternsFound ?? 0,
-    competitorsChecked: stats?.competitorsChecked ?? competitors.length,
-    competitorsTotal: Math.max(stats?.competitorsTotal ?? 0, competitors.length),
-  }
+  const liveStats = useMemo(
+    () => ({
+      reviewsCollected: stats?.reviewsCollected ?? 0,
+      patternsFound: stats?.patternsFound ?? 0,
+      competitorsChecked: stats?.competitorsChecked ?? competitors.length,
+      competitorsTotal: Math.max(stats?.competitorsTotal ?? 0, competitors.length),
+    }),
+    [
+      stats?.reviewsCollected,
+      stats?.patternsFound,
+      stats?.competitorsChecked,
+      stats?.competitorsTotal,
+      competitors.length,
+    ],
+  )
 
   const allEvents = useMemo(() => {
     const base = baseLogEvents(stage, liveStats)
@@ -224,14 +233,7 @@ export function AnalysisTheater({
     const head = base.slice(0, Math.min(2, base.length))
     const tail = base.slice(head.length)
     return [...head, ...ambient, ...tail]
-  }, [
-    stage,
-    elapsedSec,
-    liveStats.reviewsCollected,
-    liveStats.patternsFound,
-    liveStats.competitorsChecked,
-    liveStats.competitorsTotal,
-  ])
+  }, [stage, elapsedSec, liveStats])
 
   useEffect(() => {
     setVisibleCount(1)
