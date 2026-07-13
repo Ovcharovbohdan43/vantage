@@ -1,7 +1,6 @@
 import { randomInt } from "node:crypto";
 import { existsSync } from "node:fs";
 import path from "node:path";
-import { launchOptions } from "camoufox-js";
 import { firefox, type Browser, type BrowserContext, type Page } from "playwright-core";
 import type { ScrapedReview, Source } from "../config.js";
 import { config } from "../config.js";
@@ -207,10 +206,20 @@ async function extractReviewsFromDom(page: Page, source: Source): Promise<Scrape
   }
 }
 
+/** Image-baked path. Prefer over CAMOUFOX_INSTALL_DIR (/opt is often an empty Railway volume). */
+const IMAGE_CAMOUFOX_DIR = "/app/camoufox";
+
 async function launchCamoufox(proxyUrl: string | null): Promise<Browser> {
   const proxy = proxyUrl ? proxyPartsFromUrl(proxyUrl) : undefined;
   const executable_path = resolveCamoufoxBinary();
-  console.log(`[camoufox] executable=${executable_path}`);
+  const installDir = path.dirname(executable_path);
+
+  // camoufox-js freezes INSTALL_DIR at first import from process.env — set it
+  // before the dynamic import so geoip/version.json resolve next to the binary.
+  process.env.CAMOUFOX_INSTALL_DIR = installDir;
+  console.log(`[camoufox] executable=${executable_path} installDir=${installDir}`);
+
+  const { launchOptions } = await import("camoufox-js");
   const opts = await launchOptions({
     executable_path,
     headless: config.headless,
@@ -237,16 +246,18 @@ async function launchCamoufox(proxyUrl: string | null): Promise<Browser> {
 }
 
 function resolveCamoufoxBinary(): string {
-  const dirs = [
-    process.env.CAMOUFOX_INSTALL_DIR?.trim(),
-    "/app/camoufox",
-  ].filter((d): d is string => Boolean(d));
+  const dirs = [IMAGE_CAMOUFOX_DIR];
+  const envDir = process.env.CAMOUFOX_INSTALL_DIR?.trim();
+  // Never prefer /opt — historical Railway volume mounts an empty dir there.
+  if (envDir && envDir !== "/opt/camoufox" && envDir !== IMAGE_CAMOUFOX_DIR) {
+    dirs.push(envDir);
+  }
   for (const dir of dirs) {
     const bin = path.join(dir, "camoufox-bin");
     if (existsSync(bin)) return bin;
   }
   throw new Error(
-    `Camoufox binary missing (tried ${dirs.join(", ") || "none"}). Rebuild image with install-camoufox.mjs.`,
+    `Camoufox binary missing (tried ${dirs.map((d) => path.join(d, "camoufox-bin")).join(", ")}). Rebuild image.`,
   );
 }
 

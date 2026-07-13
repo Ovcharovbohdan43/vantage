@@ -1,12 +1,12 @@
 [build]
 builder = "DOCKERFILE"
 dockerfilePath = "apps/review-collector/Dockerfile"
+# Build context MUST be the monorepo root (Railway Root Directory empty).
 watchPatterns = ["apps/review-collector/**"]
 
 [deploy]
-# Must match Dockerfile CMD — clears any dashboard Start Command that still
-# points at celery or plain `node dist/index.js` without the camoufox preload.
-startCommand = "node --import ./dist/preload-camoufox-env.js dist/index.js"
+# Wipe any dashboard Start Command that runs plain `node dist/index.js`.
+startCommand = "./entrypoint.sh"
 healthcheckPath = "/health"
 healthcheckTimeout = 30
 restartPolicyType = "ON_FAILURE"

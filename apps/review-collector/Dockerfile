@@ -34,7 +34,9 @@ RUN npx tsc -p tsconfig.json \
 
 ENV NODE_ENV=production
 
+COPY apps/review-collector/scripts/entrypoint.sh ./entrypoint.sh
+RUN chmod +x ./entrypoint.sh
+
 EXPOSE 8080
 
-# Preload forces CAMOUFOX_INSTALL_DIR before camoufox-js reads it at import time.
-CMD ["node", "--import", "./dist/preload-camoufox-env.js", "dist/index.js"]
+CMD ["./entrypoint.sh"]

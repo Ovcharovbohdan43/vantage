@@ -10,6 +10,8 @@ import { collectRoutes } from "./routes/collect.js";
 const app = new Hono();
 
 function camoufoxBinaryPath(): string {
+  const imageBin = path.join("/app/camoufox", "camoufox-bin");
+  if (existsSync(imageBin)) return imageBin;
   const dir = process.env.CAMOUFOX_INSTALL_DIR?.trim() || "/app/camoufox";
   return path.join(dir, "camoufox-bin");
 }
