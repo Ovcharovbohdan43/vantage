@@ -13,22 +13,19 @@ ENV CAMOUFOX_INSTALL_DIR=/app/camoufox
 ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=0
 
 COPY apps/review-collector/package.json apps/review-collector/package-lock.json* ./
-# camoufox-js fetch starts GeoIP/addon downloads without awaiting them, so the
-# CLI can exit non-zero even after a successful browser install. Tolerate that
-# and require the real binary instead.
-RUN npm install --include=dev \
+COPY apps/review-collector/scripts/install-camoufox.mjs ./scripts/install-camoufox.mjs
+
+# camoufox-js fetch uses AdmZip, which silently drops large ZIP64 entries
+# (camoufox-bin). Download with the same resolver, extract with system unzip.
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends unzip \
+  && rm -rf /var/lib/apt/lists/* \
+  && npm install --include=dev \
+  && node ./scripts/install-camoufox.mjs \
   && (CAMOUFOX_INSTALL_DIR=/app/camoufox PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=0 npx camoufox-js fetch || true) \
-  && mkdir -p /app/camoufox \
-  && if [ ! -e /app/camoufox/camoufox-bin ]; then \
-       FOUND="$(find /app/camoufox /root/.cache/camoufox -name 'camoufox-bin' -type f 2>/dev/null | head -n 1)"; \
-       echo "camoufox-bin search result: ${FOUND:-NONE}"; \
-       ls -la /app/camoufox 2>/dev/null || true; \
-       ls -la /root/.cache/camoufox 2>/dev/null || true; \
-       if [ -n "$FOUND" ]; then cp -a "$(dirname "$FOUND")/." /app/camoufox/; fi; \
-     fi \
-  && chmod -R a+rX /app/camoufox \
   && test -e /app/camoufox/camoufox-bin \
-  && ls -la /app/camoufox/camoufox-bin
+  && ls -la /app/camoufox/camoufox-bin \
+  && chmod -R a+rX /app/camoufox
 
 COPY apps/review-collector/tsconfig.json ./
 COPY apps/review-collector/src ./src
