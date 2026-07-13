@@ -309,6 +309,15 @@ describe('ResetPasswordPage buttons and links', () => {
     expect(hrefOf('Vantage')).toBe('/')
     expect(hrefOf('Back to sign in')).toBe('/login')
 
+    await user.click(screen.getByRole('link', { name: 'Back to sign in' }))
+    await waitFor(() => {
+      expect(mockSignOut).toHaveBeenCalled()
+      expect(mockPush).toHaveBeenCalledWith('/login')
+    })
+
+    mockSignOut.mockClear()
+    mockPush.mockClear()
+
     await user.type(screen.getByLabelText('New password'), 'newpass12')
     await user.type(screen.getByLabelText('Confirm password'), 'newpass12')
     await user.click(screen.getByRole('button', { name: 'Update password' }))

@@ -69,15 +69,25 @@ export default function ResetPasswordPage() {
     router.refresh()
   }
 
+  async function handleBackToSignIn(e: React.MouseEvent) {
+    e.preventDefault()
+    // Recovery links leave an authenticated session; middleware would
+    // otherwise bounce /login → /dashboard. Clear it before leaving.
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    router.push('/login')
+    router.refresh()
+  }
+
   return (
     <AuthPageShell
       title="Choose a new password"
       subtitle="Enter a new password for your Vantage account"
       footer={
         <p className="mt-6 text-center text-sm text-v-muted">
-          <Link href="/login" className={authLinkClass}>
+          <a href="/login" onClick={handleBackToSignIn} className={authLinkClass}>
             Back to sign in
-          </Link>
+          </a>
         </p>
       }
     >
