@@ -13,8 +13,11 @@ import {
   authLinkClass,
   authMutedLinkClass,
   authPrimaryBtnClass,
+  authSecondaryBtnClass,
 } from '@/components/auth-styles'
 import { createClient } from '@/lib/supabase/client'
+
+type LoginStep = 'credentials' | 'otp'
 
 export function LoginForm() {
   const router = useRouter()
@@ -25,6 +28,7 @@ export function LoginForm() {
   const authError = searchParams.get('error')
   const showOtpByDefault = authError === 'confirmation_failed'
 
+  const [step, setStep] = useState<LoginStep>('credentials')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -58,13 +62,29 @@ export function LoginForm() {
     )
   }, [confirmed, authError, resetDone])
 
+  async function sendLoginOtp(targetEmail: string) {
+    const supabase = createClient()
+    const safeNext = next.startsWith('/') ? next : '/dashboard'
+    return supabase.auth.signInWithOtp({
+      email: targetEmail,
+      options: {
+        shouldCreateUser: false,
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(safeNext)}`,
+      },
+    })
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
     setLoading(true)
 
     const supabase = createClient()
-    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
+    const trimmedEmail = email.trim()
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: trimmedEmail,
+      password,
+    })
 
     if (signInError) {
       setError(signInError.message)
@@ -72,8 +92,73 @@ export function LoginForm() {
       return
     }
 
-    router.push(next)
-    router.refresh()
+    // Password ok — drop this session until the email code is verified.
+    await supabase.auth.signOut()
+
+    const { error: otpError } = await sendLoginOtp(trimmedEmail)
+    if (otpError) {
+      setError(otpError.message || 'Could not send the verification code. Try again.')
+      setLoading(false)
+      return
+    }
+
+    setPassword('')
+    setStep('otp')
+    setLoading(false)
+  }
+
+  if (step === 'otp') {
+    return (
+      <AuthPageShell
+        title="Check your email"
+        subtitle="Enter the one-time code we sent to finish signing in"
+        footer={
+          <p className="mt-6 text-center text-sm text-v-muted">
+            Wrong account?{' '}
+            <button
+              type="button"
+              onClick={() => {
+                setStep('credentials')
+                setError(null)
+              }}
+              className={authLinkClass}
+            >
+              Back to sign in
+            </button>
+          </p>
+        }
+      >
+        <AuthAlert
+          variant="success"
+          title="Code sent"
+          description={`We emailed a 6-digit code to ${email.trim()}. Enter it below to access your workspace.`}
+          className="mb-6"
+        />
+
+        <AuthOtpForm
+          type="email"
+          defaultEmail={email.trim()}
+          emailReadOnly
+          allowResend
+          submitLabel="Verify and continue"
+          onVerified={async () => {
+            router.push(next.startsWith('/') ? next : '/dashboard')
+            router.refresh()
+          }}
+        />
+
+        <button
+          type="button"
+          onClick={() => {
+            setStep('credentials')
+            setError(null)
+          }}
+          className={`${authSecondaryBtnClass} mt-3`}
+        >
+          Use a different email
+        </button>
+      </AuthPageShell>
+    )
   }
 
   return (
@@ -125,6 +210,15 @@ export function LoginForm() {
         />
       )}
 
+      {authError === 'login_otp_failed' && (
+        <AuthAlert
+          variant="error"
+          title="Sign-in link invalid or expired"
+          description="Sign in again with your password — we will email a fresh one-time code."
+          className="mb-6"
+        />
+      )}
+
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
           <label htmlFor="email" className={authLabelClass}>
@@ -164,8 +258,12 @@ export function LoginForm() {
         {error && <p className={authErrorClass}>{error}</p>}
 
         <button type="submit" disabled={loading} className={authPrimaryBtnClass}>
-          {loading ? 'Signing in…' : 'Sign in'}
+          {loading ? 'Sending code…' : 'Continue'}
         </button>
+        <p className="text-xs leading-relaxed text-v-muted">
+          After your password is checked, we email a one-time code. You need that code to finish
+          signing in.
+        </p>
       </form>
 
       <div className="mt-8 border-t border-white/[0.08] pt-6">
@@ -175,13 +273,14 @@ export function LoginForm() {
             onClick={() => setShowConfirmOtp(true)}
             className="text-sm text-v-muted transition-colors hover:text-v-on"
           >
-            Have a confirmation code?
+            Have a signup confirmation code?
           </button>
         ) : (
           <div>
-            <h2 className="mb-1 text-sm font-semibold text-v-on">Confirm with email code</h2>
+            <h2 className="mb-1 text-sm font-semibold text-v-on">Confirm signup with email code</h2>
             <p className="mb-4 text-xs leading-relaxed text-v-muted">
-              If the confirmation link expired, enter the email and one-time code from the message.
+              If the signup confirmation link expired, enter the email and one-time code from that
+              message.
             </p>
             <AuthOtpForm
               type="signup"

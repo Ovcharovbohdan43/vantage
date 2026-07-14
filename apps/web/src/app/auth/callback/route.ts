@@ -5,7 +5,10 @@ import { createClient } from '@/lib/supabase/server'
 /**
  * Handles auth email links:
  * - PKCE `?code=` (+ optional `flow=recovery|confirm`)
- * - OTP `?token_hash=&type=recovery|signup|…` (recommended for custom templates)
+ * - OTP `?token_hash=&type=recovery|signup|email|…` (recommended for custom templates)
+ *
+ * `type=email` / magiclink = login verification (keep session).
+ * `type=signup` / invite = account confirmation (sign out → login banner).
  */
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
@@ -17,8 +20,11 @@ export async function GET(request: Request) {
 
   const type = typeParam as EmailOtpType | null
   const isRecovery = flow === 'recovery' || type === 'recovery'
-  const isConfirm =
-    flow === 'confirm' || type === 'signup' || type === 'email' || type === 'invite'
+  const isSignupConfirm = flow === 'confirm' || type === 'signup' || type === 'invite'
+  const isLoginEmail = type === 'email' || type === 'magiclink'
+
+  const safeNext =
+    nextPath && nextPath.startsWith('/') && !nextPath.startsWith('//') ? nextPath : '/dashboard'
 
   const supabase = await createClient()
 
@@ -32,18 +38,21 @@ export async function GET(request: Request) {
       if (type === 'recovery') {
         return NextResponse.redirect(`${origin}/reset-password`)
       }
-      if (type === 'signup' || type === 'email' || type === 'invite') {
+      if (isSignupConfirm) {
         await supabase.auth.signOut()
         return NextResponse.redirect(`${origin}/login?confirmed=true`)
       }
-      if (nextPath?.startsWith('/')) {
-        return NextResponse.redirect(`${origin}${nextPath}`)
+      if (isLoginEmail) {
+        return NextResponse.redirect(`${origin}${safeNext}`)
       }
-      return NextResponse.redirect(`${origin}/dashboard`)
+      return NextResponse.redirect(`${origin}${safeNext}`)
     }
 
     if (type === 'recovery') {
       return NextResponse.redirect(`${origin}/login?error=recovery_failed`)
+    }
+    if (isLoginEmail) {
+      return NextResponse.redirect(`${origin}/login?error=login_otp_failed`)
     }
     return NextResponse.redirect(`${origin}/login?error=confirmation_failed`)
   }
@@ -55,21 +64,21 @@ export async function GET(request: Request) {
       if (isRecovery) {
         return NextResponse.redirect(`${origin}/reset-password`)
       }
-      if (isConfirm) {
+      if (isSignupConfirm) {
         await supabase.auth.signOut()
         return NextResponse.redirect(`${origin}/login?confirmed=true`)
       }
-      if (nextPath?.startsWith('/')) {
-        return NextResponse.redirect(`${origin}${nextPath}`)
-      }
-      // Ambiguous code without flow/type — prefer dashboard for signed-in sessions.
-      return NextResponse.redirect(`${origin}/dashboard`)
+      // Login magic-link / PKCE without confirm flow → app.
+      return NextResponse.redirect(`${origin}${safeNext}`)
     }
 
     if (isRecovery) {
       return NextResponse.redirect(`${origin}/login?error=recovery_failed`)
     }
-    return NextResponse.redirect(`${origin}/login?error=confirmation_failed`)
+    if (flow === 'confirm') {
+      return NextResponse.redirect(`${origin}/login?error=confirmation_failed`)
+    }
+    return NextResponse.redirect(`${origin}/login?error=login_otp_failed`)
   }
 
   // No usable token — send users to the right recovery/confirm entry.

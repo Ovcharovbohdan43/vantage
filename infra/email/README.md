@@ -13,6 +13,9 @@ App emails (welcome, support) go through **Resend API** (`apps/api`).
 | `templates/confirm-signup.html` | Confirm signup (paste into Supabase) |
 | `templates/confirm-signup.txt` | Plain-text fallback |
 | `templates/confirm-signup.subject.txt` | `Confirm your Vantage account` |
+| `templates/magic-link.html` | Login OTP / magic link (paste into Supabase → Magic Link) |
+| `templates/magic-link.txt` | Plain-text fallback |
+| `templates/magic-link.subject.txt` | `Your Vantage sign-in code` |
 | `templates/reset-password.html` | Reset password (paste into Supabase) |
 | `templates/reset-password.txt` | Plain-text fallback |
 | `templates/reset-password.subject.txt` | `Reset your Vantage password` |
@@ -25,7 +28,7 @@ App emails (welcome, support) go through **Resend API** (`apps/api`).
 | Token | Used in | Meaning |
 |-------|---------|---------|
 | `{{ .ConfirmationURL }}` | confirm, reset | Primary action link |
-| `{{ .Token }}` | confirm, reset | 6-digit OTP fallback |
+| `{{ .Token }}` | confirm, reset, magic link | 6-digit OTP |
 | `{{ .Email }}` | all | Recipient address |
 | `{{ .SiteURL }}` | all | App base URL |
 | `{{ .Credits }}` | welcome | Credit grant amount |
@@ -38,6 +41,23 @@ App emails (welcome, support) go through **Resend API** (`apps/api`).
 - Unsubscribe (product updates only): `/unsubscribe?email=`
 
 Security emails note that they cannot be unsubscribed.
+
+## Sign-in email code (password + OTP)
+
+Login requires password **and** a one-time code from email:
+
+1. User enters email + password on `/login`
+2. App verifies password, signs out the interim session, then calls `signInWithOtp`
+3. Supabase sends the **Magic Link** template (code + optional link)
+4. User enters the code on `/login` (or opens the link → `/auth/callback?type=email`)
+
+Paste `templates/magic-link.*` into **Authentication → Email → Magic Link** in Supabase.
+
+Magic link URL format:
+
+```
+{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=email&next=/dashboard
+```
 
 ## Confirm signup / Reset password
 
@@ -62,8 +82,9 @@ Email templates use **token_hash links** into the app (not Site URL alone):
      - `https://your-domain.com/auth/callback`
      - `https://your-domain.com/auth/callback?flow=confirm`
      - `https://your-domain.com/auth/callback?flow=recovery`
+     - `https://your-domain.com/auth/callback?next=/dashboard`
 2. **Authentication → SMTP** — Resend (`smtp.resend.com`, user `resend`, password = API key)
-3. Paste HTML bodies into **Email templates → Confirm signup** and **Reset password** (use the files in `templates/`)
+3. Paste HTML bodies into **Email templates → Confirm signup**, **Magic Link**, and **Reset password** (use the files in `templates/`)
 
 ### Deliverability
 

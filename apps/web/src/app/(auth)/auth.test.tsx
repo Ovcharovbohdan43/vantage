@@ -12,6 +12,7 @@ const mockRefresh = vi.fn()
 let searchParams = new URLSearchParams()
 
 const mockSignInWithPassword = vi.fn()
+const mockSignInWithOtp = vi.fn()
 const mockSignUp = vi.fn()
 const mockResetPasswordForEmail = vi.fn()
 const mockGetSession = vi.fn()
@@ -32,6 +33,7 @@ vi.mock('@/lib/supabase/client', () => ({
   createClient: () => ({
     auth: {
       signInWithPassword: mockSignInWithPassword,
+      signInWithOtp: mockSignInWithOtp,
       signUp: mockSignUp,
       resetPasswordForEmail: mockResetPasswordForEmail,
       getSession: mockGetSession,
@@ -70,6 +72,7 @@ describe('LoginForm buttons and links', () => {
     mockPush.mockReset()
     mockRefresh.mockReset()
     mockSignInWithPassword.mockReset()
+    mockSignInWithOtp.mockReset()
     mockVerifyOtp.mockReset()
     mockSignOut.mockReset()
   })
@@ -82,39 +85,56 @@ describe('LoginForm buttons and links', () => {
     expect(hrefOf('Forgot password?')).toBe('/forgot-password')
   })
 
-  it('submits sign-in and navigates to dashboard by default', async () => {
+  it('checks password then sends login OTP instead of navigating', async () => {
     const user = userEvent.setup()
     mockSignInWithPassword.mockResolvedValue({ error: null })
+    mockSignOut.mockResolvedValue({})
+    mockSignInWithOtp.mockResolvedValue({ error: null })
 
     render(<LoginForm />)
 
     await user.type(screen.getByLabelText('Email'), 'founder@example.com')
     await user.type(screen.getByLabelText('Password'), 'password123')
-    await user.click(screen.getByRole('button', { name: 'Sign in' }))
+    await user.click(screen.getByRole('button', { name: 'Continue' }))
 
     await waitFor(() => {
       expect(mockSignInWithPassword).toHaveBeenCalledWith({
         email: 'founder@example.com',
         password: 'password123',
       })
-      expect(mockPush).toHaveBeenCalledWith('/dashboard')
-      expect(mockRefresh).toHaveBeenCalled()
+      expect(mockSignOut).toHaveBeenCalled()
+      expect(mockSignInWithOtp).toHaveBeenCalled()
     })
+    expect(await screen.findByText('Check your email')).toBeInTheDocument()
+    expect(mockPush).not.toHaveBeenCalled()
   })
 
-  it('honors next search param after successful sign-in', async () => {
+  it('verifies login OTP and honors next search param', async () => {
     const user = userEvent.setup()
     searchParams = new URLSearchParams('next=/research/new')
     mockSignInWithPassword.mockResolvedValue({ error: null })
+    mockSignOut.mockResolvedValue({})
+    mockSignInWithOtp.mockResolvedValue({ error: null })
+    mockVerifyOtp.mockResolvedValue({ data: { session: {} }, error: null })
 
     render(<LoginForm />)
 
     await user.type(screen.getByLabelText('Email'), 'a@b.com')
     await user.type(screen.getByLabelText('Password'), 'password123')
-    await user.click(screen.getByRole('button', { name: 'Sign in' }))
+    await user.click(screen.getByRole('button', { name: 'Continue' }))
+
+    expect(await screen.findByRole('button', { name: 'Verify and continue' })).toBeInTheDocument()
+    await user.type(screen.getByLabelText('One-time code'), '482910')
+    await user.click(screen.getByRole('button', { name: 'Verify and continue' }))
 
     await waitFor(() => {
+      expect(mockVerifyOtp).toHaveBeenCalledWith({
+        email: 'a@b.com',
+        token: '482910',
+        type: 'email',
+      })
       expect(mockPush).toHaveBeenCalledWith('/research/new')
+      expect(mockRefresh).toHaveBeenCalled()
     })
   })
 
@@ -125,7 +145,7 @@ describe('LoginForm buttons and links', () => {
 
     render(<LoginForm />)
 
-    await user.click(screen.getByRole('button', { name: 'Have a confirmation code?' }))
+    await user.click(screen.getByRole('button', { name: 'Have a signup confirmation code?' }))
     await user.type(screen.getByLabelText('Email', { selector: '#otp-email-signup' }), 'a@b.com')
     await user.type(screen.getByLabelText('One-time code'), '482910')
     await user.click(screen.getByRole('button', { name: 'Confirm email' }))
@@ -141,7 +161,7 @@ describe('LoginForm buttons and links', () => {
     expect(await screen.findByText('Email confirmed successfully')).toBeInTheDocument()
   })
 
-  it('shows auth error and keeps Sign in enabled after failure', async () => {
+  it('shows auth error and keeps Continue enabled after failure', async () => {
     const user = userEvent.setup()
     mockSignInWithPassword.mockResolvedValue({ error: { message: 'Invalid login credentials' } })
 
@@ -149,11 +169,12 @@ describe('LoginForm buttons and links', () => {
 
     await user.type(screen.getByLabelText('Email'), 'a@b.com')
     await user.type(screen.getByLabelText('Password'), 'wrong')
-    await user.click(screen.getByRole('button', { name: 'Sign in' }))
+    await user.click(screen.getByRole('button', { name: 'Continue' }))
 
     expect(await screen.findByText('Invalid login credentials')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Sign in' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Continue' })).toBeEnabled()
     expect(mockPush).not.toHaveBeenCalled()
+    expect(mockSignInWithOtp).not.toHaveBeenCalled()
   })
 
   it('shows confirmed banner when confirmed=true', () => {
@@ -387,7 +408,7 @@ describe('Auth interactive CTA inventory', () => {
 
     const links = screen.getAllByRole('link').map((el) => el.getAttribute('href'))
     expect(links).toEqual(expect.arrayContaining(['/', '/signup', '/forgot-password']))
-    expect(screen.getByRole('button', { name: 'Sign in' })).toHaveAttribute('type', 'submit')
+    expect(screen.getByRole('button', { name: 'Continue' })).toHaveAttribute('type', 'submit')
   })
 
   it('signup form has only expected interactive controls', () => {

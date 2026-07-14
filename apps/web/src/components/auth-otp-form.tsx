@@ -1,24 +1,29 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   authErrorClass,
   authFieldClass,
   authHintClass,
   authLabelClass,
   authPrimaryBtnClass,
+  authSecondaryBtnClass,
 } from '@/components/auth-styles'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 
-export type AuthOtpType = 'signup' | 'recovery'
+export type AuthOtpType = 'signup' | 'recovery' | 'email'
 
 interface AuthOtpFormProps {
   type: AuthOtpType
   /** Pre-fill email when known */
   defaultEmail?: string
+  /** Lock the email field (login challenge after password). */
+  emailReadOnly?: boolean
   submitLabel?: string
   className?: string
+  /** Show resend for login email OTP. */
+  allowResend?: boolean
   onVerified: () => void | Promise<void>
 }
 
@@ -29,18 +34,27 @@ function normalizeToken(raw: string) {
 export function AuthOtpForm({
   type,
   defaultEmail = '',
+  emailReadOnly = false,
   submitLabel = 'Verify code',
   className,
+  allowResend = false,
   onVerified,
 }: AuthOtpFormProps) {
   const [email, setEmail] = useState(defaultEmail)
   const [token, setToken] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [resending, setResending] = useState(false)
+  const [resentHint, setResentHint] = useState<string | null>(null)
+
+  useEffect(() => {
+    setEmail(defaultEmail)
+  }, [defaultEmail])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
+    setResentHint(null)
 
     const trimmedEmail = email.trim()
     const code = normalizeToken(token)
@@ -74,6 +88,34 @@ export function AuthOtpForm({
     }
   }
 
+  async function handleResend() {
+    setError(null)
+    setResentHint(null)
+    const trimmedEmail = email.trim()
+    if (!trimmedEmail || !trimmedEmail.includes('@')) {
+      setError('Enter a valid email before resending.')
+      return
+    }
+    if (type !== 'email') return
+
+    setResending(true)
+    const supabase = createClient()
+    const { error: otpError } = await supabase.auth.signInWithOtp({
+      email: trimmedEmail,
+      options: {
+        shouldCreateUser: false,
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent('/dashboard')}`,
+      },
+    })
+    setResending(false)
+
+    if (otpError) {
+      setError(otpError.message)
+      return
+    }
+    setResentHint('A new code was sent. Check your inbox.')
+  }
+
   return (
     <form onSubmit={handleSubmit} className={cn('space-y-4', className)} noValidate>
       <div className="space-y-2">
@@ -85,10 +127,11 @@ export function AuthOtpForm({
           type="email"
           autoComplete="email"
           required
+          readOnly={emailReadOnly}
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="you@company.com"
-          className={authFieldClass}
+          className={cn(authFieldClass, emailReadOnly && 'opacity-80')}
         />
       </div>
       <div className="space-y-2">
@@ -110,15 +153,29 @@ export function AuthOtpForm({
           aria-describedby={`otp-hint-${type}`}
         />
         <p id={`otp-hint-${type}`} className={authHintClass}>
-          Use the code from your Vantage email if the link expired.
+          {type === 'email'
+            ? 'Enter the 6-digit code from the sign-in email we just sent.'
+            : 'Use the code from your Vantage email if the link expired.'}
         </p>
       </div>
 
       {error && <p className={authErrorClass}>{error}</p>}
+      {resentHint && <p className="text-sm text-v-tertiary">{resentHint}</p>}
 
       <button type="submit" disabled={loading} className={authPrimaryBtnClass}>
         {loading ? 'Verifying…' : submitLabel}
       </button>
+
+      {allowResend && type === 'email' && (
+        <button
+          type="button"
+          disabled={resending || loading}
+          onClick={() => void handleResend()}
+          className={authSecondaryBtnClass}
+        >
+          {resending ? 'Sending…' : 'Resend code'}
+        </button>
+      )}
     </form>
   )
 }
