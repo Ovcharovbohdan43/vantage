@@ -128,7 +128,7 @@ export function FullReportCta({ projectId, credits }: FullReportCtaProps) {
               ? 'Starting full analysis…'
               : affordable
                 ? `Use ${cost} credit${cost === 1 ? '' : 's'} — full report`
-                : 'Get credits — from $9'}
+                : 'Get credits — from $5'}
             {!unlockMutation.isPending && <ArrowUpRight size={14} />}
           </button>
         </div>

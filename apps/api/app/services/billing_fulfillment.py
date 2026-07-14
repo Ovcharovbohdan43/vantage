@@ -60,12 +60,17 @@ def resolve_pack_from_session(session: dict) -> ResearchPack | None:
             return resolved
 
     amount = session.get("amount_total")
-    if amount == 900:
-        return "starter"
-    if amount == 2900:
-        return "founder"
-    if amount == 7900:
-        return "indie"
+    # Current amounts plus legacy prices for already-created Checkout sessions.
+    amount_to_pack: dict[int, ResearchPack] = {
+        500: "starter",
+        2500: "founder",
+        10000: "indie",
+        900: "starter",
+        2900: "founder",
+        7900: "indie",
+    }
+    if isinstance(amount, int):
+        return amount_to_pack.get(amount)
     return None
 
 

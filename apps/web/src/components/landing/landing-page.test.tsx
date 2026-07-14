@@ -10,21 +10,21 @@ const PACKS: ResearchPackInfo[] = [
   {
     id: 'starter',
     label: 'Starter Research',
-    price_usd: 9,
+    price_usd: 5,
     credits: 1,
     tagline: 'Your first full report — prove the tool works',
   },
   {
     id: 'founder',
     label: 'Founder Pack',
-    price_usd: 29,
+    price_usd: 25,
     credits: 5,
     tagline: 'Compare multiple ideas before you commit months of work',
   },
   {
     id: 'indie',
     label: 'Indie Hacker',
-    price_usd: 79,
+    price_usd: 100,
     credits: 20,
     tagline: 'For builders who validate ideas constantly',
   },
@@ -130,10 +130,13 @@ describe('LandingPage CTAs and links', () => {
   it('routes hero and section jump CTAs correctly', () => {
     renderLanding()
 
+    expectAllHrefs('Create free account', '/signup')
     expectAllHrefs('Start free preview', '/signup')
     expectAllHrefs('Browse library', '/library')
     expectAllHrefs('0.1 Method', '#method')
     expectAllHrefs('5.0 Pricing', '#pricing')
+    expect(screen.getByText('1 full report free')).toBeInTheDocument()
+    expect(screen.getByText('included on signup · no card')).toBeInTheDocument()
   })
 
   it('routes pricing pack buttons to signup', () => {
@@ -148,6 +151,10 @@ describe('LandingPage CTAs and links', () => {
     renderLanding()
 
     expect(screen.getByText('Recommended')).toBeInTheDocument()
+    expect(screen.getByText('$5')).toBeInTheDocument()
+    expect(screen.getByText('$25')).toBeInTheDocument()
+    expect(screen.getByText('$100')).toBeInTheDocument()
+    expect(screen.getAllByText('One-time payment · $5 per report')).toHaveLength(3)
     expect(screen.getByRole('link', { name: 'Get Founder Pack' })).toBeVisible()
     expect(screen.getByRole('link', { name: 'Choose Starter' })).toBeVisible()
     expect(screen.getByRole('link', { name: 'Choose Indie' })).toBeVisible()
@@ -218,6 +225,7 @@ describe('LandingPage CTAs and links', () => {
       /Choose Starter/i,
       /Get Founder Pack/i,
       /Choose Indie/i,
+      /Create free account/i,
       /Start free preview/i,
     ]
     for (const name of purchaseNames) {

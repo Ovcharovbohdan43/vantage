@@ -58,8 +58,8 @@ const RUN_STEPS = [
 
 const PACK_FEATURES: Record<string, string[]> = {
   starter: ['1 full analysis credit', 'Shallow / Standard / Deep depth', 'Quotes + verdict included', 'Credits never expire'],
-  founder: ['5 full analysis credits', 'Compare multiple ideas', 'Best value per credit', 'Credits never expire'],
-  indie: ['20 full analysis credits', 'High-volume validation', 'Lowest cost per run', 'Credits never expire'],
+  founder: ['5 full analysis credits', 'Compare multiple ideas', 'Five reports in one purchase', 'Credits never expire'],
+  indie: ['20 full analysis credits', 'High-volume validation', 'Twenty-report capacity', 'Credits never expire'],
 }
 
 function packFeatures(pack: ResearchPackInfo): string[] {
@@ -110,12 +110,39 @@ export function LandingPage({ featuredArticles, packs }: LandingPageProps) {
           </div>
 
           <div className="mx-auto flex max-w-[1120px] flex-col items-stretch gap-3 px-5 pb-16 sm:flex-row sm:items-center sm:justify-center md:px-8 md:pb-24">
-            <Link
-              href="/signup"
-              className="inline-flex h-12 items-center justify-center rounded-full bg-v-on px-8 text-sm font-medium text-v-bg transition-opacity hover:opacity-90"
-            >
-              Start free preview
-            </Link>
+            <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
+              <Link
+                href="/signup"
+                className="inline-flex h-12 items-center justify-center rounded-full bg-v-on px-8 text-sm font-medium text-v-bg transition-opacity hover:opacity-90"
+              >
+                Create free account
+              </Link>
+              <div
+                className="flex min-h-12 items-center gap-2.5 rounded-lg border border-white/[0.12] bg-[#0d1117] px-3.5 py-2 text-left shadow-[0_1px_0_rgba(255,255,255,0.04)]"
+                role="note"
+                aria-label="One full report is included free when you sign up"
+              >
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-[#3fb950]/45 bg-[#238636]/15 text-[#3fb950]">
+                  <svg viewBox="0 0 16 16" className="h-3 w-3" fill="none" aria-hidden>
+                    <path
+                      d="m3.5 8.25 2.75 2.75 6.25-6.25"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </span>
+                <span>
+                  <span className="block text-xs font-medium leading-4 text-[#e6edf3]">
+                    1 full report free
+                  </span>
+                  <span className="block font-landing-mono text-[10px] leading-4 text-[#8b949e]">
+                    included on signup · no card
+                  </span>
+                </span>
+              </div>
+            </div>
             <Link
               href="/library"
               className="inline-flex h-12 items-center justify-center rounded-full border border-white/14 px-8 text-sm font-medium text-v-on transition-colors hover:border-white/28 hover:bg-white/[0.03]"
@@ -376,7 +403,9 @@ export function LandingPage({ featuredArticles, packs }: LandingPageProps) {
                         </span>
                         <span className="text-sm text-v-muted">USD</span>
                       </div>
-                      <p className="mt-1 text-xs text-v-muted">One-time payment</p>
+                      <p className="mt-1 text-xs text-v-muted">
+                        One-time payment · $5 per report
+                      </p>
 
                       <ul className="mt-6 flex-1 space-y-2.5 border-t border-white/[0.06] pt-6">
                         {features.map((feature) => (

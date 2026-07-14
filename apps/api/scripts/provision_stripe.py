@@ -20,9 +20,9 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from app.config import settings  # noqa: E402
 
 PACKS = [
-    ("starter", "Starter Research", 900, 1),
-    ("founder", "Founder Pack", 2900, 5),
-    ("indie", "Indie Hacker", 7900, 20),
+    ("starter", "Starter Research", 500, 1),
+    ("founder", "Founder Pack", 2500, 5),
+    ("indie", "Indie Hacker", 10000, 20),
 ]
 
 
