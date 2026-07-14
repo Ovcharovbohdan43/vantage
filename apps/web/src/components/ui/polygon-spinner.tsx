@@ -68,8 +68,8 @@ export function PolygonSpinner({
 
     const timing = 0.3
     const maxSides = 12
-    // Keep drawn radius well under the box so stroke + rotation stay visible.
-    const draw = size * 0.72
+    // Keep the morph fully inside the layout box so captions below are never covered.
+    const draw = size * 0.62
     const center = draw / 6
     const radius = center
     const sides = 1
@@ -174,7 +174,8 @@ export function PolygonSpinner({
   return (
     <div
       className={cn(
-        'inline-flex shrink-0 items-center justify-center overflow-visible text-v-on',
+        // Clip to the reserved square so siblings (captions, titles) never sit under the SVG spill.
+        'relative z-0 inline-flex shrink-0 items-center justify-center overflow-hidden text-v-on',
         className,
       )}
       style={{ width: size, height: size }}
@@ -185,13 +186,12 @@ export function PolygonSpinner({
     >
       <svg
         ref={svgRef}
-        className="block overflow-visible"
+        className="block max-h-full max-w-full"
         version="1.1"
         xmlns="http://www.w3.org/2000/svg"
         width={size}
         height={size}
         viewBox={`0 0 ${size} ${size}`}
-        overflow="visible"
         aria-hidden
       >
         <polygon

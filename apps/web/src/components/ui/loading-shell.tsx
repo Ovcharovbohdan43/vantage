@@ -18,12 +18,14 @@ export function LoadingShell({ title, description, className, children }: Loadin
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className="max-w-md text-center"
+        className="flex max-w-md flex-col items-center gap-5 text-center"
       >
-        <PolygonSpinner size={56} className="mx-auto mb-4 text-v-on" label={title} />
-        <h2 className="mb-1 text-sm font-medium text-v-on">{title}</h2>
-        {description && <p className="text-sm text-v-muted">{description}</p>}
-        {children}
+        <PolygonSpinner size={56} className="text-v-on" label={title} />
+        <div className="relative z-10">
+          <h2 className="mb-1 text-sm font-medium text-v-on">{title}</h2>
+          {description && <p className="text-sm text-v-muted">{description}</p>}
+          {children}
+        </div>
       </motion.div>
     </div>
   )

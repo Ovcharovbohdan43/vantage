@@ -330,15 +330,15 @@ export function AnalysisTheater({
       </div>
 
       <div className="relative z-10 mx-auto grid min-h-0 w-full max-w-[1120px] flex-1 grid-cols-1 gap-6 px-5 pb-8 pt-5 md:px-8 lg:grid-cols-[220px_minmax(0,1fr)_240px] lg:gap-8">
-        <aside className="order-2 hidden min-h-0 flex-col overflow-visible lg:order-1 lg:flex">
+        <aside className="order-2 hidden min-h-0 flex-col lg:order-1 lg:flex">
           <p className="mb-3 font-landing-mono text-[10px] uppercase tracking-[0.14em] text-v-muted">
             Market map
           </p>
-          <div className="min-h-0 flex-1 overflow-x-visible overflow-y-auto border-y border-white/[0.06] py-1">
+          <div className="min-h-0 flex-1 overflow-y-auto border-y border-white/[0.06] py-1">
             {competitorsLoading && competitors.length === 0 ? (
-              <div className="flex flex-col items-center justify-center gap-3 overflow-visible py-10">
+              <div className="flex flex-col items-center justify-center gap-5 py-10">
                 <PolygonSpinner size={40} className="text-v-muted" label="Loading competitors" />
-                <p className="text-xs text-v-muted">Scanning market…</p>
+                <p className="relative z-10 text-xs text-v-muted">Scanning market…</p>
               </div>
             ) : competitors.length === 0 ? (
               <p className="py-4 text-sm leading-relaxed text-v-muted">
@@ -367,14 +367,14 @@ export function AnalysisTheater({
           </div>
         </aside>
 
-        <section className="order-1 flex min-h-0 flex-col overflow-visible lg:order-2">
-          <div className="flex items-start gap-3 overflow-visible sm:gap-4">
+        <section className="order-1 flex min-h-0 flex-col lg:order-2">
+          <div className="flex items-start gap-3 sm:gap-4">
             {stage !== 'completed' && (
-              <div className="mt-0.5 flex shrink-0 items-center justify-center overflow-visible">
+              <div className="mt-0.5 flex shrink-0 items-center justify-center">
                 <AnalysisHeroSpinner />
               </div>
             )}
-            <div className="min-w-0 flex-1 pt-0.5">
+            <div className="relative z-10 min-w-0 flex-1 pt-0.5">
               <h1 className="text-xl font-semibold tracking-tight text-v-on sm:text-2xl">{copy.title}</h1>
               <p className="mt-2 max-w-xl text-sm leading-relaxed text-v-muted">{copy.tips[0]}</p>
             </div>
@@ -382,8 +382,8 @@ export function AnalysisTheater({
 
           <div className="mt-6 flex min-h-0 flex-1 flex-col rounded-lg border border-white/[0.08] bg-[#0d1117]">
             <div className="flex shrink-0 items-center justify-between border-b border-white/[0.08] bg-[#161b22] px-3 py-2 sm:px-4">
-              <div className="flex items-center gap-2 overflow-visible">
-                <div className="flex h-5 w-5 shrink-0 items-center justify-center overflow-visible">
+              <div className="flex items-center gap-2">
+                <div className="flex h-5 w-5 shrink-0 items-center justify-center">
                   <PolygonSpinner size={16} className="text-v-primary" label="" />
                 </div>
                 <p className="font-landing-mono text-[11px] uppercase tracking-[0.14em] text-[#8b949e]">

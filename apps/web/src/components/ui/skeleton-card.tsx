@@ -16,9 +16,9 @@ export function SkeletonCard({ className }: { className?: string }) {
 
 export function DashboardSkeleton() {
   return (
-    <div className="mx-auto flex min-h-[50vh] max-w-5xl flex-col items-center justify-center gap-4 px-4 py-16 sm:px-6 md:px-8">
+    <div className="mx-auto flex min-h-[50vh] max-w-5xl flex-col items-center justify-center gap-6 px-4 py-16 sm:px-6 md:px-8">
       <PolygonSpinner size={72} className="text-v-primary" label="Loading dashboard" />
-      <p className="font-landing-mono text-[11px] uppercase tracking-[0.14em] text-v-muted">
+      <p className="relative z-10 font-landing-mono text-[11px] uppercase tracking-[0.14em] text-v-muted">
         Loading workspace
       </p>
     </div>

@@ -49,8 +49,8 @@ export function AnalysisLoadingView({
       aria-live="polite"
       aria-busy="true"
     >
-      <div className={cn('text-center overflow-visible', isFullscreen ? 'max-w-md' : 'mx-auto max-w-lg')}>
-        <div className="mx-auto mb-6 flex justify-center overflow-visible">
+      <div className={cn('text-center', isFullscreen ? 'max-w-md' : 'mx-auto max-w-lg')}>
+        <div className="mx-auto mb-8 flex justify-center">
           <PolygonSpinner
             size={isFullscreen ? 72 : 64}
             className={cn(isFullscreen ? 'text-zinc-950' : 'text-v-primary')}
@@ -59,7 +59,7 @@ export function AnalysisLoadingView({
         </div>
         <h2
           className={cn(
-            'mb-3 text-base font-semibold',
+            'relative z-10 mb-3 text-base font-semibold',
             isFullscreen ? 'text-zinc-950' : 'text-zinc-50',
           )}
         >
