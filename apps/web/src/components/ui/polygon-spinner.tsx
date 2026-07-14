@@ -3,6 +3,8 @@
 /**
  * Morphing polygon loader (Neil Pullman / polygon-spinner), ported to GSAP 3.
  * Use for data-fetch waits — dashboard open, analysis start, shell loads.
+ *
+ * Drawn with headroom so stroke / rotation never clip into a hard square.
  */
 import { useEffect, useId, useRef } from 'react'
 import gsap from 'gsap'
@@ -66,11 +68,13 @@ export function PolygonSpinner({
 
     const timing = 0.3
     const maxSides = 12
-    const center = size / 6
+    // Keep drawn radius well under the box so stroke + rotation stay visible.
+    const draw = size * 0.72
+    const center = draw / 6
     const radius = center
     const sides = 1
+    const s = draw / 100
 
-    const s = size / 100
     const points: PointDict = fillPoints(
       {
         x0: 0,
@@ -148,9 +152,9 @@ export function PolygonSpinner({
       gsap.to(svg, {
         duration: 0.4,
         keyframes: [
-          { scale: 1.2, opacity: 1 },
-          { scale: 0.8, opacity: 0.5 },
-          { scale: 0.2, opacity: 0.1 },
+          { scale: 1.05, opacity: 1 },
+          { scale: 0.85, opacity: 0.5 },
+          { scale: 0.35, opacity: 0.1 },
           { scale: 0, opacity: 0 },
         ],
       })
@@ -165,9 +169,15 @@ export function PolygonSpinner({
     }
   }, [size])
 
+  const strokeWidth = size >= 64 ? 2 : size >= 40 ? 1.75 : 1.5
+
   return (
     <div
-      className={cn('inline-flex items-center justify-center text-v-on', className)}
+      className={cn(
+        'inline-flex shrink-0 items-center justify-center overflow-visible text-v-on',
+        className,
+      )}
+      style={{ width: size, height: size }}
       role={label ? 'status' : undefined}
       aria-live={label ? 'polite' : undefined}
       aria-label={label || undefined}
@@ -175,22 +185,24 @@ export function PolygonSpinner({
     >
       <svg
         ref={svgRef}
-        className="block"
+        className="block overflow-visible"
         version="1.1"
         xmlns="http://www.w3.org/2000/svg"
         width={size}
         height={size}
         viewBox={`0 0 ${size} ${size}`}
+        overflow="visible"
         aria-hidden
       >
-        <svg preserveAspectRatio="xMidYMid meet" viewBox={`0 0 ${size} ${size}`} width="100%" height="100%">
-          <polygon
-            ref={polygonRef}
-            id={polygonId}
-            className="fill-transparent stroke-current"
-            strokeWidth={size >= 64 ? 2 : 1.5}
-          />
-        </svg>
+        <polygon
+          ref={polygonRef}
+          id={polygonId}
+          className="fill-transparent stroke-current"
+          strokeWidth={strokeWidth}
+          strokeLinejoin="round"
+          strokeLinecap="round"
+          vectorEffect="non-scaling-stroke"
+        />
       </svg>
       {label ? <span className="sr-only">{label}</span> : null}
     </div>

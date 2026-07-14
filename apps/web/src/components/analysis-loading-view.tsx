@@ -49,13 +49,14 @@ export function AnalysisLoadingView({
       aria-live="polite"
       aria-busy="true"
     >
-      <div className={cn('text-center', isFullscreen ? 'max-w-md' : 'mx-auto max-w-lg')}>
-        <PolygonSpinner
-          size={80}
-          className={cn('mx-auto mb-6', isFullscreen ? 'text-zinc-950' : 'text-v-primary')}
-          label={copy.title}
-        />
-
+      <div className={cn('text-center overflow-visible', isFullscreen ? 'max-w-md' : 'mx-auto max-w-lg')}>
+        <div className="mx-auto mb-6 flex justify-center overflow-visible">
+          <PolygonSpinner
+            size={isFullscreen ? 72 : 64}
+            className={cn(isFullscreen ? 'text-zinc-950' : 'text-v-primary')}
+            label={copy.title}
+          />
+        </div>
         <h2
           className={cn(
             'mb-3 text-base font-semibold',

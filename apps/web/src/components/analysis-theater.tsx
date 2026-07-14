@@ -48,6 +48,21 @@ function formatElapsed(totalSeconds: number): string {
   return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
 }
 
+/** One spinner sized for the viewport — avoids mounting two GSAP timelines. */
+function AnalysisHeroSpinner() {
+  const [size, setSize] = useState(52)
+
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 640px)')
+    const sync = () => setSize(mq.matches ? 52 : 40)
+    sync()
+    mq.addEventListener('change', sync)
+    return () => mq.removeEventListener('change', sync)
+  }, [])
+
+  return <PolygonSpinner size={size} className="text-v-primary" label="Analysis running" />
+}
+
 function formatClock(totalSeconds: number): string {
   const mins = Math.floor(totalSeconds / 60)
   const secs = totalSeconds % 60
@@ -315,13 +330,13 @@ export function AnalysisTheater({
       </div>
 
       <div className="relative z-10 mx-auto grid min-h-0 w-full max-w-[1120px] flex-1 grid-cols-1 gap-6 px-5 pb-8 pt-5 md:px-8 lg:grid-cols-[220px_minmax(0,1fr)_240px] lg:gap-8">
-        <aside className="order-2 hidden min-h-0 flex-col lg:order-1 lg:flex">
+        <aside className="order-2 hidden min-h-0 flex-col overflow-visible lg:order-1 lg:flex">
           <p className="mb-3 font-landing-mono text-[10px] uppercase tracking-[0.14em] text-v-muted">
             Market map
           </p>
-          <div className="min-h-0 flex-1 overflow-y-auto border-y border-white/[0.06] py-1">
+          <div className="min-h-0 flex-1 overflow-x-visible overflow-y-auto border-y border-white/[0.06] py-1">
             {competitorsLoading && competitors.length === 0 ? (
-              <div className="flex flex-col items-center justify-center gap-3 py-10">
+              <div className="flex flex-col items-center justify-center gap-3 overflow-visible py-10">
                 <PolygonSpinner size={40} className="text-v-muted" label="Loading competitors" />
                 <p className="text-xs text-v-muted">Scanning market…</p>
               </div>
@@ -352,21 +367,25 @@ export function AnalysisTheater({
           </div>
         </aside>
 
-        <section className="order-1 flex min-h-0 flex-col lg:order-2">
-          <div className="flex items-start gap-4">
+        <section className="order-1 flex min-h-0 flex-col overflow-visible lg:order-2">
+          <div className="flex items-start gap-3 overflow-visible sm:gap-4">
             {stage !== 'completed' && (
-              <PolygonSpinner size={52} className="mt-0.5 shrink-0 text-v-primary" label="Analysis running" />
+              <div className="mt-0.5 flex shrink-0 items-center justify-center overflow-visible">
+                <AnalysisHeroSpinner />
+              </div>
             )}
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1 pt-0.5">
               <h1 className="text-xl font-semibold tracking-tight text-v-on sm:text-2xl">{copy.title}</h1>
               <p className="mt-2 max-w-xl text-sm leading-relaxed text-v-muted">{copy.tips[0]}</p>
             </div>
           </div>
 
-          <div className="mt-6 flex-1 overflow-hidden rounded-lg border border-white/[0.08] bg-[#0d1117]">
-            <div className="flex items-center justify-between border-b border-white/[0.08] bg-[#161b22] px-4 py-2">
-              <div className="flex items-center gap-2">
-                <PolygonSpinner size={16} className="text-v-primary" label="" />
+          <div className="mt-6 flex min-h-0 flex-1 flex-col rounded-lg border border-white/[0.08] bg-[#0d1117]">
+            <div className="flex shrink-0 items-center justify-between border-b border-white/[0.08] bg-[#161b22] px-3 py-2 sm:px-4">
+              <div className="flex items-center gap-2 overflow-visible">
+                <div className="flex h-5 w-5 shrink-0 items-center justify-center overflow-visible">
+                  <PolygonSpinner size={16} className="text-v-primary" label="" />
+                </div>
                 <p className="font-landing-mono text-[11px] uppercase tracking-[0.14em] text-[#8b949e]">
                   Event log
                 </p>
@@ -379,7 +398,7 @@ export function AnalysisTheater({
                 live
               </p>
             </div>
-            <ul className="max-h-[280px] space-y-0 overflow-y-auto p-3 font-landing-mono text-[12px] leading-relaxed sm:max-h-[360px]">
+            <ul className="max-h-[min(42vh,280px)] min-h-0 flex-1 space-y-0 overflow-y-auto p-3 font-landing-mono text-[12px] leading-relaxed sm:max-h-[min(50vh,360px)]">
               {visibleEvents.map((event, index) => (
                 <li
                   key={event.id}
