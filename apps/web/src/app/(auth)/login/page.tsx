@@ -1,5 +1,12 @@
+import type { Metadata } from 'next'
 import { Suspense } from 'react'
 import { LoginForm } from './login-form'
+
+export const metadata: Metadata = {
+  title: 'Sign in',
+  description: 'Sign in to Vantage to run market research and open your reports.',
+  robots: { index: false, follow: false },
+}
 
 function LoginFallback() {
   return (

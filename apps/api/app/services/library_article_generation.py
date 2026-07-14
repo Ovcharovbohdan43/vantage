@@ -196,8 +196,17 @@ def _build_seo_payload(
             "headline": title,
             "description": description,
             "url": canonical,
+            "mainEntityOfPage": {"@type": "WebPage", "@id": canonical},
             "author": {"@type": "Organization", "name": "Vantage Research Library"},
-            "publisher": {"@type": "Organization", "name": "Vantage"},
+            "publisher": {
+                "@type": "Organization",
+                "name": "Vantage",
+                "logo": {
+                    "@type": "ImageObject",
+                    "url": f"{settings.app_web_url.rstrip('/')}/brand/app-icon-512.png",
+                },
+            },
+            "image": [f"{settings.app_web_url.rstrip('/')}/opengraph-image"],
         },
     }
 

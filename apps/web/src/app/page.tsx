@@ -1,9 +1,29 @@
+import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
+import { JsonLd } from '@/components/seo/json-ld'
 import { LandingPage } from '@/components/landing/landing-page'
 import { listLibraryArticles } from '@/lib/api/library'
 import { publicApiFetch } from '@/lib/api/public'
 import type { ResearchPackInfo } from '@/lib/api/types'
+import {
+  organizationJsonLd,
+  softwareApplicationJsonLd,
+  websiteJsonLd,
+} from '@/lib/seo/structured-data'
+import { SITE_DEFAULT_TITLE, SITE_DESCRIPTION, absoluteUrl } from '@/lib/seo/site'
 import { createClient } from '@/lib/supabase/server'
+
+export const metadata: Metadata = {
+  title: { absolute: SITE_DEFAULT_TITLE },
+  description: SITE_DESCRIPTION,
+  alternates: { canonical: absoluteUrl('/') },
+  openGraph: {
+    title: SITE_DEFAULT_TITLE,
+    description: SITE_DESCRIPTION,
+    url: absoluteUrl('/'),
+    type: 'website',
+  },
+}
 
 const FALLBACK_PACKS: ResearchPackInfo[] = [
   {
@@ -58,5 +78,12 @@ export default async function HomePage() {
     }
   }
 
-  return <LandingPage featuredArticles={featuredArticles} packs={packs} />
+  return (
+    <>
+      <JsonLd data={organizationJsonLd()} />
+      <JsonLd data={websiteJsonLd()} />
+      <JsonLd data={softwareApplicationJsonLd()} />
+      <LandingPage featuredArticles={featuredArticles} packs={packs} />
+    </>
+  )
 }

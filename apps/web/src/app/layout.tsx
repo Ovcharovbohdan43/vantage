@@ -1,13 +1,40 @@
+import type { Metadata, Viewport } from 'next'
 import { Analytics } from '@vercel/analytics/next'
 import Script from 'next/script'
 import { AuthHashHandler } from '@/components/auth-hash-handler'
 import { Providers } from '@/components/providers'
+import {
+  SITE_DEFAULT_TITLE,
+  SITE_DESCRIPTION,
+  SITE_KEYWORDS,
+  SITE_NAME,
+  absoluteUrl,
+  getMetadataBase,
+} from '@/lib/seo/site'
 import './globals.css'
 
-export const metadata = {
-  title: 'Vantage — Find out if your idea is worth building',
-  description:
-    'Validate startup ideas with real negative reviews from G2 and Capterra. Market pain research with evidence, not generic AI reports.',
+export const metadata: Metadata = {
+  metadataBase: getMetadataBase(),
+  title: {
+    default: SITE_DEFAULT_TITLE,
+    template: `%s · ${SITE_NAME}`,
+  },
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
+  keywords: [...SITE_KEYWORDS],
+  authors: [{ name: SITE_NAME, url: absoluteUrl('/') }],
+  creator: SITE_NAME,
+  publisher: SITE_NAME,
+  category: 'business',
+  referrer: 'origin-when-cross-origin',
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
+  alternates: {
+    canonical: '/',
+  },
   icons: {
     icon: [
       { url: '/favicon.ico', sizes: 'any' },
@@ -15,12 +42,55 @@ export const metadata = {
     ],
     apple: [{ url: '/apple-icon.png', sizes: '180x180', type: 'image/png' }],
   },
+  manifest: '/manifest.webmanifest',
   openGraph: {
-    title: 'Vantage — Market pain research',
-    description: 'Find out if your idea is worth the next 3 months — before you write code.',
     type: 'website',
-    images: [{ url: '/brand/app-icon-512.png', width: 512, height: 512, alt: 'Vantage' }],
+    locale: 'en_US',
+    url: absoluteUrl('/'),
+    siteName: SITE_NAME,
+    title: SITE_DEFAULT_TITLE,
+    description: SITE_DESCRIPTION,
+    images: [
+      {
+        url: '/opengraph-image',
+        width: 1200,
+        height: 630,
+        alt: `${SITE_NAME} — market pain research`,
+      },
+    ],
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: SITE_DEFAULT_TITLE,
+    description: SITE_DESCRIPTION,
+    images: ['/twitter-image'],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+      'max-video-preview': -1,
+    },
+  },
+  appleWebApp: {
+    capable: true,
+    title: SITE_NAME,
+    statusBarStyle: 'black-translucent',
+  },
+}
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: '(prefers-color-scheme: dark)', color: '#050505' },
+    { media: '(prefers-color-scheme: light)', color: '#050505' },
+  ],
+  colorScheme: 'dark',
+  width: 'device-width',
+  initialScale: 1,
 }
 
 const CLARITY_PROJECT_ID = 'xldittplv4'

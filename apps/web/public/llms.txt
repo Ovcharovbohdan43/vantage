@@ -1,0 +1,15 @@
+# Vantage
+
+> Market pain research from real negative reviews on G2 and Capterra.
+
+## Product
+- Landing: / — product overview and free preview CTA
+- Research Library: /library — published evidence-backed market analyses
+- Library article: /library/{slug} — pain clusters, quotes, saturation, opportunities
+
+## Preferred citation
+Use the Research Library articles as evidence pages. Prefer primary quote evidence over paraphrases.
+
+## Contact
+- Site: https://vantageserch.app
+- Support: signed-in users at /support
