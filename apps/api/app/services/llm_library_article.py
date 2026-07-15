@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from datetime import UTC, datetime
 
 from openai import OpenAI
 
@@ -57,6 +58,7 @@ def generate_library_article_with_llm(
 
     source_text = ", ".join(s.upper() for s in sources) if sources else "G2"
     client = OpenAI(api_key=settings.openai_api_key)
+    current_year = datetime.now(UTC).year
 
     prompt = (
         "You are writing a PUBLIC market research article for a Research Library.\n"
@@ -64,7 +66,15 @@ def generate_library_article_with_llm(
         "CRITICAL RULES:\n"
         "- Write ONLY about the market category and competitor products — never about a specific startup idea.\n"
         "- Do NOT mention any user's product, idea, company name, or personalized recommendations.\n"
-        "- Title must be generic market research, e.g. 'Customer Pain Analysis of CRM Software'.\n"
+        "- Infer the concrete job these products perform from their names and review pain points.\n"
+        f"- Title must be a natural English search question ending in '{current_year}?'.\n"
+        "- Name the specific product function in plain language; never use a broad taxonomy label when "
+        "the evidence supports a narrower term.\n"
+        f"- Preferred pattern: 'Is It Worth Building Invoice Software in {current_year}?'.\n"
+        "- Avoid empty titles such as 'Customer Pain Analysis', 'Market Research', or 'Software Analysis'.\n"
+        "- seo.title should preserve the same query intent and stay within 70 characters.\n"
+        "- seo.description should include the review count, product count, product function, and the "
+        "strongest evidence-backed pain theme.\n"
         "- Use ONLY the pain clusters and review quotes provided — do not invent pain points.\n"
         "- Each pain point needs at least 3 real quotes from the data (paraphrase minimally, keep authentic voice).\n"
         "- cluster_id must match the ID from pain cluster data.\n"
@@ -121,9 +131,10 @@ def build_fallback_library_article(
     from app.services.library_slug import slugify
 
     cat_label = library_category.lower()
-    title = f"Customer Pain Analysis of {library_category} Software"
+    current_year = datetime.now(UTC).year
+    title = f"Is It Worth Building {library_category} Software in {current_year}?"
     if library_category == "Other":
-        title = "Customer Feedback Analysis of B2B Software"
+        title = f"Is It Worth Building This Type of B2B Software in {current_year}?"
 
     pain_points: list[LibraryPainPoint] = []
     for cluster in clusters[:8]:
@@ -266,7 +277,7 @@ def build_fallback_library_article(
             f"documented here with clear positioning — not more features for their own sake."
         ),
         seo=LibrarySeoMeta(
-            title=f"{title} | Research Library",
+            title=title[:70],
             description=(
                 f"Analysis of {reviews_collected} negative {library_category} software reviews. "
                 f"Top customer pain points, market saturation, and opportunities."

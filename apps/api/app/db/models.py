@@ -262,6 +262,42 @@ class LibraryArticle(Base):
     )
 
 
+class LibraryArticleRevision(Base):
+    __tablename__ = "library_article_revisions"
+    __table_args__ = (
+        UniqueConstraint(
+            "article_id",
+            "generation_version",
+            "source_fingerprint",
+            name="uq_library_article_revision_generation",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    article_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("library_articles.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    generation_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    source_fingerprint: Mapped[str] = mapped_column(String(64), nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="staged")
+    category: Mapped[str] = mapped_column(Text, nullable=False)
+    title: Mapped[str] = mapped_column(Text, nullable=False)
+    executive_summary: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    content: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    seo: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    reviews_snapshot: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
+    market_saturation: Mapped[str] = mapped_column(String(16), nullable=False, default="MEDIUM")
+    competition_level: Mapped[str] = mapped_column(String(16), nullable=False, default="medium")
+    products_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    reviews_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    generation_error: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    activated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
 class EmailMessage(Base):
     __tablename__ = "email_messages"
 

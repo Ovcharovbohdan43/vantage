@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import logging
+import hashlib
+import json
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from uuid import UUID
@@ -9,7 +11,16 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.db.models import Competitor, LibraryArticle, PainCluster, Project, Report, ResearchJob, Review
+from app.db.models import (
+    Competitor,
+    LibraryArticle,
+    LibraryArticleRevision,
+    PainCluster,
+    Project,
+    Report,
+    ResearchJob,
+    Review,
+)
 from app.services.library_categories import normalize_library_category
 from app.services.library_slug import ensure_unique_slug, slugify
 from app.services.llm_library_article import build_fallback_library_article, generate_library_article_with_llm
@@ -19,6 +30,24 @@ from app.services.llm_schemas import LibraryArticleDraft
 
 logger = logging.getLogger(__name__)
 
+LIBRARY_GENERATION_VERSION = "public-report-v2"
+CONFIDENCE_PCT = {"high": 83, "medium": 68, "low": 48}
+PUBLIC_CLUSTER_FIELDS = (
+    "mention_count",
+    "share_pct",
+    "negative_share_pct",
+    "emotional_intensity",
+    "commercial_opportunity",
+    "trend",
+    "year_counts",
+    "date_coverage",
+    "competitors",
+    "top_terms",
+    "feature_requests",
+    "sub_themes",
+    "why_opportunity",
+)
+
 
 @dataclass
 class LibraryGenerationResult:
@@ -26,6 +55,7 @@ class LibraryGenerationResult:
     status: str
     slug: str | None = None
     error: str | None = None
+    revision_id: UUID | None = None
 
 
 def _cluster_ids_for_review(db: Session, project_id: UUID, review_id: str) -> list[str]:
@@ -153,24 +183,123 @@ def _existing_slugs(db: Session) -> set[str]:
     return set(db.scalars(select(LibraryArticle.slug)).all())
 
 
-def _build_content_payload(draft: LibraryArticleDraft, report: Report, sources: list[str]) -> dict:
+def _public_pain_points(draft: LibraryArticleDraft, report: Report) -> list[dict]:
+    analytics_by_id = {
+        str(cluster.get("id")): cluster
+        for cluster in (report.pain_clusters_snapshot or [])
+        if cluster.get("id")
+    }
+    points: list[dict] = []
+    for pain in draft.pain_points:
+        item = pain.model_dump()
+        analytics = analytics_by_id.get(str(pain.cluster_id), {})
+        for field in PUBLIC_CLUSTER_FIELDS:
+            value = analytics.get(field)
+            if value is not None:
+                item[field] = value
+        # Canonical report values always win over prose-generation inputs.
+        item["frequency"] = int(
+            analytics.get("frequency")
+            or analytics.get("mention_count")
+            or item["frequency"]
+        )
+        item["severity_score"] = float(
+            analytics.get("severity_score") or item["severity_score"]
+        )
+        points.append(item)
+    return points
+
+
+def _public_competitors(report: Report) -> list[dict]:
+    return [
+        {
+            "id": str(item.get("id") or ""),
+            "name": str(item.get("name") or "Product"),
+            "source": str(item.get("source") or ""),
+            "rating": item.get("rating"),
+            "reviews_count": item.get("reviews_count"),
+        }
+        for item in (report.competitors_snapshot or [])
+        if item.get("name")
+    ]
+
+
+def _build_content_payload(
+    draft: LibraryArticleDraft,
+    report: Report,
+    sources: list[str],
+    *,
+    products_analyzed: int,
+    reviews_analyzed: int,
+    analyzed_at: datetime,
+) -> dict:
+    pain_points = _public_pain_points(draft, report)
+    pain_signals = sum(
+        int(point.get("mention_count") or point.get("frequency") or 0)
+        for point in pain_points
+    )
+    major_problems = sum(
+        1
+        for point in pain_points
+        if float(point.get("severity_score") or 0) >= 6
+        or int(point.get("mention_count") or point.get("frequency") or 0) >= 10
+    )
+    recommendations = report.recommendations or {}
+    opportunity_size = recommendations.get("opportunity_size") or {}
+
     return {
         "dataset": {
-            "products_analyzed": 0,  # filled by caller
-            "reviews_analyzed": 0,
+            "products_analyzed": products_analyzed,
+            "reviews_analyzed": reviews_analyzed,
             "sources": [s.upper() for s in sources],
             "rating_range": "1-3",
+            "analyzed_at": analyzed_at.isoformat(),
+        },
+        "scores": {
+            "market_score": round(float(report.market_score), 1),
+            "risk_score": round(float(report.risk_score), 1),
+            "data_confidence": report.data_confidence,
+            "confidence_pct": CONFIDENCE_PCT.get(report.data_confidence, 68),
+        },
+        "stats": {
+            "pain_signals": pain_signals,
+            "clusters_found": len(pain_points),
+            "major_problems": max(major_problems, min(5, len(pain_points))),
+            "negative_signals": int(
+                opportunity_size.get("negative_signals") or pain_signals
+            ),
+            "underserved_problems": int(
+                opportunity_size.get("underserved_problems") or major_problems
+            ),
         },
         "market_saturation": {
             "level": report.market_saturation,
             "competition_level": draft.competition_level,
             "explanation": draft.market_saturation_explanation,
         },
-        "pain_points": [p.model_dump() for p in draft.pain_points],
+        "pain_points": pain_points,
+        "competitors": _public_competitors(report),
         "market_opportunities": [o.model_dump() for o in draft.market_opportunities],
         "risk_analysis": [r.model_dump() for r in draft.risk_analysis],
         "final_takeaway": draft.final_takeaway,
+        "generation": {
+            "version": LIBRARY_GENERATION_VERSION,
+            "numeric_source": "report_snapshot",
+        },
     }
+
+
+def _source_fingerprint(report: Report, article: LibraryArticle) -> str:
+    payload = {
+        "article_id": str(article.id),
+        "version": LIBRARY_GENERATION_VERSION,
+        "report_updated_at": report.updated_at.isoformat() if report.updated_at else None,
+        "scores": [report.market_score, report.risk_score, report.data_confidence],
+        "clusters": report.pain_clusters_snapshot or [],
+        "competitors": report.competitors_snapshot or [],
+    }
+    raw = json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str)
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
 def _build_seo_payload(
@@ -182,12 +311,13 @@ def _build_seo_payload(
 ) -> dict:
     canonical = f"{settings.app_web_url.rstrip('/')}/library/{slug}"
     description = draft.seo.description
+    seo_title = title if len(title) <= 70 else draft.seo.title
     return {
-        "title": draft.seo.title,
+        "title": seo_title,
         "description": description,
         "slug": slug,
         "canonical_url": canonical,
-        "og_title": draft.seo.title,
+        "og_title": title,
         "og_description": description,
         "twitter_card": "summary_large_image",
         "json_ld": {
@@ -216,6 +346,7 @@ def generate_library_article_for_project(
     project_id: UUID,
     *,
     allow_preview: bool = False,
+    stage_only: bool = False,
 ) -> LibraryGenerationResult:
     project = db.get(Project, project_id)
     if not project:
@@ -227,6 +358,14 @@ def generate_library_article_for_project(
     report = db.scalar(select(Report).where(Report.project_id == project_id))
     if not report:
         return LibraryGenerationResult(article_id=None, status="failed", error="report_not_found")
+
+    existing = db.scalar(select(LibraryArticle).where(LibraryArticle.project_id == project_id))
+    if stage_only and (not existing or existing.status != "published"):
+        return LibraryGenerationResult(
+            article_id=existing.id if existing else None,
+            status="failed",
+            error="stage_requires_published_article",
+        )
 
     job = db.scalar(
         select(ResearchJob)
@@ -274,9 +413,7 @@ def generate_library_article_for_project(
     sanitization = sanitize_library_article(draft)
     if not sanitization.is_safe:
         logger.warning("Library article failed sanitization: %s", sanitization.issues)
-        existing = db.scalar(select(LibraryArticle).where(LibraryArticle.project_id == project_id))
         if existing:
-            existing.status = "failed"
             existing.generation_error = {"issues": sanitization.issues}
             existing.updated_at = datetime.now(UTC)
             db.commit()
@@ -291,24 +428,65 @@ def generate_library_article_for_project(
     executive_summary = sanitization.sanitized_executive_summary
     draft.final_takeaway = sanitization.sanitized_final_takeaway
 
-    base_slug = slugify(draft.seo.slug or title)
-    slug = ensure_unique_slug(base_slug, _existing_slugs(db))
+    if existing:
+        slug = existing.slug
+    else:
+        base_slug = slugify(draft.seo.slug or title)
+        slug = ensure_unique_slug(base_slug, _existing_slugs(db))
 
-    content = _build_content_payload(draft, report, sources)
-    content["dataset"]["products_analyzed"] = len(competitors)
-    content["dataset"]["reviews_analyzed"] = reviews_collected
-    content["dataset"]["analyzed_at"] = (job.completed_at or datetime.now(UTC)).isoformat()
-    content["final_takeaway"] = draft.final_takeaway
+    analyzed_at = job.completed_at or datetime.now(UTC)
+    content = _build_content_payload(
+        draft,
+        report,
+        sources,
+        products_analyzed=len(competitors),
+        reviews_analyzed=reviews_collected,
+        analyzed_at=analyzed_at,
+    )
 
     seo = _build_seo_payload(draft, slug, title=title, executive_summary=executive_summary)
     reviews_snapshot = _load_reviews_snapshot(db, project_id)
 
-    article = db.scalar(select(LibraryArticle).where(LibraryArticle.project_id == project_id))
+    if stage_only and existing:
+        fingerprint = _source_fingerprint(report, existing)
+        revision = db.scalar(
+            select(LibraryArticleRevision).where(
+                LibraryArticleRevision.article_id == existing.id,
+                LibraryArticleRevision.generation_version == LIBRARY_GENERATION_VERSION,
+                LibraryArticleRevision.source_fingerprint == fingerprint,
+            )
+        )
+        if not revision:
+            revision = LibraryArticleRevision(
+                article_id=existing.id,
+                generation_version=LIBRARY_GENERATION_VERSION,
+                source_fingerprint=fingerprint,
+                status="staged",
+                category=library_category,
+                title=title,
+                executive_summary=executive_summary,
+                content=content,
+                seo=seo,
+                reviews_snapshot=reviews_snapshot,
+                market_saturation=report.market_saturation,
+                competition_level=draft.competition_level,
+                products_count=len(competitors),
+                reviews_count=reviews_collected,
+            )
+            db.add(revision)
+            db.commit()
+            db.refresh(revision)
+        return LibraryGenerationResult(
+            article_id=existing.id,
+            revision_id=revision.id,
+            status=revision.status,
+            slug=existing.slug,
+        )
+
+    article = existing
     if not article:
         article = LibraryArticle(project_id=project_id, slug=slug)
         db.add(article)
-    else:
-        article.slug = slug
 
     article.status = "published"
     article.category = library_category
@@ -321,7 +499,8 @@ def generate_library_article_for_project(
     article.competition_level = draft.competition_level
     article.products_count = len(competitors)
     article.reviews_count = reviews_collected
-    article.published_at = datetime.now(UTC)
+    if article.published_at is None:
+        article.published_at = datetime.now(UTC)
     article.generation_error = None
     article.updated_at = datetime.now(UTC)
 
@@ -329,3 +508,92 @@ def generate_library_article_for_project(
     db.refresh(article)
 
     return LibraryGenerationResult(article_id=article.id, status="published", slug=article.slug)
+
+
+def activate_library_article_revision(
+    db: Session,
+    revision_id: UUID,
+) -> LibraryGenerationResult:
+    revision = db.scalar(
+        select(LibraryArticleRevision)
+        .where(LibraryArticleRevision.id == revision_id)
+        .with_for_update()
+    )
+    if not revision:
+        return LibraryGenerationResult(
+            article_id=None,
+            revision_id=revision_id,
+            status="failed",
+            error="revision_not_found",
+        )
+
+    article = db.scalar(
+        select(LibraryArticle)
+        .where(LibraryArticle.id == revision.article_id)
+        .with_for_update()
+    )
+    if not article:
+        return LibraryGenerationResult(
+            article_id=None,
+            revision_id=revision.id,
+            status="failed",
+            error="article_not_found",
+        )
+    if revision.status == "active":
+        return LibraryGenerationResult(
+            article_id=article.id,
+            revision_id=revision.id,
+            status="active",
+            slug=article.slug,
+        )
+    if revision.status != "staged":
+        return LibraryGenerationResult(
+            article_id=article.id,
+            revision_id=revision.id,
+            status="failed",
+            slug=article.slug,
+            error=f"revision_not_staged:{revision.status}",
+        )
+
+    canonical_seo = dict(revision.seo or {})
+    canonical_url = f"{settings.app_web_url.rstrip('/')}/library/{article.slug}"
+    canonical_seo["slug"] = article.slug
+    canonical_seo["canonical_url"] = canonical_url
+    json_ld = dict(canonical_seo.get("json_ld") or {})
+    json_ld["url"] = canonical_url
+    json_ld["mainEntityOfPage"] = {"@type": "WebPage", "@id": canonical_url}
+    canonical_seo["json_ld"] = json_ld
+
+    active_revisions = db.scalars(
+        select(LibraryArticleRevision).where(
+            LibraryArticleRevision.article_id == article.id,
+            LibraryArticleRevision.status == "active",
+        )
+    ).all()
+    for active in active_revisions:
+        active.status = "superseded"
+
+    article.status = "published"
+    article.category = revision.category
+    article.title = revision.title
+    article.executive_summary = revision.executive_summary
+    article.content = revision.content
+    article.seo = canonical_seo
+    article.reviews_snapshot = revision.reviews_snapshot
+    article.market_saturation = revision.market_saturation
+    article.competition_level = revision.competition_level
+    article.products_count = revision.products_count
+    article.reviews_count = revision.reviews_count
+    article.generation_error = None
+    article.updated_at = datetime.now(UTC)
+
+    revision.status = "active"
+    revision.activated_at = datetime.now(UTC)
+    db.commit()
+    db.refresh(article)
+    return LibraryGenerationResult(
+        article_id=article.id,
+        revision_id=revision.id,
+        status="active",
+        slug=article.slug,
+    )

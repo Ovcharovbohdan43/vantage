@@ -56,10 +56,31 @@ export interface LibraryPainPoint {
   title: string
   frequency: number
   severity_score: number
+  mention_count?: number | null
+  share_pct?: number | null
+  negative_share_pct?: number | null
+  emotional_intensity?: number | null
+  commercial_opportunity?: number | null
+  trend?: 'growing' | 'flat' | 'declining' | null
+  year_counts?: Array<{ year: number; count: number }>
+  date_coverage?: number | null
+  competitors?: Array<{ name: string; complaints: number }>
+  top_terms?: Array<{ term: string; count: number }>
+  feature_requests?: Array<{ label: string; count: number; examples?: string[] }>
+  sub_themes?: Array<{ title: string; frequency: number; share_pct?: number | null }>
+  why_opportunity?: string | null
   explanation: string
   why_critical: string
   quotes: LibraryPainQuote[]
   supporting_review_ids: string[]
+}
+
+export interface LibraryCompetitor {
+  id: string
+  name: string
+  source: string
+  rating: number | null
+  reviews_count: number | null
 }
 
 export interface LibraryOpportunity {
@@ -75,15 +96,33 @@ export interface LibraryRiskItem {
 
 export interface LibraryArticleContent {
   dataset: LibraryDataset
+  scores?: {
+    market_score: number
+    risk_score: number
+    data_confidence: string
+    confidence_pct: number
+  }
+  stats?: {
+    pain_signals: number
+    clusters_found: number
+    major_problems: number
+    negative_signals: number
+    underserved_problems: number
+  }
   market_saturation: {
     level: string
     competition_level: string
     explanation: string
   }
   pain_points: LibraryPainPoint[]
+  competitors?: LibraryCompetitor[]
   market_opportunities: LibraryOpportunity[]
   risk_analysis: LibraryRiskItem[]
   final_takeaway: string
+  generation?: {
+    version: string
+    numeric_source: string
+  }
 }
 
 export interface LibrarySeo {

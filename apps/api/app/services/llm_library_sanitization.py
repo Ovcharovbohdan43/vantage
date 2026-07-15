@@ -19,8 +19,8 @@ FORBIDDEN_HINTS = [
 ]
 
 
-def _residual_issues(title: str, executive_summary: str, final_takeaway: str) -> list[str]:
-    blob = f"{title} {executive_summary} {final_takeaway}".lower()
+def _residual_issues(content: str) -> list[str]:
+    blob = content.lower()
     return [f"Forbidden phrase: {hint}" for hint in FORBIDDEN_HINTS if hint in blob]
 
 
@@ -71,17 +71,20 @@ def sanitize_library_article(draft: LibraryArticleDraft) -> LibrarySanitizationR
     llm_result = sanitize_library_article_with_llm(draft)
 
     if llm_result:
-        residual = _residual_issues(
-            llm_result.sanitized_title,
-            llm_result.sanitized_executive_summary,
-            llm_result.sanitized_final_takeaway,
+        sanitized_draft = draft.model_copy(
+            update={
+                "title": llm_result.sanitized_title,
+                "executive_summary": llm_result.sanitized_executive_summary,
+                "final_takeaway": llm_result.sanitized_final_takeaway,
+            }
         )
+        residual = _residual_issues(sanitized_draft.model_dump_json())
         if residual:
             llm_result.issues.extend(residual)
             llm_result.is_safe = False
         return llm_result
 
-    residual = _residual_issues(draft.title, draft.executive_summary, draft.final_takeaway)
+    residual = _residual_issues(draft.model_dump_json())
     return LibrarySanitizationResult(
         is_safe=len(residual) == 0,
         issues=residual,

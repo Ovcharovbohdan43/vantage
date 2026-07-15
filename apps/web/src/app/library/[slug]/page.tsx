@@ -99,7 +99,7 @@ export default async function LibraryArticlePage({ params }: PageProps) {
   ])
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-5 sm:py-10 md:px-8">
+    <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-5 sm:py-10 md:px-8">
       <nav className="mb-5 flex min-w-0 items-center gap-2 text-sm sm:mb-6" aria-label="Breadcrumb">
         <Link
           href="/library"

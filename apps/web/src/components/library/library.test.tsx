@@ -157,7 +157,7 @@ describe('LibraryIndexClient filters and buttons', () => {
       />,
     )
 
-    await user.click(screen.getByRole('button', { name: 'Clear', exact: true }))
+    await user.click(screen.getByRole('button', { name: /^Clear$/ }))
     expect(mockPush).toHaveBeenCalledWith('/library')
   })
 
