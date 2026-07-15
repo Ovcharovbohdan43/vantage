@@ -94,6 +94,25 @@ export interface LibraryRiskItem {
   explanation: string
 }
 
+export interface LibraryMvpFeature {
+  name: string
+  problem_solved: string
+  solution: string
+  evidence_cluster_ids: string[]
+}
+
+export interface LibraryMvpBlueprint {
+  concept_name: string
+  product_concept: string
+  target_user: string
+  value_proposition: string
+  core_workflow: string[]
+  features: LibraryMvpFeature[]
+  in_scope: string[]
+  out_of_scope: string[]
+  success_metric: string
+}
+
 export interface LibraryArticleContent {
   dataset: LibraryDataset
   scores?: {
@@ -119,6 +138,7 @@ export interface LibraryArticleContent {
   market_opportunities: LibraryOpportunity[]
   risk_analysis: LibraryRiskItem[]
   final_takeaway: string
+  mvp_blueprint?: LibraryMvpBlueprint
   generation?: {
     version: string
     numeric_source: string

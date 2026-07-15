@@ -81,6 +81,29 @@ const FULL_ARTICLE: LibraryArticle = {
       { risk: 'Platform lock-in', level: 'medium', explanation: 'Shopify APIs change often.' },
     ],
     final_takeaway: 'Pain is real but competition is dense — niche hard.',
+    mvp_blueprint: {
+      concept_name: 'StockSignal',
+      product_concept:
+        'A focused inventory control product that prevents delayed stock updates across storefronts.',
+      target_user: 'Small multichannel retailers that cannot dedicate an operations team to inventory.',
+      value_proposition: 'Keep every channel accurate without manual reconciliation or complex setup.',
+      core_workflow: [
+        'Connect storefronts.',
+        'Review detected stock conflicts.',
+        'Approve the corrected inventory state.',
+      ],
+      features: [
+        {
+          name: 'Real-time inventory sync',
+          problem_solved: 'Competing products leave stock quantities stale overnight.',
+          solution: 'Propagate stock changes immediately and surface any failed update for recovery.',
+          evidence_cluster_ids: ['c1'],
+        },
+      ],
+      in_scope: ['Real-time inventory sync'],
+      out_of_scope: ['Warehouse planning unrelated to synchronization failures'],
+      success_metric: 'A retailer completes one week without an order caused by stale inventory.',
+    },
   },
   seo: {
     title: 'Shopify inventory',
@@ -199,6 +222,10 @@ describe('LibraryArticleView tabs and CTAs', () => {
       'href',
       '/research/new',
     )
+    expect(screen.getByRole('heading', { name: 'StockSignal' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Real-time inventory sync' })).toBeInTheDocument()
+    expect(screen.getByText(/Competing products leave stock quantities stale/i)).toBeInTheDocument()
+    expect(screen.getByText(/A retailer completes one week/i)).toBeInTheDocument()
   })
 
   it('switches to Evidence via tab and View evidence button', async () => {

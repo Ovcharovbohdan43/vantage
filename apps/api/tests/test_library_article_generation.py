@@ -2,6 +2,17 @@ from datetime import UTC, datetime
 from types import SimpleNamespace
 
 from app.services.library_article_generation import _build_content_payload
+from app.services.llm_library_article import ensure_mvp_blueprint_coverage
+from app.services.llm_schemas import (
+    LibraryArticleDraft,
+    LibraryMvpBlueprint,
+    LibraryMvpFeature,
+    LibraryOpportunity,
+    LibraryPainPoint,
+    LibraryPainQuote,
+    LibraryRiskItem,
+    LibrarySeoMeta,
+)
 
 
 class _Dumpable:
@@ -42,6 +53,26 @@ def test_public_content_uses_report_snapshots_for_numeric_analytics():
             )
         ],
         final_takeaway="The evidence shows a recurring workflow gap.",
+        mvp_blueprint=_Dumpable(
+            {
+                "concept_name": "CloseFlow",
+                "product_concept": "A focused reconciliation workflow built around unresolved close delays.",
+                "target_user": "Finance teams that lose time to delayed reconciliation in incumbent tools.",
+                "value_proposition": "Complete reconciliation faster with clear exceptions and reliable status.",
+                "core_workflow": ["Import records", "Resolve exceptions", "Confirm the close"],
+                "features": [
+                    {
+                        "name": "Fast reconciliation",
+                        "problem_solved": "Incumbents repeatedly delay the daily reconciliation workflow.",
+                        "solution": "Match records continuously and present only exceptions requiring review.",
+                        "evidence_cluster_ids": ["cluster-1"],
+                    }
+                ],
+                "in_scope": ["Fast reconciliation"],
+                "out_of_scope": ["General ledger replacement"],
+                "success_metric": "A finance user completes daily reconciliation in under ten minutes.",
+            }
+        ),
     )
     report = SimpleNamespace(
         market_saturation="HIGH",
@@ -107,4 +138,73 @@ def test_public_content_uses_report_snapshots_for_numeric_analytics():
     assert content["stats"]["negative_signals"] == 31
     assert content["competitors"][0]["name"] == "Ledger App"
     assert "url" not in content["competitors"][0]
+    assert content["mvp_blueprint"]["concept_name"] == "CloseFlow"
+    assert content["mvp_blueprint"]["features"][0]["evidence_cluster_ids"] == ["cluster-1"]
     assert content["generation"]["numeric_source"] == "report_snapshot"
+    assert content["generation"]["version"] == "public-report-v3"
+
+
+def test_mvp_blueprint_covers_legacy_pain_points_without_report_snapshot():
+    quote = LibraryPainQuote(text="The workflow fails every night.", rating=1, source="g2", product="Tool")
+    pains = [
+        LibraryPainPoint(
+            cluster_id=f"cluster-{index}",
+            title=f"Workflow problem {index}",
+            frequency=5,
+            severity_score=7,
+            explanation=f"Customers repeatedly report unresolved workflow problem number {index}.",
+            why_critical="It blocks completion of the customer's core daily workflow.",
+            quotes=[quote, quote, quote],
+            supporting_review_ids=[f"review-{index}"],
+        )
+        for index in (1, 2)
+    ]
+    draft = LibraryArticleDraft(
+        title="Is It Worth Building Workflow Software in 2026?",
+        executive_summary="This public analysis documents recurring workflow failures across competing products and explains the resulting market gap.",
+        market_saturation_explanation="The segment contains established competitors but recurring complaints remain unresolved.",
+        competition_level="medium",
+        pain_points=pains,
+        market_opportunities=[LibraryOpportunity(title="Reliable workflow", body="Remove recurring failures in the core daily workflow.")],
+        risk_analysis=[
+            LibraryRiskItem(risk=name, level="medium", explanation="This risk requires focused validation before expansion.")
+            for name in ("Competition", "Switching cost", "Differentiation", "Pricing")
+        ],
+        final_takeaway="The evidence supports a focused workflow product rather than a broad feature platform.",
+        mvp_blueprint=LibraryMvpBlueprint(
+            concept_name="Workflow Clarity",
+            product_concept="A focused product that removes recurring failures from a core customer workflow.",
+            target_user="Teams that currently lose time to unreliable incumbent workflow software.",
+            value_proposition="Complete the core workflow reliably with fewer steps and clearer recovery.",
+            core_workflow=["Connect the source", "Run the workflow", "Review the result"],
+            features=[
+                LibraryMvpFeature(
+                    name="Reliable execution",
+                    problem_solved="Customers report that the first workflow problem remains unresolved.",
+                    solution="Run the workflow with reliable defaults and actionable failure recovery.",
+                    evidence_cluster_ids=["cluster-1"],
+                )
+            ],
+            in_scope=["Reliable execution"],
+            out_of_scope=["Unrelated enterprise administration"],
+            success_metric="A new user completes the workflow without assistance on the first attempt.",
+        ),
+        seo=LibrarySeoMeta(
+            title="Is Workflow Software Worth Building in 2026?",
+            description="Analysis of 50 negative reviews across five workflow products and their most common reliability complaint.",
+            slug="is-workflow-software-worth-building-2026",
+        ),
+    )
+
+    covered = ensure_mvp_blueprint_coverage(
+        draft,
+        SimpleNamespace(pain_clusters_snapshot=[]),
+    )
+
+    evidence_ids = {
+        cluster_id
+        for feature in covered.mvp_blueprint.features
+        for cluster_id in feature.evidence_cluster_ids
+    }
+    assert evidence_ids == {"cluster-1", "cluster-2"}
+    assert len(covered.mvp_blueprint.features) == 2

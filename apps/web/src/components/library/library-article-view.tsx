@@ -2,7 +2,18 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { ArrowRight, BarChart3, Database, Eye, Quote } from 'lucide-react'
+import {
+  ArrowRight,
+  BarChart3,
+  CheckCircle2,
+  Database,
+  Eye,
+  Lightbulb,
+  Quote,
+  Target,
+  UserRound,
+  Workflow,
+} from 'lucide-react'
 import { LibraryEvidence } from '@/components/library/library-evidence'
 import { LibraryReportCharts } from '@/components/library/library-report-charts'
 import { trackLibraryEvent } from '@/lib/api/library'
@@ -527,6 +538,163 @@ export function LibraryArticleView({ article }: LibraryArticleViewProps) {
               </div>
             </dl>
           </section>
+
+          {content.mvp_blueprint && (
+            <section
+              aria-labelledby="mvp-blueprint-title"
+              className="overflow-hidden rounded-lg border border-v-primary/25 bg-v-surface"
+            >
+              <div className="border-b border-white/[0.08] bg-[linear-gradient(135deg,rgba(198,255,87,0.09),transparent_58%)] p-5 sm:p-7">
+                <p className="font-landing-mono text-[10px] uppercase tracking-[0.16em] text-v-primary">
+                  06 / Founder blueprint
+                </p>
+                <div className="mt-4 grid gap-5 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-end">
+                  <div>
+                    <div className="flex items-center gap-2 text-v-primary">
+                      <Lightbulb aria-hidden className="size-5" strokeWidth={1.7} />
+                      <span className="font-landing-mono text-xs uppercase tracking-wider">
+                        Evidence-built MVP
+                      </span>
+                    </div>
+                    <h2
+                      id="mvp-blueprint-title"
+                      className="mt-3 text-2xl font-semibold tracking-tight text-v-on sm:text-3xl"
+                    >
+                      {content.mvp_blueprint.concept_name}
+                    </h2>
+                    <p className="mt-3 max-w-3xl text-sm leading-relaxed text-v-muted sm:text-base">
+                      {content.mvp_blueprint.product_concept}
+                    </p>
+                  </div>
+                  <div className="rounded-md border border-v-primary/20 bg-v-bg/70 p-4">
+                    <div className="flex items-center gap-2 text-v-primary">
+                      <Target aria-hidden className="size-4" />
+                      <p className="font-landing-mono text-[10px] uppercase tracking-wider">
+                        Value proposition
+                      </p>
+                    </div>
+                    <p className="mt-2 text-sm font-medium leading-relaxed text-v-on">
+                      {content.mvp_blueprint.value_proposition}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid gap-px bg-white/[0.07] lg:grid-cols-2">
+                <div className="bg-v-bg p-5 sm:p-6">
+                  <div className="flex items-center gap-2">
+                    <UserRound aria-hidden className="size-4 text-v-secondary" />
+                    <h3 className="font-landing-mono text-[10px] uppercase tracking-wider text-v-muted">
+                      First customer
+                    </h3>
+                  </div>
+                  <p className="mt-3 text-sm leading-relaxed text-v-on">
+                    {content.mvp_blueprint.target_user}
+                  </p>
+                </div>
+                <div className="bg-v-bg p-5 sm:p-6">
+                  <div className="flex items-center gap-2">
+                    <Workflow aria-hidden className="size-4 text-v-secondary" />
+                    <h3 className="font-landing-mono text-[10px] uppercase tracking-wider text-v-muted">
+                      Core workflow
+                    </h3>
+                  </div>
+                  <ol className="mt-3 space-y-3">
+                    {content.mvp_blueprint.core_workflow.map((step, index) => (
+                      <li key={step} className="grid grid-cols-[1.5rem_minmax(0,1fr)] gap-2 text-sm">
+                        <span className="font-landing-mono text-xs tabular-nums text-v-primary">
+                          {String(index + 1).padStart(2, '0')}
+                        </span>
+                        <span className="leading-relaxed text-v-on">{step}</span>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              </div>
+
+              <div className="border-t border-white/[0.08] p-5 sm:p-7">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                  <div>
+                    <p className="font-landing-mono text-[10px] uppercase tracking-wider text-v-primary">
+                      MVP feature set
+                    </p>
+                    <h3 className="mt-1 text-lg font-semibold text-v-on">
+                      Every feature answers a documented competitor gap
+                    </h3>
+                  </div>
+                  <p className="font-landing-mono text-[10px] uppercase tracking-wider text-v-muted">
+                    {content.mvp_blueprint.features.length} evidence-linked features
+                  </p>
+                </div>
+                <ol className="mt-5 grid gap-3 lg:grid-cols-2">
+                  {content.mvp_blueprint.features.map((feature, index) => (
+                    <li
+                      key={`${feature.name}-${index}`}
+                      className="rounded-md border border-white/[0.08] bg-v-bg p-4"
+                    >
+                      <div className="flex items-start gap-3">
+                        <span className="font-landing-mono text-xs tabular-nums text-v-primary">
+                          {String(index + 1).padStart(2, '0')}
+                        </span>
+                        <div className="min-w-0">
+                          <h4 className="text-sm font-semibold text-v-on">{feature.name}</h4>
+                          <p className="mt-2 text-xs leading-relaxed text-v-error/90">
+                            <span className="font-medium text-v-muted">Competitor problem — </span>
+                            {feature.problem_solved}
+                          </p>
+                          <p className="mt-2 text-sm leading-relaxed text-v-on">{feature.solution}</p>
+                          <p className="mt-3 font-landing-mono text-[9px] uppercase tracking-wider text-v-muted">
+                            Evidence: {feature.evidence_cluster_ids.join(' · ')}
+                          </p>
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+
+              <div className="grid gap-px border-t border-white/[0.08] bg-white/[0.07] lg:grid-cols-2">
+                <div className="bg-v-bg p-5 sm:p-6">
+                  <h3 className="font-landing-mono text-[10px] uppercase tracking-wider text-v-secondary">
+                    In this MVP
+                  </h3>
+                  <ul className="mt-3 space-y-2">
+                    {content.mvp_blueprint.in_scope.map((item) => (
+                      <li key={item} className="flex gap-2 text-sm leading-relaxed text-v-on">
+                        <CheckCircle2
+                          aria-hidden
+                          className="mt-0.5 size-4 shrink-0 text-v-secondary"
+                        />
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="bg-v-bg p-5 sm:p-6">
+                  <h3 className="font-landing-mono text-[10px] uppercase tracking-wider text-v-muted">
+                    Deliberately later
+                  </h3>
+                  <ul className="mt-3 space-y-2">
+                    {content.mvp_blueprint.out_of_scope.map((item) => (
+                      <li key={item} className="flex gap-2 text-sm leading-relaxed text-v-muted">
+                        <span aria-hidden className="mt-2 size-1.5 shrink-0 rounded-full bg-white/25" />
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+
+              <div className="border-t border-white/[0.08] bg-v-primary/[0.04] px-5 py-4 sm:px-7">
+                <p className="font-landing-mono text-[10px] uppercase tracking-wider text-v-primary">
+                  MVP success signal
+                </p>
+                <p className="mt-1 text-sm font-medium leading-relaxed text-v-on">
+                  {content.mvp_blueprint.success_metric}
+                </p>
+              </div>
+            </section>
+          )}
 
           <section className="rounded-lg border border-v-primary/20 bg-v-primary/[0.04] p-6 sm:p-8">
             <p className="font-landing-mono text-[10px] uppercase tracking-wider text-v-primary">

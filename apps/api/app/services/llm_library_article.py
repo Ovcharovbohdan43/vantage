@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 from datetime import UTC, datetime
 
@@ -8,7 +9,7 @@ from openai import OpenAI
 from app.config import settings
 from app.db.models import Competitor, PainCluster, Report
 from app.services.library_categories import normalize_library_category
-from app.services.llm_schemas import LibraryArticleDraft
+from app.services.llm_schemas import LibraryArticleDraft, LibraryMvpFeature
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +42,103 @@ def _competitor_block(competitors: list[Competitor]) -> str:
         f"- {c.name} ({c.source}, rating={c.rating or 'n/a'}, reviews={c.reviews_count or 'n/a'})"
         for c in competitors[:20]
     ) or "No competitors."
+
+
+def _gap_evidence_block(report: Report) -> str:
+    """Expose every public gap signal so the blueprint can cover the full dataset."""
+    gaps: list[dict] = []
+    for cluster in report.pain_clusters_snapshot or []:
+        cluster_id = str(cluster.get("id") or "")
+        if not cluster_id:
+            continue
+        gaps.append(
+            {
+                "cluster_id": cluster_id,
+                "title": cluster.get("title"),
+                "description": cluster.get("description"),
+                "mention_count": cluster.get("mention_count") or cluster.get("frequency"),
+                "severity_score": cluster.get("severity_score"),
+                "trend": cluster.get("trend"),
+                "affected_competitors": cluster.get("competitors") or [],
+                "feature_requests": cluster.get("feature_requests") or [],
+                "sub_themes": cluster.get("sub_themes") or [],
+                "why_opportunity": cluster.get("why_opportunity"),
+            }
+        )
+    return json.dumps(gaps, ensure_ascii=False, indent=2) if gaps else "No enriched gap evidence."
+
+
+def ensure_mvp_blueprint_coverage(
+    draft: LibraryArticleDraft,
+    report: Report,
+) -> LibraryArticleDraft:
+    """Deterministically cover any evidence gap omitted by the prose model."""
+    blueprint = draft.mvp_blueprint
+    covered = {
+        cluster_id
+        for feature in blueprint.features
+        for cluster_id in feature.evidence_cluster_ids
+    }
+    features = list(blueprint.features)
+    in_scope = list(blueprint.in_scope)
+
+    def append_gap(gap: dict) -> None:
+        cluster_id = str(gap.get("id") or "")
+        if not cluster_id or cluster_id in covered:
+            return
+        title = str(gap.get("title") or "Unresolved customer workflow")
+        description = str(
+            gap.get("description")
+            or gap.get("why_opportunity")
+            or f"Customers report that {title.lower()} remains unresolved in competing products."
+        )
+        if len(description) < 20:
+            description = f"Customers repeatedly report this competitor problem: {description}."
+        requests = [
+            str(item.get("label") if isinstance(item, dict) else item)
+            for item in (gap.get("feature_requests") or [])
+            if item
+        ]
+        name = (requests[0] if requests else f"Resolve {title}")[:100]
+        solution = (
+            f"Add a focused workflow that resolves {title.lower()}"
+            + (
+                f" with {', '.join(requests[:3])}."
+                if requests
+                else " using reliable defaults, clear status, and actionable recovery."
+            )
+        )
+        feature = LibraryMvpFeature(
+            name=name,
+            problem_solved=description[:400],
+            solution=solution[:500],
+            evidence_cluster_ids=[cluster_id],
+        )
+        features.append(feature)
+        in_scope.append(feature.name)
+        covered.add(cluster_id)
+
+    for gap in report.pain_clusters_snapshot or []:
+        append_gap(gap)
+
+    # Some legacy reports predate enriched snapshots. Their generated public
+    # pain points remain valid evidence and must still map to an MVP feature.
+    for pain in draft.pain_points:
+        append_gap(
+            {
+                "id": str(pain.cluster_id),
+                "title": pain.title,
+                "description": pain.explanation,
+                "feature_requests": [],
+            }
+        )
+
+    if features == blueprint.features:
+        return draft
+    updated_blueprint = blueprint.model_copy(
+        update={"features": features[:24], "in_scope": list(dict.fromkeys(in_scope))[:24]}
+    )
+    return draft.model_copy(update={"mvp_blueprint": updated_blueprint})
 
 
 def generate_library_article_with_llm(
@@ -80,6 +178,14 @@ def generate_library_article_with_llm(
         "- cluster_id must match the ID from pain cluster data.\n"
         "- supporting_review_ids: use review_id from quote data when available, else cluster ID.\n"
         "- risk_analysis must include: Competition, Customer Switching Cost, Differentiation, Pricing Pressure.\n"
+        "- End with ONE concrete, hypothetical MVP blueprint for a founder. It must be market-generic and "
+        "must never reveal the researcher or their private idea.\n"
+        "- The blueprint must make the product, target user, value, first-use workflow, scope, and success "
+        "metric immediately clear.\n"
+        "- Include a feature for EVERY gap in the enriched gap evidence. Every feature must explain the "
+        "competitor problem it solves and cite the exact evidence_cluster_ids. Combine related gaps only "
+        "when all IDs remain cited. Do not add unsupported features.\n"
+        "- All listed blueprint features are in MVP scope. out_of_scope is reserved for unrelated expansion.\n"
         "- seo.slug: lowercase hyphenated, derived from title, no user-specific terms.\n\n"
         f"Market category: {category} (library taxonomy: {library_category})\n"
         f"Products analyzed: {len(competitors)}\n"
@@ -89,7 +195,8 @@ def generate_library_article_with_llm(
         f"Market saturation signal: {report.market_saturation}\n"
         f"Market score: {report.market_score}, Risk score: {report.risk_score}\n\n"
         f"Competitors:\n{_competitor_block(competitors)}\n\n"
-        f"Pain clusters:\n{_cluster_block(clusters)}"
+        f"Pain clusters:\n{_cluster_block(clusters)}\n\n"
+        f"Enriched gap evidence (cover every cluster_id in the MVP blueprint):\n{_gap_evidence_block(report)}"
     )
 
     try:
@@ -122,6 +229,8 @@ def build_fallback_library_article(
 ) -> LibraryArticleDraft:
     """Heuristic article when LLM is unavailable."""
     from app.services.llm_schemas import (
+        LibraryMvpBlueprint,
+        LibraryMvpFeature,
         LibraryOpportunity,
         LibraryPainPoint,
         LibraryPainQuote,
@@ -197,6 +306,70 @@ def build_fallback_library_article(
 
     slug = slugify(title)
     saturation = report.market_saturation
+    cluster_snapshots = [
+        cluster
+        for cluster in (report.pain_clusters_snapshot or [])
+        if cluster.get("id")
+    ]
+    if not cluster_snapshots:
+        cluster_snapshots = [
+            {
+                "id": str(cluster.id),
+                "title": cluster.title,
+                "description": cluster.description,
+                "feature_requests": [],
+                "why_opportunity": None,
+            }
+            for cluster in clusters
+        ]
+
+    mvp_features: list[LibraryMvpFeature] = []
+    for index, gap in enumerate(cluster_snapshots):
+        requests = gap.get("feature_requests") or []
+        requested_names = [
+            str(item.get("label") if isinstance(item, dict) else item)
+            for item in requests
+            if item
+        ]
+        gap_title = str(gap.get("title") or f"Customer pain {index + 1}")
+        feature_name = requested_names[0] if requested_names else f"Solve {gap_title}"
+        problem = str(
+            gap.get("description")
+            or gap.get("why_opportunity")
+            or f"Customers repeatedly report {gap_title.lower()} across competing products."
+        )
+        solution = (
+            f"Provide a focused workflow that removes {gap_title.lower()}"
+            + (
+                f" and includes {', '.join(requested_names[:3])}."
+                if requested_names
+                else " with fewer steps, clear feedback, and reliable defaults."
+            )
+        )
+        mvp_features.append(
+            LibraryMvpFeature(
+                name=feature_name[:100],
+                problem_solved=problem[:400],
+                solution=solution[:500],
+                evidence_cluster_ids=[str(gap["id"])],
+            )
+        )
+
+    if not mvp_features:
+        mvp_features = [
+            LibraryMvpFeature(
+                name="Guided core workflow",
+                problem_solved="Customers struggle to reach value because competing products are complex to configure.",
+                solution="Provide one guided workflow with reliable defaults, clear feedback, and minimal setup.",
+                evidence_cluster_ids=["fallback"],
+            )
+        ]
+
+    feature_names = [feature.name for feature in mvp_features]
+    concept_name = f"{library_category} Clarity"
+    if library_category == "Other":
+        concept_name = "Workflow Clarity"
+
     return LibraryArticleDraft(
         title=title,
         executive_summary=(
@@ -275,6 +448,37 @@ def build_fallback_library_article(
         final_takeaway=(
             f"The {library_category} market remains active but demanding. Winners address the pain points "
             f"documented here with clear positioning — not more features for their own sake."
+        ),
+        mvp_blueprint=LibraryMvpBlueprint(
+            concept_name=concept_name,
+            product_concept=(
+                f"A focused {library_category.lower()} product that replaces the most frustrating incumbent "
+                "workflows with a single, guided experience built around the documented customer gaps."
+            ),
+            target_user=(
+                f"Teams currently using {library_category.lower()} products who feel the recurring pains "
+                "documented in this analysis and need a simpler path to the core outcome."
+            ),
+            value_proposition=(
+                f"Reach the core {library_category.lower()} outcome with less setup, fewer failures, and "
+                "a workflow shaped directly by unresolved competitor complaints."
+            ),
+            core_workflow=[
+                "Connect or import the minimum data required for the core job.",
+                "Follow one guided workflow that applies reliable defaults.",
+                "Resolve exceptions with clear context and complete the outcome.",
+                "Review the result and reuse the workflow without repeated setup.",
+            ],
+            features=mvp_features,
+            in_scope=feature_names,
+            out_of_scope=[
+                "Broad platform features not tied to the documented competitor gaps.",
+                "Enterprise customization before the core workflow is validated.",
+            ],
+            success_metric=(
+                "A new user completes the core workflow without assistance and reaches the intended outcome "
+                "faster than with the incumbent product."
+            ),
         ),
         seo=LibrarySeoMeta(
             title=title[:70],

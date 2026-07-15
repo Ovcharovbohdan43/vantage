@@ -111,6 +111,25 @@ class LibrarySeoMeta(BaseModel):
     slug: str = Field(min_length=5, max_length=120, pattern=r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 
 
+class LibraryMvpFeature(BaseModel):
+    name: str = Field(min_length=3, max_length=100)
+    problem_solved: str = Field(min_length=20, max_length=400)
+    solution: str = Field(min_length=20, max_length=500)
+    evidence_cluster_ids: list[str] = Field(min_length=1, max_length=12)
+
+
+class LibraryMvpBlueprint(BaseModel):
+    concept_name: str = Field(min_length=3, max_length=100)
+    product_concept: str = Field(min_length=40, max_length=800)
+    target_user: str = Field(min_length=20, max_length=400)
+    value_proposition: str = Field(min_length=30, max_length=500)
+    core_workflow: list[str] = Field(min_length=3, max_length=8)
+    features: list[LibraryMvpFeature] = Field(min_length=1, max_length=24)
+    in_scope: list[str] = Field(min_length=1, max_length=24)
+    out_of_scope: list[str] = Field(min_length=1, max_length=12)
+    success_metric: str = Field(min_length=20, max_length=300)
+
+
 class LibraryArticleDraft(BaseModel):
     """Market-facing article — must NOT reference any user idea or company."""
 
@@ -122,6 +141,7 @@ class LibraryArticleDraft(BaseModel):
     market_opportunities: list[LibraryOpportunity] = Field(min_length=1, max_length=5)
     risk_analysis: list[LibraryRiskItem] = Field(min_length=4, max_length=6)
     final_takeaway: str = Field(min_length=40, max_length=1200)
+    mvp_blueprint: LibraryMvpBlueprint
     seo: LibrarySeoMeta
 
 

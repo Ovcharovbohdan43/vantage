@@ -23,14 +23,18 @@ from app.db.models import (
 )
 from app.services.library_categories import normalize_library_category
 from app.services.library_slug import ensure_unique_slug, slugify
-from app.services.llm_library_article import build_fallback_library_article, generate_library_article_with_llm
+from app.services.llm_library_article import (
+    build_fallback_library_article,
+    ensure_mvp_blueprint_coverage,
+    generate_library_article_with_llm,
+)
 from app.services.llm_library_sanitization import sanitize_library_article
 from app.services.llm_cluster_analysis import cluster_examples_list
 from app.services.llm_schemas import LibraryArticleDraft
 
 logger = logging.getLogger(__name__)
 
-LIBRARY_GENERATION_VERSION = "public-report-v2"
+LIBRARY_GENERATION_VERSION = "public-report-v3"
 CONFIDENCE_PCT = {"high": 83, "medium": 68, "low": 48}
 PUBLIC_CLUSTER_FIELDS = (
     "mention_count",
@@ -282,6 +286,7 @@ def _build_content_payload(
         "market_opportunities": [o.model_dump() for o in draft.market_opportunities],
         "risk_analysis": [r.model_dump() for r in draft.risk_analysis],
         "final_takeaway": draft.final_takeaway,
+        "mvp_blueprint": draft.mvp_blueprint.model_dump(),
         "generation": {
             "version": LIBRARY_GENERATION_VERSION,
             "numeric_source": "report_snapshot",
@@ -409,6 +414,7 @@ def generate_library_article_for_project(
             reviews_collected=reviews_collected,
             sources=sources,
         )
+    draft = ensure_mvp_blueprint_coverage(draft, report)
 
     sanitization = sanitize_library_article(draft)
     if not sanitization.is_safe:
@@ -461,19 +467,21 @@ def generate_library_article_for_project(
                 article_id=existing.id,
                 generation_version=LIBRARY_GENERATION_VERSION,
                 source_fingerprint=fingerprint,
-                status="staged",
-                category=library_category,
-                title=title,
-                executive_summary=executive_summary,
-                content=content,
-                seo=seo,
-                reviews_snapshot=reviews_snapshot,
-                market_saturation=report.market_saturation,
-                competition_level=draft.competition_level,
-                products_count=len(competitors),
-                reviews_count=reviews_collected,
             )
             db.add(revision)
+        if revision.status == "staged":
+            # A repeated stage run is a safe refresh of the unpublished draft.
+            # This supports validator fixes without creating duplicate revisions.
+            revision.category = library_category
+            revision.title = title
+            revision.executive_summary = executive_summary
+            revision.content = content
+            revision.seo = seo
+            revision.reviews_snapshot = reviews_snapshot
+            revision.market_saturation = report.market_saturation
+            revision.competition_level = draft.competition_level
+            revision.products_count = len(competitors)
+            revision.reviews_count = reviews_collected
             db.commit()
             db.refresh(revision)
         return LibraryGenerationResult(
