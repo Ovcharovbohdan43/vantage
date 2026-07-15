@@ -1,7 +1,7 @@
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
-from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint, func
+from sqlalchemy import Date, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from pgvector.sqlalchemy import Vector
@@ -296,6 +296,62 @@ class LibraryArticleRevision(Base):
     generation_error: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     activated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class IdeaOfWeekSelection(Base):
+    __tablename__ = "idea_of_week_selections"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    week_start: Mapped[date] = mapped_column(Date, nullable=False, unique=True, index=True)
+    week_slug: Mapped[str] = mapped_column(String(16), nullable=False, unique=True, index=True)
+    article_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("library_articles.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="published")
+    headline: Mapped[str] = mapped_column(Text, nullable=False)
+    dek: Mapped[str] = mapped_column(Text, nullable=False)
+    why_this_week: Mapped[str] = mapped_column(Text, nullable=False)
+    trend_query: Mapped[str] = mapped_column(Text, nullable=False)
+    trend_data: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    selection_score: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    selection_inputs: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class ShareDraftEntitlement(Base):
+    __tablename__ = "share_draft_entitlements"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("profiles.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    source_kind: Mapped[str] = mapped_column(String(24), nullable=False)
+    source_ref: Mapped[str] = mapped_column(Text, nullable=False)
+    return_path: Mapped[str] = mapped_column(Text, nullable=False)
+    grant_type: Mapped[str] = mapped_column(String(16), nullable=False, default="stripe")
+    stripe_checkout_session_id: Mapped[str | None] = mapped_column(Text, nullable=True, unique=True)
+    amount_cents: Mapped[int] = mapped_column(Integer, nullable=False, default=50)
+    currency: Mapped[str] = mapped_column(String(8), nullable=False, default="usd")
+    payment_status: Mapped[str] = mapped_column(String(16), nullable=False, default="pending")
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="ready")
+    generation_attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    generation_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    draft_title: Mapped[str | None] = mapped_column(Text, nullable=True)
+    draft_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    last_generation_error: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
 
 class EmailMessage(Base):

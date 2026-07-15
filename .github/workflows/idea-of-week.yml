@@ -1,0 +1,22 @@
+name: Publish Idea of the Week
+
+on:
+  schedule:
+    - cron: '0 0 * * 1'
+  workflow_dispatch:
+
+jobs:
+  select:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Select and publish weekly idea
+        env:
+          API_URL: ${{ secrets.IDEA_OF_WEEK_API_URL }}
+          CRON_SECRET: ${{ secrets.IDEA_OF_WEEK_CRON_SECRET }}
+        run: |
+          test -n "$API_URL"
+          test -n "$CRON_SECRET"
+          curl --fail-with-body --silent --show-error \
+            --request POST \
+            --header "Authorization: Bearer $CRON_SECRET" \
+            "$API_URL/api/v1/idea-of-week/internal/select"

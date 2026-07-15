@@ -22,6 +22,7 @@ interface AppShellProps {
 export const APP_NAV = [
   { href: '/dashboard', label: 'Dashboard' },
   { href: '/research/new', label: 'New research' },
+  { href: '/idea-of-the-week', label: 'Idea of the Week' },
   { href: '/library', label: 'Research Library' },
   { href: '/support', label: 'Support' },
 ] as const

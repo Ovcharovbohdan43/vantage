@@ -151,3 +151,8 @@ class LibrarySanitizationResult(BaseModel):
     sanitized_title: str = Field(min_length=10, max_length=120)
     sanitized_executive_summary: str = Field(min_length=80, max_length=2500)
     sanitized_final_takeaway: str = Field(min_length=40, max_length=1200)
+
+
+class SocialShareDraft(BaseModel):
+    title: str = Field(min_length=20, max_length=180)
+    text: str = Field(min_length=400, max_length=3500)

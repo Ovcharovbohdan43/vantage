@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import Literal
+from uuid import UUID
 
 from pydantic import BaseModel, Field
 
@@ -64,6 +65,38 @@ class PromoRedeemOut(BaseModel):
 class BillingErrorDetail(BaseModel):
     code: str
     message: str
+
+
+ShareDraftSourceKind = Literal["report", "library", "idea_of_week"]
+
+
+class ShareDraftCheckoutRequest(BaseModel):
+    source_kind: ShareDraftSourceKind
+    source_ref: str = Field(min_length=1, max_length=160)
+
+
+class ShareDraftCheckoutOut(BaseModel):
+    entitlement_id: UUID
+    checkout_url: str | None = None
+    payment_required: bool
+    amount_cents: int
+    currency: str = "usd"
+
+
+class ShareDraftFulfillRequest(BaseModel):
+    session_id: str = Field(min_length=3, max_length=255)
+
+
+class ShareDraftFulfillOut(BaseModel):
+    entitlement_id: UUID
+    source_kind: ShareDraftSourceKind
+    source_ref: str
+    return_path: str
+    ready: bool
+
+
+class ShareDraftGenerateRequest(BaseModel):
+    entitlement_id: UUID
 
 
 # Keep alias for transitional imports

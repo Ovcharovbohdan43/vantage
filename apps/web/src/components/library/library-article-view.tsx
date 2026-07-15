@@ -16,8 +16,10 @@ import {
 } from 'lucide-react'
 import { LibraryEvidence } from '@/components/library/library-evidence'
 import { LibraryReportCharts } from '@/components/library/library-report-charts'
+import { ShareReport } from '@/components/share-report'
 import { trackLibraryEvent } from '@/lib/api/library'
 import type { LibraryArticle, LibraryPainPoint } from '@/lib/api/library'
+import { buildLibraryReportPost } from '@/lib/share-report'
 import { cn } from '@/lib/utils'
 
 function StarRating({ rating }: { rating: number }) {
@@ -695,6 +697,11 @@ export function LibraryArticleView({ article }: LibraryArticleViewProps) {
               </div>
             </section>
           )}
+
+          <ShareReport
+            payload={buildLibraryReportPost(article)}
+            draftSource={{ kind: 'library', slug: article.slug }}
+          />
 
           <section className="rounded-lg border border-v-primary/20 bg-v-primary/[0.04] p-6 sm:p-8">
             <p className="font-landing-mono text-[10px] uppercase tracking-wider text-v-primary">

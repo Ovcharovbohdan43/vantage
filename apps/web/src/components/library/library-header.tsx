@@ -14,6 +14,12 @@ export function LibraryHeader() {
         </Link>
         <nav className="flex shrink-0 items-center gap-2.5 text-sm sm:gap-4" aria-label="Library">
           <Link
+            href="/idea-of-the-week"
+            className="text-[13px] text-v-muted transition-colors hover:text-v-on"
+          >
+            Idea of the Week
+          </Link>
+          <Link
             href="/library"
             className="text-[13px] text-v-muted transition-colors hover:text-v-on"
           >

@@ -1,8 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 import stripe
 
 from app.config import settings
+from app.db.models import IdeaOfWeekSelection, LibraryArticle, Project, Report
 from app.db.session import get_db
 from app.deps.auth import AuthUser, get_current_user
 from app.schemas.billing import (
@@ -15,10 +17,19 @@ from app.schemas.billing import (
     PackInfo,
     PromoRedeemOut,
     PromoRedeemRequest,
+    ShareDraftCheckoutOut,
+    ShareDraftCheckoutRequest,
+    ShareDraftFulfillOut,
+    ShareDraftFulfillRequest,
 )
 from app.services.billing_fulfillment import fulfill_checkout_session
 from app.services.credits import CreditError, get_user_credits
 from app.services.promo_codes import redeem_promo_code
+from app.services.share_draft_billing import (
+    ShareDraftBillingError,
+    create_share_draft_checkout,
+    fulfill_share_draft_checkout,
+)
 from app.services.stripe_billing import (
     apply_checkout_completed,
     create_checkout_session,
@@ -26,6 +37,57 @@ from app.services.stripe_billing import (
 )
 
 router = APIRouter(prefix="/billing", tags=["billing"])
+
+
+async def _validate_share_draft_source(
+    db: AsyncSession,
+    *,
+    user_id,
+    source_kind: str,
+    source_ref: str,
+) -> str:
+    if source_kind == "report":
+        try:
+            from uuid import UUID
+
+            project_id = UUID(source_ref)
+        except ValueError as exc:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Report not found") from exc
+        exists = (
+            await db.execute(
+                select(Project.id)
+                .join(Report, Report.project_id == Project.id)
+                .where(Project.id == project_id, Project.user_id == user_id)
+            )
+        ).scalar_one_or_none()
+        if not exists:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Report not found")
+        return f"/research/{project_id}/report"
+
+    if source_kind == "library":
+        exists = (
+            await db.execute(
+                select(LibraryArticle.slug).where(
+                    LibraryArticle.slug == source_ref,
+                    LibraryArticle.status == "published",
+                )
+            )
+        ).scalar_one_or_none()
+        if not exists:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Article not found")
+        return f"/library/{source_ref}"
+
+    exists = (
+        await db.execute(
+            select(IdeaOfWeekSelection.week_slug).where(
+                IdeaOfWeekSelection.week_slug == source_ref,
+                IdeaOfWeekSelection.status == "published",
+            )
+        )
+    ).scalar_one_or_none()
+    if not exists:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Weekly idea not found")
+    return f"/idea-of-the-week/{source_ref}"
 
 
 @router.get("/credits", response_model=CreditsOut)
@@ -124,6 +186,91 @@ async def billing_fulfill(
     )
 
 
+@router.post("/share-drafts/checkout", response_model=ShareDraftCheckoutOut)
+async def share_draft_checkout(
+    payload: ShareDraftCheckoutRequest,
+    user: AuthUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    return_path = await _validate_share_draft_source(
+        db,
+        user_id=user.id,
+        source_kind=payload.source_kind,
+        source_ref=payload.source_ref,
+    )
+    try:
+        entitlement, checkout_url = await create_share_draft_checkout(
+            db,
+            user_id=user.id,
+            email=user.email,
+            source_kind=payload.source_kind,
+            source_ref=payload.source_ref,
+            return_path=return_path,
+        )
+        await db.commit()
+    except stripe.StripeError as exc:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Stripe error: {exc.user_message or str(exc)}",
+        ) from exc
+    except ShareDraftBillingError as exc:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={"code": exc.code, "message": exc.message},
+        ) from exc
+
+    return ShareDraftCheckoutOut(
+        entitlement_id=entitlement.id,
+        checkout_url=checkout_url,
+        payment_required=checkout_url is not None,
+        amount_cents=entitlement.amount_cents,
+        currency=entitlement.currency,
+    )
+
+
+@router.post("/share-drafts/fulfill", response_model=ShareDraftFulfillOut)
+async def share_draft_fulfill(
+    payload: ShareDraftFulfillRequest,
+    user: AuthUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if not settings.stripe_secret_key.strip():
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Stripe not configured")
+    try:
+        session = stripe.checkout.Session.retrieve(payload.session_id)
+    except stripe.StripeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Stripe error: {exc.user_message or str(exc)}",
+        ) from exc
+
+    owner_id = session.client_reference_id or (session.metadata or {}).get("user_id")
+    if not owner_id or str(user.id) != str(owner_id):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Checkout session does not belong to you")
+
+    try:
+        entitlement = await fulfill_share_draft_checkout(db, session)
+        if not entitlement:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Share purchase not found")
+        await db.commit()
+    except ShareDraftBillingError as exc:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"code": exc.code, "message": exc.message},
+        ) from exc
+
+    return ShareDraftFulfillOut(
+        entitlement_id=entitlement.id,
+        source_kind=entitlement.source_kind,
+        source_ref=entitlement.source_ref,
+        return_path=entitlement.return_path,
+        ready=entitlement.payment_status in {"paid", "not_required"},
+    )
+
+
 @router.post("/promo/redeem", response_model=PromoRedeemOut)
 async def billing_redeem_promo(
     payload: PromoRedeemRequest,
@@ -174,7 +321,12 @@ async def billing_webhook(request: Request, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid signature") from exc
 
     if event["type"] == "checkout.session.completed":
-        await apply_checkout_completed(db, event["data"]["object"])
+        session = event["data"]["object"]
+        metadata = session.get("metadata") or {}
+        if metadata.get("purchase_type") == "share_draft":
+            await fulfill_share_draft_checkout(db, session)
+        else:
+            await apply_checkout_completed(db, session)
 
     await db.commit()
     return {"received": True}

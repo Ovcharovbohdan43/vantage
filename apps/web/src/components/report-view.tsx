@@ -11,6 +11,7 @@ import { AppFeedbackPrompt } from '@/components/app-feedback-prompt'
 import { FullReportCta } from '@/components/full-report-cta'
 import { PricingModal } from '@/components/pricing-modal'
 import { ProjectEvidence } from '@/components/project-evidence'
+import { ShareReport } from '@/components/share-report'
 import { StateScreen } from '@/components/state-screen'
 import {
   ReportCompetitorsSection,
@@ -34,6 +35,7 @@ import { getCredits } from '@/lib/api/billing'
 import { ApiError } from '@/lib/api/client'
 import { retryProject } from '@/lib/api/projects'
 import { downloadReportMarkdown } from '@/lib/report-export'
+import { buildAuthenticatedReportPost } from '@/lib/share-report'
 import type { MarketSaturation } from '@/lib/api/types'
 import { cn } from '@/lib/utils'
 
@@ -238,6 +240,11 @@ export function ReportView({ projectId }: ReportViewProps) {
           <ReportDeepDive report={data} isPreview={isPreview} />
 
           {isPreview && credits && <FullReportCta projectId={projectId} credits={credits} />}
+          <ShareReport
+            payload={buildAuthenticatedReportPost(data)}
+            draftSource={{ kind: 'report', projectId }}
+            className="mb-8"
+          />
         </>
       )}
 

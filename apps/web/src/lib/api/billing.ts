@@ -1,5 +1,6 @@
 import { apiFetch } from '@/lib/api/client'
 import type { CreditsBalance, Project, ResearchDepth, ResearchPack, ResearchPackInfo } from '@/lib/api/types'
+import type { ShareDraftSource } from '@/lib/share-report'
 
 export function getCredits() {
   return apiFetch<CreditsBalance>('/api/v1/billing/credits')
@@ -32,6 +33,36 @@ export function fulfillCheckoutSession(sessionId: string) {
     credits_added: number
     total_credits: number
   }>('/api/v1/billing/fulfill', {
+    method: 'POST',
+    body: JSON.stringify({ session_id: sessionId }),
+  })
+}
+
+export function createShareDraftCheckout(source: ShareDraftSource) {
+  const sourceKind =
+    source.kind === 'idea-of-week' ? 'idea_of_week' : source.kind
+  const sourceRef =
+    source.kind === 'report' ? source.projectId : source.kind === 'library' ? source.slug : source.week
+  return apiFetch<{
+    entitlement_id: string
+    checkout_url: string | null
+    payment_required: boolean
+    amount_cents: number
+    currency: string
+  }>('/api/v1/billing/share-drafts/checkout', {
+    method: 'POST',
+    body: JSON.stringify({ source_kind: sourceKind, source_ref: sourceRef }),
+  })
+}
+
+export function fulfillShareDraftCheckout(sessionId: string) {
+  return apiFetch<{
+    entitlement_id: string
+    source_kind: 'report' | 'library' | 'idea_of_week'
+    source_ref: string
+    return_path: string
+    ready: boolean
+  }>('/api/v1/billing/share-drafts/fulfill', {
     method: 'POST',
     body: JSON.stringify({ session_id: sessionId }),
   })

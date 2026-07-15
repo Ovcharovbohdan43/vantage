@@ -7,6 +7,7 @@ import { VantageLogo } from '@/components/vantage-logo'
 import { cn } from '@/lib/utils'
 
 const NAV_LINKS = [
+  { href: '/idea-of-the-week', label: 'Idea of the Week' },
   { href: '/library', label: 'Library' },
   { href: '#method', label: 'Method' },
   { href: '#report', label: 'Report' },

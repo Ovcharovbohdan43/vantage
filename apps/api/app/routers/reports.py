@@ -3,6 +3,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.concurrency import run_in_threadpool
 
 from app.db.models import Competitor, Project, Report, ResearchJob, Review
 from app.db.session import get_db
@@ -22,6 +23,15 @@ from app.schemas.reports import (
     ReportSubTheme,
     ReportTermCount,
     ReportYearCount,
+)
+from app.services.llm_schemas import SocialShareDraft
+from app.services.llm_social_share import build_report_share_facts, generate_social_share_draft
+from app.schemas.billing import ShareDraftGenerateRequest
+from app.services.share_draft_billing import (
+    ShareDraftBillingError,
+    claim_share_draft_entitlement,
+    complete_share_draft_entitlement,
+    release_share_draft_entitlement,
 )
 
 router = APIRouter(prefix="/projects", tags=["reports"])
@@ -397,3 +407,65 @@ async def get_project_report(
         )
 
     return await _report_to_out(project, report, db)
+
+
+@router.post("/{project_id}/report/share-draft", response_model=SocialShareDraft)
+async def generate_project_report_share_draft(
+    project_id: UUID,
+    payload: ShareDraftGenerateRequest,
+    user: AuthUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    project = await _get_owned_project(project_id, user, db)
+
+    result = await db.execute(select(Report).where(Report.project_id == project_id))
+    report = result.scalar_one_or_none()
+    if not report:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Report not ready yet. Complete a research run first.",
+        )
+
+    report_out = await _report_to_out(project, report, db)
+    try:
+        claim = await claim_share_draft_entitlement(
+            db,
+            entitlement_id=payload.entitlement_id,
+            user_id=user.id,
+            source_kind="report",
+            source_ref=str(project_id),
+        )
+        await db.commit()
+    except ShareDraftBillingError as exc:
+        code = status.HTTP_402_PAYMENT_REQUIRED if exc.code == "payment_required" else status.HTTP_409_CONFLICT
+        raise HTTPException(status_code=code, detail={"code": exc.code, "message": exc.message}) from exc
+
+    if claim.cached_draft:
+        return claim.cached_draft
+
+    try:
+        draft = await run_in_threadpool(
+            generate_social_share_draft,
+            build_report_share_facts(report_out),
+        )
+        if not draft:
+            raise RuntimeError("Share draft generation is unavailable")
+    except Exception as exc:
+        await release_share_draft_entitlement(
+            db,
+            entitlement_id=payload.entitlement_id,
+            error=str(exc),
+        )
+        await db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={"code": "generation_failed", "message": "Generation failed. You can retry without paying again."},
+        ) from exc
+
+    await complete_share_draft_entitlement(
+        db,
+        entitlement_id=payload.entitlement_id,
+        draft=draft,
+    )
+    await db.commit()
+    return draft

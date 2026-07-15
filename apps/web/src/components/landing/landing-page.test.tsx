@@ -1,6 +1,7 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
+import type { IdeaOfWeek } from '@/lib/api/idea-of-week'
 import type { LibraryArticleSummary } from '@/lib/api/library'
 import type { ResearchPackInfo } from '@/lib/api/types'
 import { LandingHeader } from '@/components/landing/landing-header'
@@ -46,14 +47,46 @@ const ARTICLES: LibraryArticleSummary[] = [
   },
 ]
 
+const CURRENT_IDEA = {
+  id: 'weekly-1',
+  week_start: '2026-07-13',
+  week_slug: '2026-W29',
+  headline: "This week's build: Invoice Management Software",
+  dek: 'Simplify invoicing with reliable support and integrations.',
+  trend_query: 'Invoice Software',
+  trend_data: {
+    points: [
+      { date: 'Week 1', timestamp: 1, value: 25 },
+      { date: 'Week 2', timestamp: 2, value: 52 },
+    ],
+    metrics: {
+      current_interest: 52,
+      previous_interest: 83.4,
+      growth_pct: -37.6,
+      peak_interest: 100,
+    },
+  },
+  selection_score: 56.5,
+  article: {
+    category: 'Finance',
+    content: {
+      mvp_blueprint: {
+        target_user: 'Small finance teams that need a simpler invoicing workflow.',
+      },
+    },
+  },
+} as IdeaOfWeek
+
 function renderLanding(overrides?: {
   featuredArticles?: LibraryArticleSummary[]
   packs?: ResearchPackInfo[]
+  currentIdea?: IdeaOfWeek | null
 }) {
   return render(
     <LandingPage
       featuredArticles={overrides?.featuredArticles ?? ARTICLES}
       packs={overrides?.packs ?? PACKS}
+      currentIdea={overrides?.currentIdea}
     />,
   )
 }
@@ -137,6 +170,30 @@ describe('LandingPage CTAs and links', () => {
     expectAllHrefs('5.0 Pricing', '#pricing')
     expect(screen.getByText('1 full report free')).toBeInTheDocument()
     expect(screen.getByText('included on signup · no card')).toBeInTheDocument()
+    expect(
+      screen.getByRole('img', { name: /Idea of the Week report showing Google search demand/i }),
+    ).toBeInTheDocument()
+  })
+
+  it('shows the current weekly idea and links to its stable page', () => {
+    renderLanding({ currentIdea: CURRENT_IDEA })
+
+    expect(screen.getByRole('heading', { name: 'Invoice Management Software' })).toBeInTheDocument()
+    expect(screen.getByText('“Invoice Software”')).toBeInTheDocument()
+    expect(screen.getByText('52')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Read this week's idea/i })).toHaveAttribute(
+      'href',
+      '/idea-of-the-week/2026-W29',
+    )
+    expect(screen.getByRole('link', { name: 'Research your market' })).toHaveAttribute(
+      'href',
+      '/research/new?from=landing-weekly-idea',
+    )
+  })
+
+  it('omits the weekly section when no idea is published', () => {
+    renderLanding({ currentIdea: null })
+    expect(screen.queryByText('One market idea worth watching this week')).not.toBeInTheDocument()
   })
 
   it('routes pricing pack buttons to signup', () => {

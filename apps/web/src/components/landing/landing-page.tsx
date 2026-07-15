@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import type { IdeaOfWeek } from '@/lib/api/idea-of-week'
 import type { LibraryArticleSummary } from '@/lib/api/library'
 import type { ResearchPackInfo } from '@/lib/api/types'
 import { FigCollect, FigDecide, FigDescribe } from '@/components/landing/landing-fig-icons'
@@ -6,6 +7,7 @@ import { LandingHeader } from '@/components/landing/landing-header'
 import { LandingHeroStage } from '@/components/landing/landing-hero-stage'
 import { LandingReportStage } from '@/components/landing/landing-report-stage'
 import { LandingReveal } from '@/components/landing/landing-reveal'
+import { LandingWeeklyIdea } from '@/components/landing/landing-weekly-idea'
 import { VantageLogo } from '@/components/vantage-logo'
 
 const STEPS = [
@@ -75,9 +77,10 @@ function packFeatures(pack: ResearchPackInfo): string[] {
 interface LandingPageProps {
   featuredArticles: LibraryArticleSummary[]
   packs: ResearchPackInfo[]
+  currentIdea?: IdeaOfWeek | null
 }
 
-export function LandingPage({ featuredArticles, packs }: LandingPageProps) {
+export function LandingPage({ featuredArticles, packs, currentIdea = null }: LandingPageProps) {
   return (
     <div className="landing-root min-h-screen">
       <LandingHeader />
@@ -151,6 +154,8 @@ export function LandingPage({ featuredArticles, packs }: LandingPageProps) {
             </Link>
           </div>
         </section>
+
+        {currentIdea && <LandingWeeklyIdea idea={currentIdea} />}
 
         {/* Method — FIG + line art */}
         <section id="method" className="border-t border-white/[0.06] py-20 md:py-28">

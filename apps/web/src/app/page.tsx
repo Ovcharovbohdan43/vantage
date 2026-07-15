@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { JsonLd } from '@/components/seo/json-ld'
 import { LandingPage } from '@/components/landing/landing-page'
 import { listLibraryArticles } from '@/lib/api/library'
+import { loadCurrentIdeaOfWeek } from '@/lib/api/idea-of-week-server'
 import { publicApiFetch } from '@/lib/api/public'
 import type { ResearchPackInfo } from '@/lib/api/types'
 import {
@@ -61,29 +62,23 @@ export default async function HomePage() {
 
   let featuredArticles: Awaited<ReturnType<typeof listLibraryArticles>>['items'] = []
   let packs: ResearchPackInfo[] = FALLBACK_PACKS
+  let currentIdea: Awaited<ReturnType<typeof loadCurrentIdeaOfWeek>> = null
 
-  try {
-    const [library, packList] = await Promise.all([
-      listLibraryArticles({ limit: 3, sort: 'latest' }),
-      publicApiFetch<ResearchPackInfo[]>('/api/v1/billing/packs', { cache: 'no-store' }),
-    ])
-    featuredArticles = library.items
-    packs = packList
-  } catch {
-    try {
-      const library = await listLibraryArticles({ limit: 3, sort: 'latest' })
-      featuredArticles = library.items
-    } catch {
-      // API unavailable during local setup
-    }
-  }
+  const [libraryResult, packResult, ideaResult] = await Promise.allSettled([
+    listLibraryArticles({ limit: 3, sort: 'latest' }),
+    publicApiFetch<ResearchPackInfo[]>('/api/v1/billing/packs', { cache: 'no-store' }),
+    loadCurrentIdeaOfWeek(),
+  ])
+  if (libraryResult.status === 'fulfilled') featuredArticles = libraryResult.value.items
+  if (packResult.status === 'fulfilled') packs = packResult.value
+  if (ideaResult.status === 'fulfilled') currentIdea = ideaResult.value
 
   return (
     <>
       <JsonLd data={organizationJsonLd()} />
       <JsonLd data={websiteJsonLd()} />
       <JsonLd data={softwareApplicationJsonLd()} />
-      <LandingPage featuredArticles={featuredArticles} packs={packs} />
+      <LandingPage featuredArticles={featuredArticles} packs={packs} currentIdea={currentIdea} />
     </>
   )
 }

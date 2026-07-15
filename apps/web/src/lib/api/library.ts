@@ -1,4 +1,6 @@
+import { apiFetch } from '@/lib/api/client'
 import { publicApiFetch } from '@/lib/api/public'
+import type { ShareDraft } from '@/lib/share-report'
 
 export interface LibraryArticleSummary {
   id: string
@@ -204,6 +206,14 @@ export function listLibraryArticles(params: LibraryListParams = {}) {
 
 export function getLibraryArticle(slug: string) {
   return publicApiFetch<LibraryArticle>(`/api/v1/library/${slug}`, { revalidate: 120 })
+}
+
+export function generateLibraryShareDraft(slug: string, entitlementId: string) {
+  return apiFetch<ShareDraft>(`/api/v1/library/${slug}/share-draft`, {
+    method: 'POST',
+    body: JSON.stringify({ entitlement_id: entitlementId }),
+    cache: 'no-store',
+  })
 }
 
 export function getLibraryReviews(

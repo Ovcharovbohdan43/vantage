@@ -3,9 +3,12 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.concurrency import run_in_threadpool
 
 from app.db.models import LibraryArticle, LibraryArticleEvent
 from app.db.session import get_db
+from app.deps.auth import AuthUser, get_current_user
+from app.schemas.billing import ShareDraftGenerateRequest
 from app.schemas.library import (
     LibraryArticleOut,
     LibraryArticleSummary,
@@ -13,6 +16,14 @@ from app.schemas.library import (
     LibraryListOut,
     LibraryReviewOut,
     LibraryReviewsOut,
+)
+from app.services.llm_schemas import SocialShareDraft
+from app.services.llm_social_share import build_library_share_facts, generate_social_share_draft
+from app.services.share_draft_billing import (
+    ShareDraftBillingError,
+    claim_share_draft_entitlement,
+    complete_share_draft_entitlement,
+    release_share_draft_entitlement,
 )
 from app.services.library_categories import LIBRARY_CATEGORIES
 
@@ -101,6 +112,67 @@ async def get_library_article(slug: str, db: AsyncSession = Depends(get_db)):
     if not article:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Article not found")
     return article
+
+
+@router.post("/{slug}/share-draft", response_model=SocialShareDraft)
+async def generate_library_share_draft(
+    slug: str,
+    payload: ShareDraftGenerateRequest,
+    user: AuthUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(LibraryArticle).where(
+            LibraryArticle.slug == slug,
+            LibraryArticle.status == "published",
+        )
+    )
+    article = result.scalar_one_or_none()
+    if not article:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Article not found")
+
+    try:
+        claim = await claim_share_draft_entitlement(
+            db,
+            entitlement_id=payload.entitlement_id,
+            user_id=user.id,
+            source_kind="library",
+            source_ref=slug,
+        )
+        await db.commit()
+    except ShareDraftBillingError as exc:
+        code = status.HTTP_402_PAYMENT_REQUIRED if exc.code == "payment_required" else status.HTTP_409_CONFLICT
+        raise HTTPException(status_code=code, detail={"code": exc.code, "message": exc.message}) from exc
+
+    if claim.cached_draft:
+        return claim.cached_draft
+
+    try:
+        draft = await run_in_threadpool(
+            generate_social_share_draft,
+            build_library_share_facts(article),
+        )
+        if not draft:
+            raise RuntimeError("Share draft generation is unavailable")
+    except Exception as exc:
+        await release_share_draft_entitlement(
+            db,
+            entitlement_id=payload.entitlement_id,
+            error=str(exc),
+        )
+        await db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={"code": "generation_failed", "message": "Generation failed. You can retry without paying again."},
+        ) from exc
+
+    await complete_share_draft_entitlement(
+        db,
+        entitlement_id=payload.entitlement_id,
+        draft=draft,
+    )
+    await db.commit()
+    return draft
 
 
 @router.get("/{slug}/reviews", response_model=LibraryReviewsOut)

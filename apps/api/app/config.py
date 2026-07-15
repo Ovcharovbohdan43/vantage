@@ -28,6 +28,10 @@ class Settings(BaseSettings):
     embedding_dimensions: int = 1536
     max_negative_review_rating: int = 3
     competitor_http_timeout_seconds: float = 20.0
+    serpapi_api_key: str = ""
+    serpapi_timeout_seconds: float = 20.0
+    serpapi_monthly_budget: int = 250
+    idea_of_week_cron_secret: str = ""
 
     playwright_headless: bool = True
     scraper_page_timeout_ms: int = 60_000
@@ -50,6 +54,8 @@ class Settings(BaseSettings):
     stripe_price_starter: str = ""
     stripe_price_founder: str = ""
     stripe_price_indie: str = ""
+    share_draft_price_cents: int = 50
+    share_draft_free_user_ids: str = ""
 
     resend_api_key: str = ""
     resend_from_email: str = "Vantage <noreply@vantageserch.app>"
@@ -92,6 +98,14 @@ class Settings(BaseSettings):
     @property
     def resend_configured(self) -> bool:
         return bool(self.resend_api_key.strip())
+
+    @property
+    def share_draft_free_users(self) -> set[str]:
+        return {
+            value.strip().lower()
+            for value in self.share_draft_free_user_ids.split(",")
+            if value.strip()
+        }
 
     @field_validator("database_url")
     @classmethod
