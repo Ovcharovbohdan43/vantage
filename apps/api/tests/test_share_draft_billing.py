@@ -53,13 +53,14 @@ class _Db:
 
 @pytest.mark.asyncio
 async def test_allowlisted_owner_gets_free_entitlement_without_stripe(monkeypatch) -> None:
-    monkeypatch.setattr(settings, "share_draft_free_user_ids", str(OWNER_ID))
+    monkeypatch.setattr(settings, "share_draft_free_user_ids", "")
+    monkeypatch.setattr(settings, "share_draft_free_emails", "")
     db = _Db()
 
     entitlement, checkout_url = await create_share_draft_checkout(
         db,
         user_id=OWNER_ID,
-        email="owner@example.com",
+        email="someone-else@example.com",
         source_kind="idea_of_week",
         source_ref="2026-W29",
         return_path="/idea-of-the-week/2026-W29",
@@ -72,8 +73,60 @@ async def test_allowlisted_owner_gets_free_entitlement_without_stripe(monkeypatc
 
 
 @pytest.mark.asyncio
-async def test_paid_checkout_charges_exactly_fifty_cents(monkeypatch) -> None:
+async def test_allowlisted_owner_email_gets_free_entitlement(monkeypatch) -> None:
     monkeypatch.setattr(settings, "share_draft_free_user_ids", "")
+    monkeypatch.setattr(settings, "share_draft_free_emails", "")
+    db = _Db()
+
+    entitlement, checkout_url = await create_share_draft_checkout(
+        db,
+        user_id=uuid4(),
+        email="f62688798@gmail.com",
+        source_kind="library",
+        source_ref="inventory-sync",
+        return_path="/library/inventory-sync",
+    )
+
+    assert checkout_url is None
+    assert entitlement.grant_type == "allowlist"
+    assert entitlement.payment_status == "not_required"
+
+
+@pytest.mark.asyncio
+async def test_paid_checkout_uses_public_web_url_not_localhost(monkeypatch) -> None:
+    monkeypatch.setattr(settings, "share_draft_free_user_ids", "")
+    monkeypatch.setattr(settings, "share_draft_free_emails", "")
+    monkeypatch.setattr(settings, "debug", False)
+    monkeypatch.setattr(settings, "app_web_url", "http://localhost:3000")
+    monkeypatch.setattr(settings, "share_draft_price_cents", 50)
+    monkeypatch.setattr(settings, "stripe_secret_key", "sk_test_example")
+    captured = {}
+
+    def fake_create(**params):
+        captured.update(params)
+        return SimpleNamespace(id="cs_test_share", url="https://checkout.stripe.test/share")
+
+    monkeypatch.setattr("stripe.checkout.Session.create", fake_create)
+    db = _Db(profile=None)
+
+    await create_share_draft_checkout(
+        db,
+        user_id=uuid4(),
+        email="founder@example.com",
+        source_kind="library",
+        source_ref="inventory-sync",
+        return_path="/library/inventory-sync",
+    )
+
+    assert "localhost" not in captured["cancel_url"]
+    assert captured["cancel_url"].startswith("https://vantageserch.app/")
+    assert captured["success_url"].startswith("https://vantageserch.app/")
+
+
+@pytest.mark.asyncio
+async def test_paid_checkout_charges_exactly_fifty_cents(monkeypatch) -> None:
+    monkeypatch.setattr(settings, "share_draft_free_user_ids", "00000000-0000-0000-0000-000000000099")
+    monkeypatch.setattr(settings, "share_draft_free_emails", "nobody@example.com")
     monkeypatch.setattr(settings, "share_draft_price_cents", 50)
     monkeypatch.setattr(settings, "stripe_secret_key", "sk_test_example")
     captured = {}

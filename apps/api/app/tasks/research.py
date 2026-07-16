@@ -415,7 +415,10 @@ def run_research(self, job_id: str) -> None:
                     project,
                     {
                         "code": "report_generation_failed",
-                        "message": "We could not finish building your report. You can retry from this page.",
+                        "message": (
+                            "We could not finish the AI analysis for your report. "
+                            "You can retry from this page — no heuristic-only report is published."
+                        ),
                         "details": {"reason": str(exc)},
                     },
                 )

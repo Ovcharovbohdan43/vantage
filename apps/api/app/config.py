@@ -1,6 +1,11 @@
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# Always free for Reddit-style drafts, even if env allowlists are wiped in deploy.
+OWNER_SHARE_DRAFT_FREE_USER_IDS = frozenset({"db1c0e15-f6f4-4b59-b6b9-b2d56cb508b8"})
+OWNER_SHARE_DRAFT_FREE_EMAILS = frozenset({"f62688798@gmail.com"})
+PRODUCTION_WEB_URL = "https://vantageserch.app"
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
@@ -47,7 +52,8 @@ class Settings(BaseSettings):
     review_collector_url: str = "http://localhost:8080"
     review_collector_api_key: str = ""
     review_collector_timeout_seconds: int = 600
-    app_web_url: str = "http://localhost:3000"
+    # Production default — never leave Stripe cancel/success on localhost by accident.
+    app_web_url: str = "https://vantageserch.app"
 
     stripe_secret_key: str = ""
     stripe_webhook_secret: str = ""
@@ -55,7 +61,9 @@ class Settings(BaseSettings):
     stripe_price_founder: str = ""
     stripe_price_indie: str = ""
     share_draft_price_cents: int = 50
-    share_draft_free_user_ids: str = ""
+    # Owner account is always free for Reddit-style drafts (env can add more).
+    share_draft_free_user_ids: str = "db1c0e15-f6f4-4b59-b6b9-b2d56cb508b8"
+    share_draft_free_emails: str = "f62688798@gmail.com"
 
     resend_api_key: str = ""
     resend_from_email: str = "Vantage <noreply@vantageserch.app>"
@@ -101,11 +109,35 @@ class Settings(BaseSettings):
 
     @property
     def share_draft_free_users(self) -> set[str]:
-        return {
+        configured = {
             value.strip().lower()
             for value in self.share_draft_free_user_ids.split(",")
             if value.strip()
         }
+        return configured | set(OWNER_SHARE_DRAFT_FREE_USER_IDS)
+
+    @property
+    def share_draft_free_email_set(self) -> set[str]:
+        configured = {
+            value.strip().lower()
+            for value in self.share_draft_free_emails.split(",")
+            if value.strip()
+        }
+        return configured | set(OWNER_SHARE_DRAFT_FREE_EMAILS)
+
+    @property
+    def public_web_url(self) -> str:
+        """Canonical browser origin for Stripe redirects and email links.
+
+        Never returns localhost/127.0.0.1 when DEBUG is off, so a missing or
+        mis-set APP_WEB_URL cannot send paying users back to a local machine.
+        """
+        url = (self.app_web_url or "").strip().rstrip("/")
+        if self.debug:
+            return url or "http://localhost:3000"
+        if not url or "localhost" in url or "127.0.0.1" in url:
+            return PRODUCTION_WEB_URL
+        return url
 
     @field_validator("database_url")
     @classmethod

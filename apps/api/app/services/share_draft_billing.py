@@ -30,8 +30,12 @@ class ShareDraftClaim:
     cached_draft: SocialShareDraft | None = None
 
 
-def is_share_draft_free_user(user_id: UUID) -> bool:
-    return str(user_id).lower() in settings.share_draft_free_users
+def is_share_draft_free_user(user_id: UUID, email: str | None = None) -> bool:
+    if str(user_id).lower() in settings.share_draft_free_users:
+        return True
+    if email and email.strip().lower() in settings.share_draft_free_email_set:
+        return True
+    return False
 
 
 async def create_share_draft_checkout(
@@ -43,7 +47,7 @@ async def create_share_draft_checkout(
     source_ref: str,
     return_path: str,
 ) -> tuple[ShareDraftEntitlement, str | None]:
-    free = is_share_draft_free_user(user_id)
+    free = is_share_draft_free_user(user_id, email)
     entitlement = ShareDraftEntitlement(
         user_id=user_id,
         source_kind=source_kind,
@@ -66,7 +70,7 @@ async def create_share_draft_checkout(
         raise ShareDraftBillingError("stripe_unavailable", "Stripe is not configured")
 
     profile = await db.get(Profile, user_id)
-    base_url = settings.app_web_url.rstrip("/")
+    base_url = settings.public_web_url.rstrip("/")
     separator = "&" if "?" in return_path else "?"
     params: dict = {
         "mode": "payment",

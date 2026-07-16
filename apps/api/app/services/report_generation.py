@@ -28,6 +28,9 @@ from app.services.review_cleaning import CleanedReview
 
 logger = logging.getLogger(__name__)
 
+DIFFUSE_CLUSTER_TITLE = "Complaints are too diverse to isolate one dominant user pain"
+DIFFUSE_SAMPLE_LIMIT = 40
+
 
 @dataclass
 class ReportGenerationResult:
@@ -35,6 +38,10 @@ class ReportGenerationResult:
     clusters_analyzed: int = 0
     llm_used: bool = False
     warnings: list[str] = field(default_factory=list)
+
+
+class ReportLlmRequiredError(RuntimeError):
+    """Full reports must be LLM-backed; heuristic-only output is not allowed."""
 
 
 def _as_uuid(value: str | UUID) -> UUID | None:
@@ -234,6 +241,68 @@ def _competitor_to_snapshot(row: Competitor) -> dict:
     }
 
 
+def _review_sample_payload(signals: list[ReviewSignal], *, limit: int = 25) -> list[dict]:
+    samples: list[dict] = []
+    for signal in signals[:limit]:
+        text = (signal.text or "").strip()
+        if not text:
+            continue
+        samples.append(
+            {
+                "text": text[:400],
+                "rating": signal.rating,
+                "competitor": signal.competitor_name,
+                "source": signal.source,
+            }
+        )
+    return samples
+
+
+def _create_diffuse_cluster(
+    db: Session,
+    project: Project,
+    review_signals: dict[UUID, ReviewSignal],
+) -> PainCluster:
+    """Persist a catch-all cluster so LLM can still explain that no dominant pain emerged."""
+    ordered = sorted(
+        review_signals.values(),
+        key=lambda s: (s.rating is None, s.rating if s.rating is not None else 99),
+    )
+    samples = ordered[:DIFFUSE_SAMPLE_LIMIT]
+    examples = [
+        {
+            "review_id": str(signal.id),
+            "text": signal.text,
+            "rating": signal.rating,
+            "competitor": signal.competitor_name,
+            "source": signal.source,
+            "title": None,
+        }
+        for signal in samples
+        if (signal.text or "").strip()
+    ]
+    ratings = [s.rating for s in samples if s.rating is not None]
+    severity = 5.0
+    if ratings:
+        severity = round(sum(max(1.0, min(10.0, 6.0 - float(r))) for r in ratings) / len(ratings), 2)
+
+    cluster = PainCluster(
+        project_id=project.id,
+        title=DIFFUSE_CLUSTER_TITLE,
+        description=(
+            "Automatic clustering could not find a recurring pain pattern. "
+            "The quotes below are a representative sample of collected negative reviews."
+        ),
+        frequency=len(review_signals),
+        severity_score=severity,
+        examples=examples,
+        representative_review_ids=[str(s.id) for s in samples],
+    )
+    db.add(cluster)
+    db.flush()
+    return cluster
+
+
 def _save_preview_report(
     db: Session,
     project: Project,
@@ -331,6 +400,21 @@ def generate_report_for_project(
     )
     review_signals = _load_review_signals(db, project.id)
 
+    clustering_failed = False
+    if (
+        project.research_mode != "preview"
+        and not clusters
+        and review_signals
+    ):
+        clustering_failed = True
+        job_warnings.append("no_dominant_pain_clusters")
+        clusters = [_create_diffuse_cluster(db, project, review_signals)]
+        logger.info(
+            "Created diffuse catch-all cluster for project %s from %s reviews",
+            project.id,
+            len(review_signals),
+        )
+
     # Analytics before LLM (and before releasing the transaction).
     negative_signals = sum(c.frequency for c in clusters) or reviews_collected
     reviews_analyzed = max(reviews_collected, len(review_signals))
@@ -338,7 +422,9 @@ def generate_report_for_project(
 
     for cluster in clusters:
         signals = _signals_for_cluster(cluster, review_signals)
-        sub_themes = _ensure_sub_themes(cluster, signals)
+        if not signals and clustering_failed:
+            signals = list(review_signals.values())[:DIFFUSE_SAMPLE_LIMIT]
+        sub_themes = [] if clustering_failed else _ensure_sub_themes(cluster, signals)
         analytics = analyze_cluster_reviews(
             signals,
             reviews_analyzed=reviews_analyzed,
@@ -360,17 +446,19 @@ def generate_report_for_project(
             "sub_themes": analytics.sub_themes,
             "feature_requests": [],
             "why_opportunity": None,
+            "diffuse_complaints": clustering_failed,
         }
 
     major_problems = sum(
         1
         for cluster in clusters
-        if (cluster.severity_score or 0) >= 6 or cluster.frequency >= 10
+        if not clustering_failed
+        and ((cluster.severity_score or 0) >= 6 or cluster.frequency >= 10)
     )
     opportunity_size = build_opportunity_size(
         reviews_analyzed=reviews_analyzed,
         negative_signals=negative_signals,
-        clusters_found=len(clusters),
+        clusters_found=0 if clustering_failed else len(clusters),
         major_problem_count=major_problems,
     )
     opportunity_size_dict = {
@@ -385,48 +473,60 @@ def generate_report_for_project(
 
     llm_used = False
     analyzed = 0
-    if project.research_mode != "preview" and clusters:
-        llm_items = [
-            (cluster, project, cluster_analytics.get(str(cluster.id)))
-            for cluster in clusters
-        ]
-        if on_progress:
-            on_progress(clusters_done=0, clusters_total=len(clusters))
-        analyses = analyze_clusters_parallel(llm_items)
-        for cluster in clusters:
-            analysis = analyses.get(str(cluster.id))
-            if not analysis:
-                continue
-            enriched = _apply_cluster_analysis_result(
-                cluster,
-                analysis,
-                analytics=cluster_analytics[str(cluster.id)],
-            )
-            cluster_analytics[str(cluster.id)] = enriched
-            analyzed += 1
-            llm_used = True
-        if on_progress:
-            on_progress(clusters_done=len(clusters), clusters_total=len(clusters))
+    synthesis = None
+    opportunities_summary: list[dict] = []
+    review_samples = _review_sample_payload(list(review_signals.values()))
 
-        opportunities_summary = [
-            {
-                "title": cluster.title,
-                "mention_count": cluster_analytics[str(cluster.id)].get("mention_count"),
-                "share_pct": cluster_analytics[str(cluster.id)].get("share_pct"),
-                "trend": cluster_analytics[str(cluster.id)].get("trend"),
-                "top_competitor": (
-                    (cluster_analytics[str(cluster.id)].get("competitors") or [{}])[0].get("name")
-                    if cluster_analytics[str(cluster.id)].get("competitors")
-                    else None
-                ),
-                "feature_requests": [
-                    fr.get("label")
-                    for fr in (cluster_analytics[str(cluster.id)].get("feature_requests") or [])[:4]
-                ],
-                "why_opportunity": cluster_analytics[str(cluster.id)].get("why_opportunity"),
-            }
-            for cluster in clusters[:8]
-        ]
+    if project.research_mode != "preview":
+        if not clusters and not review_signals:
+            raise ReportLlmRequiredError(
+                "No review evidence available for LLM report synthesis"
+            )
+
+        if clusters:
+            llm_items = [
+                (cluster, project, cluster_analytics.get(str(cluster.id)))
+                for cluster in clusters
+            ]
+            if on_progress:
+                on_progress(clusters_done=0, clusters_total=len(clusters))
+            analyses = analyze_clusters_parallel(llm_items)
+            for cluster in clusters:
+                analysis = analyses.get(str(cluster.id))
+                if not analysis:
+                    continue
+                enriched = _apply_cluster_analysis_result(
+                    cluster,
+                    analysis,
+                    analytics=cluster_analytics[str(cluster.id)],
+                )
+                cluster_analytics[str(cluster.id)] = enriched
+                analyzed += 1
+                llm_used = True
+            if on_progress:
+                on_progress(clusters_done=len(clusters), clusters_total=len(clusters))
+
+            opportunities_summary = [
+                {
+                    "title": cluster.title,
+                    "mention_count": cluster_analytics[str(cluster.id)].get("mention_count"),
+                    "share_pct": cluster_analytics[str(cluster.id)].get("share_pct"),
+                    "trend": cluster_analytics[str(cluster.id)].get("trend"),
+                    "top_competitor": (
+                        (cluster_analytics[str(cluster.id)].get("competitors") or [{}])[0].get("name")
+                        if cluster_analytics[str(cluster.id)].get("competitors")
+                        else None
+                    ),
+                    "feature_requests": [
+                        fr.get("label")
+                        for fr in (cluster_analytics[str(cluster.id)].get("feature_requests") or [])[:4]
+                    ],
+                    "why_opportunity": cluster_analytics[str(cluster.id)].get("why_opportunity"),
+                    "diffuse_complaints": clustering_failed,
+                }
+                for cluster in clusters[:8]
+            ]
+
         synthesis = synthesize_report_with_llm(
             project,
             clusters,
@@ -435,16 +535,20 @@ def generate_report_for_project(
             analytics_payload={
                 "opportunity_size": opportunity_size_dict,
                 "opportunities_summary": opportunities_summary,
+                "clustering_failed": clustering_failed,
+                "review_samples": review_samples,
             },
         )
+        if not synthesis:
+            raise ReportLlmRequiredError(
+                "LLM report synthesis failed; refusing to publish a non-AI report"
+            )
+        llm_used = True
     else:
-        synthesis = None
-        if project.research_mode == "preview":
-            job_warnings.append("preview_mode")
+        job_warnings.append("preview_mode")
 
     opportunity_reasoning = None
     if synthesis:
-        llm_used = True
         summary = synthesis.summary
         market_saturation = synthesis.market_saturation
         market_score = synthesis.market_score
@@ -459,6 +563,7 @@ def generate_report_for_project(
             "opportunity_size": opportunity_size_dict,
         }
     else:
+        # Preview-only path — full reports already raised above.
         heuristic = build_heuristic_report(
             idea_title=project.title,
             clusters=clusters,
@@ -475,10 +580,8 @@ def generate_report_for_project(
             **heuristic.recommendations,
             "opportunity_size": opportunity_size_dict,
         }
-        if not llm_used and project.research_mode != "preview":
-            job_warnings.append("llm_unavailable")
 
-    if not opportunity_reasoning and clusters:
+    if not opportunity_reasoning and clusters and not clustering_failed:
         top = clusters[0]
         top_analytics = cluster_analytics.get(str(top.id), {})
         top_comp = (top_analytics.get("competitors") or [{}])[0]
@@ -511,7 +614,7 @@ def generate_report_for_project(
 
     data_confidence = derive_data_confidence(
         reviews_collected=reviews_collected,
-        cluster_count=len(clusters),
+        cluster_count=0 if clustering_failed else len(clusters),
         warnings=job_warnings,
     )
 
@@ -541,12 +644,13 @@ def generate_report_for_project(
     db.flush()
 
     logger.info(
-        "Report generated for project %s: clusters=%s analyzed=%s llm=%s confidence=%s",
+        "Report generated for project %s: clusters=%s analyzed=%s llm=%s confidence=%s diffuse=%s",
         project.id,
-        len(clusters),
+        0 if clustering_failed else len(clusters),
         analyzed,
         llm_used,
         data_confidence,
+        clustering_failed,
     )
 
     return ReportGenerationResult(

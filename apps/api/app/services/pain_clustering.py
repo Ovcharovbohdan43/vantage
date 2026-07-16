@@ -189,46 +189,62 @@ def cluster_reviews(
         return []
 
     matrix = _l2_normalize(np.array(embeddings, dtype=np.float32))
-    clusterer = hdbscan.HDBSCAN(
-        min_cluster_size=min_cluster_size,
-        min_samples=max(2, min_cluster_size // 2),
-        metric="euclidean",
-        cluster_selection_method="eom",
-    )
-    labels = clusterer.fit_predict(matrix)
 
-    grouped: dict[int, list[int]] = {}
-    for idx, label in enumerate(labels):
-        if label == -1:
-            continue
-        grouped.setdefault(int(label), []).append(idx)
-
-    built: list[BuiltCluster] = []
-    for label in sorted(grouped):
-        indices = grouped[label]
-        cluster_ids = [review_ids[i] for i in indices]
-        cluster_vectors = matrix[indices]
-        centroid = cluster_vectors.mean(axis=0)
-        distances = np.linalg.norm(cluster_vectors - centroid, axis=1)
-        order = np.argsort(distances)
-
-        member_ids = [str(rid) for rid in cluster_ids]
-        examples = _build_examples(review_ids, indices, order, reviews_by_id)
-        all_ratings = [reviews_by_id[rid].rating for rid in cluster_ids]
-
-        title_review = reviews_by_id[review_ids[indices[int(order[0])]]]
-        built.append(
-            BuiltCluster(
-                title=_placeholder_title(title_review.text),
-                frequency=len(cluster_ids),
-                severity_score=_severity_from_ratings(all_ratings),
-                examples=examples,
-                representative_review_ids=member_ids,
-                member_indices=list(indices),
-            )
+    def _run(size: int) -> list[BuiltCluster]:
+        clusterer = hdbscan.HDBSCAN(
+            min_cluster_size=size,
+            min_samples=max(2, size // 2),
+            metric="euclidean",
+            cluster_selection_method="eom",
         )
+        labels = clusterer.fit_predict(matrix)
 
-    built.sort(key=lambda item: item.frequency, reverse=True)
-    attach_nested_subthemes(built, review_ids, matrix, reviews_by_id)
+        grouped: dict[int, list[int]] = {}
+        for idx, label in enumerate(labels):
+            if label == -1:
+                continue
+            grouped.setdefault(int(label), []).append(idx)
+
+        built: list[BuiltCluster] = []
+        for label in sorted(grouped):
+            indices = grouped[label]
+            cluster_ids = [review_ids[i] for i in indices]
+            cluster_vectors = matrix[indices]
+            centroid = cluster_vectors.mean(axis=0)
+            distances = np.linalg.norm(cluster_vectors - centroid, axis=1)
+            order = np.argsort(distances)
+
+            member_ids = [str(rid) for rid in cluster_ids]
+            examples = _build_examples(review_ids, indices, order, reviews_by_id)
+            all_ratings = [reviews_by_id[rid].rating for rid in cluster_ids]
+
+            title_review = reviews_by_id[review_ids[indices[int(order[0])]]]
+            built.append(
+                BuiltCluster(
+                    title=_placeholder_title(title_review.text),
+                    frequency=len(cluster_ids),
+                    severity_score=_severity_from_ratings(all_ratings),
+                    examples=examples,
+                    representative_review_ids=member_ids,
+                    member_indices=list(indices),
+                )
+            )
+
+        built.sort(key=lambda item: item.frequency, reverse=True)
+        return built
+
+    built = _run(min_cluster_size)
+    # Softer retry when the first pass marks everything as noise.
+    if not built and min_cluster_size > 3 and len(review_ids) >= 6:
+        retry_size = 3
+        logger.info(
+            "HDBSCAN found 0 clusters at min_size=%s — retrying with min_size=%s",
+            min_cluster_size,
+            retry_size,
+        )
+        built = _run(retry_size)
+
+    if built:
+        attach_nested_subthemes(built, review_ids, matrix, reviews_by_id)
     logger.info("Built %s pain clusters from %s reviews", len(built), len(review_ids))
     return built

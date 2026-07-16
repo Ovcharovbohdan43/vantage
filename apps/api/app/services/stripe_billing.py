@@ -58,10 +58,10 @@ async def create_checkout_session(
             }
         ],
         "success_url": (
-            f"{settings.app_web_url.rstrip('/')}/billing/success"
+            f"{settings.public_web_url.rstrip('/')}/billing/success"
             f"?session_id={{CHECKOUT_SESSION_ID}}&pack={pack}"
         ),
-        "cancel_url": f"{settings.app_web_url.rstrip('/')}/billing/cancel",
+        "cancel_url": f"{settings.public_web_url.rstrip('/')}/billing/cancel",
         "client_reference_id": str(user_id),
         "allow_promotion_codes": True,
         "metadata": {

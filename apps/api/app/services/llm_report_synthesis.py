@@ -25,8 +25,11 @@ def synthesize_report_with_llm(
         return None
 
     client = OpenAI(api_key=settings.openai_api_key)
+    clustering_failed = bool(analytics_payload.get("clustering_failed"))
+    review_samples = analytics_payload.get("review_samples") or []
     compact = {
         "reviews_collected": reviews_collected,
+        "clustering_failed": clustering_failed,
         "competitors": [
             {
                 "name": row.name,
@@ -38,7 +41,17 @@ def synthesize_report_with_llm(
         ],
         "opportunity_size": analytics_payload.get("opportunity_size"),
         "opportunities": analytics_payload.get("opportunities_summary", [])[:8],
+        "review_samples": review_samples[:25],
     }
+
+    diffuse_rules = ""
+    if clustering_failed or not clusters:
+        diffuse_rules = (
+            "- clustering_failed is true OR opportunities are empty: complaints did not form "
+            "a clear recurring pain pattern. Say that explicitly in summary and "
+            "opportunity_reasoning (e.g. reviews are too diverse to isolate one dominant user pain). "
+            "Still cite competitor names and review counts. Do not invent a fake top pain.\n"
+        )
 
     prompt = (
         "You write a short research summary for a founder who paid to hear unhappy customers "
@@ -49,6 +62,7 @@ def synthesize_report_with_llm(
         "- summary: 2–4 sentences citing real counts (reviews, top pain shares, competitor names).\n"
         "- opportunity_reasoning: explain the opportunity_score using complaint volume, "
         "concentration, and trend if present. No 'build' / 'pivot' / 'don't build'.\n"
+        f"{diffuse_rules}"
         "- market_score: higher = more room for a differentiated entrant (0-100).\n"
         "- risk_score: higher = harder to win (0-100).\n"
         "- market_saturation: HIGH | MEDIUM | LOW from competitor density.\n"
@@ -67,7 +81,8 @@ def synthesize_report_with_llm(
                     "role": "system",
                     "content": (
                         "Return structured market research synthesis grounded in provided counts. "
-                        "Never give founder playbooks or build/pivot verdicts."
+                        "Never give founder playbooks or build/pivot verdicts. "
+                        "If clustering failed, say so clearly instead of inventing pain themes."
                     ),
                 },
                 {"role": "user", "content": prompt},

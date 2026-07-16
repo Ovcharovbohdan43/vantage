@@ -87,6 +87,7 @@ def analyze_cluster_with_llm(
         return None
 
     analytics = analytics or {}
+    diffuse = bool(analytics.get("diffuse_complaints"))
     sub_themes = analytics.get("sub_themes") or cluster_sub_themes_list(cluster.examples)
     request_candidates = analytics.get("request_candidates") or []
     competitors = analytics.get("competitors") or []
@@ -107,31 +108,52 @@ def analyze_cluster_with_llm(
     ) or "n/a"
 
     client = OpenAI(api_key=settings.openai_api_key)
-    prompt = (
-        "You name a pain cluster from real negative software reviews. You do NOT invent advice.\n"
-        "Rules:\n"
-        "- title: one concrete sentence about what users struggle with "
-        "(e.g. 'Users abandon setup because onboarding takes too long').\n"
-        "- FORBIDDEN titles: 'Negative User Experience', 'User Pain Points', 'Poor UX', "
-        "'Customer Complaints', or any vague umbrella label.\n"
-        "- description: 2–3 sentences grounded only in quotes + provided counts.\n"
-        "- why_opportunity: why this unresolved complaint is commercially interesting, "
-        "using the numbers given (no 'interview users' / 'improve UX').\n"
-        "- sub_theme_titles: rename each indexed sub-theme with a concrete short phrase; "
-        "keep the same index; do not invent extra sub-themes.\n"
-        "- feature_request_groups: group the numbered request candidates into specific asks "
-        "(e.g. 'bank auto-import', 'offline mode'). Put candidate_indices that belong together. "
-        "Do NOT invent counts — only group indices. Skip if candidates are None.\n"
-        "- Base every claim ONLY on the provided evidence.\n\n"
-        f"Product idea context (for naming only): {project.title}\n"
-        f"Category: {project.category}\n"
-        f"Cluster size: {mention_count} reviews{share_part}\n"
-        f"Competitor complaint split: {competitor_line}\n"
-        f"Frequent words: {terms_line}\n\n"
-        f"Sub-themes to rename:\n{_format_sub_themes(sub_themes)}\n\n"
-        f"Feature-request candidate sentences:\n{_format_request_candidates(request_candidates)}\n\n"
-        f"Representative quotes:\n{quotes_block}"
-    )
+    if diffuse:
+        prompt = (
+            "Automatic clustering could NOT find a recurring pain pattern — reviews are too diverse.\n"
+            "Your job: confirm that clearly and still ground the write-up in the sample quotes.\n"
+            "Rules:\n"
+            "- title: state that no single dominant user pain could be isolated "
+            "(e.g. 'Complaints are too scattered to name one dominant pain').\n"
+            "- description: 2–3 sentences — cite that clustering failed, mention volume, "
+            "and note 1–2 concrete themes that appear in quotes WITHOUT claiming they dominate.\n"
+            "- why_opportunity: explain that fragmented complaints mean the market signal is weak/"
+            "unclear for a single wedge — using the numbers given.\n"
+            "- sub_theme_titles / feature_request_groups: leave empty arrays if nothing coherent.\n"
+            "- Base every claim ONLY on the provided evidence. Do not invent a fake top pain.\n\n"
+            f"Product idea context (for naming only): {project.title}\n"
+            f"Category: {project.category}\n"
+            f"Sample size: {mention_count} reviews{share_part}\n"
+            f"Competitor complaint split: {competitor_line}\n"
+            f"Frequent words: {terms_line}\n\n"
+            f"Representative quotes:\n{quotes_block}"
+        )
+    else:
+        prompt = (
+            "You name a pain cluster from real negative software reviews. You do NOT invent advice.\n"
+            "Rules:\n"
+            "- title: one concrete sentence about what users struggle with "
+            "(e.g. 'Users abandon setup because onboarding takes too long').\n"
+            "- FORBIDDEN titles: 'Negative User Experience', 'User Pain Points', 'Poor UX', "
+            "'Customer Complaints', or any vague umbrella label.\n"
+            "- description: 2–3 sentences grounded only in quotes + provided counts.\n"
+            "- why_opportunity: why this unresolved complaint is commercially interesting, "
+            "using the numbers given (no 'interview users' / 'improve UX').\n"
+            "- sub_theme_titles: rename each indexed sub-theme with a concrete short phrase; "
+            "keep the same index; do not invent extra sub-themes.\n"
+            "- feature_request_groups: group the numbered request candidates into specific asks "
+            "(e.g. 'bank auto-import', 'offline mode'). Put candidate_indices that belong together. "
+            "Do NOT invent counts — only group indices. Skip if candidates are None.\n"
+            "- Base every claim ONLY on the provided evidence.\n\n"
+            f"Product idea context (for naming only): {project.title}\n"
+            f"Category: {project.category}\n"
+            f"Cluster size: {mention_count} reviews{share_part}\n"
+            f"Competitor complaint split: {competitor_line}\n"
+            f"Frequent words: {terms_line}\n\n"
+            f"Sub-themes to rename:\n{_format_sub_themes(sub_themes)}\n\n"
+            f"Feature-request candidate sentences:\n{_format_request_candidates(request_candidates)}\n\n"
+            f"Representative quotes:\n{quotes_block}"
+        )
 
     try:
         completion = client.beta.chat.completions.parse(
@@ -142,6 +164,11 @@ def analyze_cluster_with_llm(
                     "content": (
                         "Return structured pain naming grounded in quotes and counts. "
                         "Never give founder advice. Never use vague cluster labels."
+                        if not diffuse
+                        else (
+                            "Return structured analysis confirming that complaints are too diverse "
+                            "for a dominant pain. Never invent a fake recurring theme."
+                        )
                     ),
                 },
                 {"role": "user", "content": prompt},
