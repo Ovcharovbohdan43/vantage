@@ -60,6 +60,12 @@ def _out(post: BlogPost, *, user_vote: int | None = None) -> BlogPostOut:
     )
 
 
+async def _save_post(db: AsyncSession, post: BlogPost, *, user_vote: int | None = None) -> BlogPostOut:
+    await db.commit()
+    await db.refresh(post)
+    return _out(post, user_vote=user_vote)
+
+
 def _voter_key(user: AuthUser | None, visitor_id: str | None) -> str:
     if user:
         return f"user:{user.id}"
@@ -192,7 +198,7 @@ async def create_blog_post(
     )
     db.add(post)
     await db.flush()
-    return _out(post)
+    return await _save_post(db, post)
 
 
 @router.patch("/posts/{slug}", response_model=BlogPostOut)
@@ -230,7 +236,7 @@ async def update_blog_post(
     post.seo = build_blog_seo(slug=post.slug, title=post.title, excerpt=post.excerpt)
     post.updated_at = datetime.now(UTC)
     await db.flush()
-    return _out(post)
+    return await _save_post(db, post)
 
 
 @router.delete("/posts/{slug}", status_code=status.HTTP_204_NO_CONTENT)
@@ -247,7 +253,7 @@ async def delete_blog_post(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found")
     await db.execute(delete(BlogPostVote).where(BlogPostVote.post_id == post.id))
     await db.delete(post)
-    await db.flush()
+    await db.commit()
 
 
 @router.post("/posts/{slug}/view", response_model=BlogPostOut)
@@ -265,7 +271,7 @@ async def record_blog_view(
     post.view_count += 1
     post.updated_at = datetime.now(UTC)
     await db.flush()
-    return _out(post)
+    return await _save_post(db, post)
 
 
 @router.post("/posts/{slug}/vote", response_model=BlogPostOut)
@@ -329,4 +335,4 @@ async def vote_blog_post(
         ).scalar_one_or_none()
         user_vote = refreshed.vote if refreshed else None
 
-    return _out(post, user_vote=user_vote)
+    return await _save_post(db, post, user_vote=user_vote)
