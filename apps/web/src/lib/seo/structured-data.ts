@@ -2,6 +2,7 @@ import {
   SITE_DESCRIPTION,
   SITE_NAME,
   absoluteUrl,
+  blogArticleUrl,
   getSiteUrl,
   libraryArticleUrl,
 } from '@/lib/seo/site'
@@ -110,6 +111,77 @@ export function normalizeArticleJsonLd(
     },
     image: [absoluteUrl('/opengraph-image')],
     ...(opts.publishedAt ? { datePublished: opts.publishedAt, dateModified: opts.publishedAt } : {}),
+  }
+
+  if (!existing || typeof existing !== 'object') return base
+  return { ...base, ...existing, url, headline: opts.title, description: opts.description }
+}
+
+export function blogCollectionJsonLd() {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Blog',
+    name: 'Vantage Blog',
+    description:
+      'Founder essays on startup research, market validation, and building Vantage in public.',
+    url: absoluteUrl('/blog'),
+    author: {
+      '@type': 'Person',
+      name: 'Bohdan',
+      image: absoluteUrl('/blog/author-avatar.png'),
+      url: absoluteUrl('/blog'),
+    },
+    publisher: {
+      '@type': 'Organization',
+      name: SITE_NAME,
+      logo: {
+        '@type': 'ImageObject',
+        url: absoluteUrl('/brand/app-icon-512.png'),
+      },
+    },
+    isPartOf: { '@type': 'WebSite', name: SITE_NAME, url: getSiteUrl() },
+  }
+}
+
+export function normalizeBlogPostJsonLd(
+  existing: Record<string, unknown> | null | undefined,
+  opts: {
+    slug: string
+    title: string
+    description: string
+    publishedAt?: string | null
+    updatedAt?: string | null
+  },
+) {
+  const url = blogArticleUrl(opts.slug)
+  const base = {
+    '@context': 'https://schema.org',
+    '@type': 'BlogPosting',
+    headline: opts.title,
+    description: opts.description,
+    url,
+    mainEntityOfPage: { '@type': 'WebPage', '@id': url },
+    author: {
+      '@type': 'Person',
+      name: 'Bohdan',
+      image: absoluteUrl('/blog/author-avatar.png'),
+      url: absoluteUrl('/blog'),
+    },
+    publisher: {
+      '@type': 'Organization',
+      name: SITE_NAME,
+      logo: {
+        '@type': 'ImageObject',
+        url: absoluteUrl('/brand/app-icon-512.png'),
+      },
+    },
+    image: [absoluteUrl('/blog/author-avatar.png')],
+    ...(opts.publishedAt
+      ? {
+          datePublished: opts.publishedAt,
+          dateModified: opts.updatedAt ?? opts.publishedAt,
+        }
+      : {}),
   }
 
   if (!existing || typeof existing !== 'object') return base

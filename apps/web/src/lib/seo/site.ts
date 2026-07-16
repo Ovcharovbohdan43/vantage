@@ -49,6 +49,10 @@ export function libraryArticleUrl(slug: string): string {
   return absoluteUrl(`/library/${slug}`)
 }
 
+export function blogArticleUrl(slug: string): string {
+  return absoluteUrl(`/blog/${slug}`)
+}
+
 export function getMetadataBase(): URL {
   return new URL(`${getSiteUrl()}/`)
 }

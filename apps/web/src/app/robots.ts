@@ -8,7 +8,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: '*',
-        allow: ['/', '/library', '/library/'],
+        allow: ['/', '/library', '/library/', '/blog', '/blog/'],
         disallow: [
           '/dashboard',
           '/research',
@@ -21,17 +21,19 @@ export default function robots(): MetadataRoute.Robots {
           '/reset-password',
           '/auth/',
           '/api/',
+          '/blog/new',
+          '/blog/*/edit',
         ],
       },
       {
         userAgent: 'GPTBot',
-        allow: ['/', '/library', '/library/'],
-        disallow: ['/dashboard', '/research', '/account', '/billing', '/api/'],
+        allow: ['/', '/library', '/library/', '/blog', '/blog/'],
+        disallow: ['/dashboard', '/research', '/account', '/billing', '/api/', '/blog/new'],
       },
       {
         userAgent: 'Google-Extended',
-        allow: ['/', '/library', '/library/'],
-        disallow: ['/dashboard', '/research', '/account', '/billing', '/api/'],
+        allow: ['/', '/library', '/library/', '/blog', '/blog/'],
+        disallow: ['/dashboard', '/research', '/account', '/billing', '/api/', '/blog/new'],
       },
     ],
     sitemap: absoluteUrl('/sitemap.xml'),

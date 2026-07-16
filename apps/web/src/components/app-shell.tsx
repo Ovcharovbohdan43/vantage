@@ -24,6 +24,7 @@ export const APP_NAV = [
   { href: '/research/new', label: 'New research' },
   { href: '/idea-of-the-week', label: 'Idea of the Week' },
   { href: '/library', label: 'Research Library' },
+  { href: '/blog', label: 'Blog' },
   { href: '/support', label: 'Support' },
 ] as const
 
