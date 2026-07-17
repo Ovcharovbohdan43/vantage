@@ -54,6 +54,8 @@ export const config = {
   pageTimeoutMs: envInt("PAGE_TIMEOUT_MS", 60_000),
   minReviewLength: envInt("MIN_REVIEW_LENGTH", 50),
   cacheTtlHours: envInt("CACHE_TTL_HOURS", 168),
+  /** How many Camoufox crawls may run at once (bounded — G2/proxies thrash above ~3). */
+  crawlConcurrency: Math.max(1, Math.min(4, envInt("CRAWL_CONCURRENCY", 2))),
   /** Default headless — headful often triggers G2 "inspection tools" heuristics. */
   headless: process.env.COLLECTOR_HEADLESS?.trim() !== "0",
 };

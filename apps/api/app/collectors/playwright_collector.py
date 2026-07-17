@@ -24,6 +24,20 @@ class CompetitorScrapeResult:
     pages_fetched: int = 0
     errors: list[str] = field(default_factory=list)
     blocked: bool = False
+    # ok | blocked | not_found | empty | error — from review-collector when available
+    status: str = "ok"
+
+    @property
+    def should_try_apify(self) -> bool:
+        """Apify only helps recover blocks/transient errors — not 404 or empty product pages."""
+        if self.reviews:
+            return False
+        if self.status in {"not_found", "empty"}:
+            return False
+        if self.blocked or self.status in {"blocked", "error"}:
+            return True
+        # Unknown/legacy empty result — try once.
+        return True
 
 
 class PlaywrightReviewCollector:

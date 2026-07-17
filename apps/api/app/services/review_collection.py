@@ -1,5 +1,6 @@
 import logging
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from contextlib import nullcontext
 from dataclasses import dataclass, field
 from math import ceil
@@ -12,6 +13,7 @@ from sqlalchemy.orm import Session
 from app.collectors.apify_collector import ApifyReviewCollector
 from app.collectors.crawlee_collector import CrawleeReviewCollector
 from app.collectors.extraction import ScrapedReview, compute_content_hash
+from app.collectors.playwright_collector import CompetitorScrapeResult
 from app.config import settings
 from app.db.models import Competitor, Project, Review
 from app.services.research_cancel import ResearchCancelled
@@ -80,19 +82,11 @@ def refresh_competitor_market_stats(db: Session, competitor: Competitor) -> None
     """Keep Market Map in sync after soft-accept discovery + review collection."""
     collected = count_competitor_reviews(db, competitor.id)
     if collected > 0:
-        # Prefer collected volume when discovery could not scrape page metadata.
         competitor.reviews_count = max(competitor.reviews_count or 0, collected)
         avg_rating = average_competitor_rating(db, competitor.id)
-        if avg_rating is not None:
-            # Soft-accept leaves rating null; fill from collected reviews.
-            # If discovery already had a page rating, keep the higher-signal page rating
-            # only when we already have one — otherwise use collected avg.
-            if competitor.rating is None:
-                competitor.rating = avg_rating
+        if avg_rating is not None and competitor.rating is None:
+            competitor.rating = avg_rating
         db.flush()
-    elif competitor.reviews_count is None and competitor.rating is None:
-        # Still waiting — leave null so UI shows "reviews pending".
-        pass
 
 
 def save_reviews_batch(
@@ -134,6 +128,47 @@ def save_reviews_batch(
     return result.rowcount or 0
 
 
+def _scrape_one(
+    *,
+    competitor: Competitor,
+    max_reviews: int,
+    primary: CrawleeReviewCollector | None,
+    fallback: ApifyReviewCollector | None,
+) -> tuple[Competitor, CompetitorScrapeResult, bool]:
+    """HTTP-only scrape for one competitor (thread-safe collectors)."""
+    used_fallback = False
+
+    if primary is not None:
+        scrape_result = primary.collect_competitor(competitor, max_reviews=max_reviews)
+        if scrape_result.should_try_apify and fallback is not None:
+            logger.info(
+                "Primary returned 0 for %s (status=%s) — Apify fallback",
+                competitor.name,
+                scrape_result.status,
+            )
+            scrape_result = fallback.collect_competitor(competitor, max_reviews=max_reviews)
+            used_fallback = True
+        elif not scrape_result.reviews and scrape_result.status in {"not_found", "empty"}:
+            logger.info(
+                "Skipping Apify for %s — definitive status=%s",
+                competitor.name,
+                scrape_result.status,
+            )
+    elif fallback is not None:
+        scrape_result = fallback.collect_competitor(competitor, max_reviews=max_reviews)
+        used_fallback = True
+    else:
+        scrape_result = CompetitorScrapeResult(
+            competitor_id=str(competitor.id),
+            competitor_name=competitor.name,
+            source=competitor.source,
+            status="error",
+            errors=["no_collector"],
+        )
+
+    return competitor, scrape_result, used_fallback
+
+
 def collect_reviews_for_project(
     db: Session,
     project: Project,
@@ -142,7 +177,7 @@ def collect_reviews_for_project(
     on_progress=None,
     should_cancel=None,
 ) -> CollectionResult:
-    """Crawlee/Webshare is primary; Apify runs only when a competitor yields no reviews."""
+    """Crawlee primary with bounded parallel competitors; Apify only on blocks/errors."""
     limits = get_plan_limits(project)
     selected = competitors[: limits.max_competitors]
 
@@ -170,7 +205,6 @@ def collect_reviews_for_project(
         )
         return result
 
-    # Decide whether Crawlee is reachable before spending N attempts.
     crawlee_alive = False
     if crawlee_ready:
         try:
@@ -195,85 +229,91 @@ def collect_reviews_for_project(
     if should_cancel and should_cancel():
         raise ResearchCancelled()
 
+    concurrency = max(1, min(settings.collection_concurrency, len(selected)))
+    logger.info(
+        "Collecting reviews for %s competitors with concurrency=%s",
+        len(selected),
+        concurrency,
+    )
+
     primary_ctx = CrawleeReviewCollector() if crawlee_alive else nullcontext()
     fallback_ctx = ApifyReviewCollector() if apify_ready else nullcontext()
+    done_count = 0
+    stop_early = False
 
     with primary_ctx as primary, fallback_ctx as fallback:
-        for index, competitor in enumerate(selected, start=1):
-            if should_cancel and should_cancel():
-                raise ResearchCancelled()
-
-            scrape_result = None
-            used_fallback = False
-
-            if primary is not None:
-                scrape_result = primary.collect_competitor(
-                    competitor,
+        with ThreadPoolExecutor(max_workers=concurrency) as pool:
+            futures = {
+                pool.submit(
+                    _scrape_one,
+                    competitor=competitor,
                     max_reviews=limits.max_reviews_per_competitor,
-                )
+                    primary=primary,
+                    fallback=fallback,
+                ): competitor
+                for competitor in selected
+            }
+
+            for future in as_completed(futures):
                 if should_cancel and should_cancel():
+                    for pending in futures:
+                        pending.cancel()
                     raise ResearchCancelled()
+
+                competitor = futures[future]
+                try:
+                    competitor, scrape_result, used_fallback = future.result()
+                except Exception as exc:  # noqa: BLE001
+                    logger.exception("Scrape failed for %s: %s", competitor.name, exc)
+                    scrape_result = CompetitorScrapeResult(
+                        competitor_id=str(competitor.id),
+                        competitor_name=competitor.name,
+                        source=competitor.source,
+                        status="error",
+                        errors=[str(exc)],
+                    )
+                    used_fallback = False
+
                 result.pages_fetched += scrape_result.pages_fetched
                 result.errors.extend(scrape_result.errors)
-                if (not scrape_result.reviews) and fallback is not None:
-                    if should_cancel and should_cancel():
-                        raise ResearchCancelled()
-                    logger.info(
-                        "Crawlee returned 0 reviews for %s — trying Apify fallback",
-                        competitor.name,
-                    )
-                    scrape_result = fallback.collect_competitor(
-                        competitor,
-                        max_reviews=limits.max_reviews_per_competitor,
-                    )
-                    used_fallback = True
-                    result.pages_fetched += scrape_result.pages_fetched
-                    result.errors.extend(scrape_result.errors)
-            elif fallback is not None:
-                scrape_result = fallback.collect_competitor(
-                    competitor,
-                    max_reviews=limits.max_reviews_per_competitor,
+
+                if used_fallback:
+                    result.warnings.append(f"apify_fallback:{competitor.name}")
+                if scrape_result.status == "not_found":
+                    result.warnings.append(f"not_found:{competitor.name}")
+                if scrape_result.blocked:
+                    result.warnings.append(f"blocked:{competitor.name}")
+
+                # Attach to the same session instance (competitors were loaded on this session).
+                saved = save_reviews_batch(
+                    db,
+                    competitor_id=competitor.id,
+                    source=competitor.source,
+                    reviews=scrape_result.reviews,
                 )
-                used_fallback = True
-                result.pages_fetched += scrape_result.pages_fetched
-                result.errors.extend(scrape_result.errors)
-            else:
-                continue
+                if saved > 0:
+                    result.competitors_with_reviews += 1
+                refresh_competitor_market_stats(db, competitor)
+                db.commit()
+                result.total_reviews = count_project_reviews(db, project.id)
 
-            if should_cancel and should_cancel():
-                raise ResearchCancelled()
+                done_count += 1
+                if on_progress:
+                    on_progress(
+                        competitors_done=done_count,
+                        competitors_total=len(selected),
+                        reviews_collected=result.total_reviews,
+                    )
 
-            if used_fallback:
-                result.warnings.append(f"apify_fallback:{competitor.name}")
+                if scrape_result.blocked and settings.scraper_stop_on_block:
+                    result.warnings.append("scraper_blocked")
+                    stop_early = True
+                    for pending in futures:
+                        pending.cancel()
+                    break
 
-            saved = save_reviews_batch(
-                db,
-                competitor_id=competitor.id,
-                source=competitor.source,
-                reviews=scrape_result.reviews,
-            )
-            if saved > 0:
-                result.competitors_with_reviews += 1
-            refresh_competitor_market_stats(db, competitor)
-            # Commit per competitor so the Market Map UI (polling listCompetitors)
-            # sees rating/reviews_count while collection is still running.
-            db.commit()
-            result.total_reviews = count_project_reviews(db, project.id)
-
-            if on_progress:
-                on_progress(
-                    competitors_done=index,
-                    competitors_total=len(selected),
-                    reviews_collected=result.total_reviews,
-                )
-
-            if index < len(selected):
-                pause = max(4.0, settings.scraper_request_delay_seconds * 2)
-                _sleep_unless_cancelled(pause, should_cancel)
-
-            if scrape_result.blocked and settings.scraper_stop_on_block:
-                result.warnings.append("scraper_blocked")
-                break
+        if stop_early:
+            pass
 
     min_successful = max(1, ceil(len(selected) * MIN_COMPETITOR_SUCCESS_RATIO))
     if result.competitors_with_reviews < min_successful:

@@ -32,6 +32,7 @@ app.get("/health", (c) =>
     ok: true,
     service: "review-collector",
     proxies: config.proxyUrls.length,
+    crawlConcurrency: config.crawlConcurrency,
     camoufox: camoufoxReady(),
     camoufoxPath: camoufoxBinaryPath(),
   }),

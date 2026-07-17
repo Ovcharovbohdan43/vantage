@@ -5,6 +5,7 @@ from uuid import UUID
 
 import numpy as np
 from openai import OpenAI
+from sqlalchemy import update
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -52,29 +53,31 @@ def dedupe_near_duplicates(
         return review_ids, embeddings
 
     matrix = _l2_normalize(np.array(embeddings, dtype=np.float32))
-    kept_ids: list[UUID] = []
-    kept_vectors: list[list[float]] = []
+    kept_indices: list[int] = []
 
-    for idx, review_id in enumerate(review_ids):
-        vector = matrix[idx]
-        if kept_vectors:
-            kept_matrix = _l2_normalize(np.array(kept_vectors, dtype=np.float32))
-            similarities = kept_matrix @ vector
-            if float(np.max(similarities)) >= threshold:
-                continue
-        kept_ids.append(review_id)
-        kept_vectors.append(embeddings[idx])
+    for idx in range(len(review_ids)):
+        if not kept_indices:
+            kept_indices.append(idx)
+            continue
+        kept_matrix = matrix[kept_indices]
+        similarities = kept_matrix @ matrix[idx]
+        if float(np.max(similarities)) >= threshold:
+            continue
+        kept_indices.append(idx)
 
-    removed = len(review_ids) - len(kept_ids)
+    removed = len(review_ids) - len(kept_indices)
     if removed:
         logger.info("Removed %s near-duplicate reviews (cosine >= %s)", removed, threshold)
 
+    kept_ids = [review_ids[i] for i in kept_indices]
+    kept_vectors = [embeddings[i] for i in kept_indices]
     return kept_ids, kept_vectors
 
 
 def persist_review_embeddings(db: Session, review_ids: list[UUID], embeddings: list[list[float]]) -> None:
+    """Bulk-update embeddings without per-row ORM get()."""
     for review_id, embedding in zip(review_ids, embeddings, strict=True):
-        review = db.get(Review, review_id)
-        if review:
-            review.embedding = embedding
+        db.execute(
+            update(Review).where(Review.id == review_id).values(embedding=embedding)
+        )
     db.flush()

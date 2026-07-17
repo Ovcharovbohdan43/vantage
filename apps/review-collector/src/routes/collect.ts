@@ -32,9 +32,12 @@ collectRoutes.post("/", async (c) => {
 
   if (!body.forceRefresh) {
     const cached = await getCachedReviews(product.id, { maxReviews, maxRating });
-    if (cached.fresh && cached.reviews.length >= Math.min(maxReviews, cached.count)) {
+    // Fresh cache (full, partial, or empty/negative) — skip recrawl within TTL.
+    if (cached.fresh) {
       return c.json({
         cached: true,
+        status: cached.reviews.length > 0 ? "ok" : "empty",
+        blocked: false,
         product: {
           id: product.id,
           source: product.source,
@@ -49,15 +52,16 @@ collectRoutes.post("/", async (c) => {
           inserted: 0,
           pagesFetched: 0,
           returned: Math.min(maxReviews, cached.reviews.length),
+          cacheCount: cached.count,
         },
-        errors: [],
+        errors: cached.count === 0 ? ["fresh_negative_cache"] : [],
       });
     }
   }
 
   const crawl = await crawlProductReviews(ref, { maxReviews, maxRating });
 
-  // Capterra name search may resolve a concrete product key/url
+  // Capterra/G2 name search may resolve a concrete product key/url
   if (crawl.productKey !== ref.productKey || crawl.resolvedUrl !== ref.url) {
     ref = {
       ...ref,
@@ -70,14 +74,17 @@ collectRoutes.post("/", async (c) => {
   const inserted = await saveReviews(product, crawl.reviews);
   const reviews = await listReviews(product.id, source, { maxReviews, maxRating });
 
-  const status =
-    reviews.length === 0 && crawl.errors.length > 0
-      ? 502
-      : 200;
+  const status = crawl.status;
+  const blocked = status === "blocked";
+  // not_found / empty are definitive — return 200 so API can skip Apify.
+  // blocked / error with zero reviews → 502 only when nothing usable returned.
+  const httpStatus = reviews.length === 0 && (status === "blocked" || status === "error") ? 502 : 200;
 
   return c.json(
     {
       cached: false,
+      status,
+      blocked,
       product: {
         id: product.id,
         source: product.source,
@@ -95,6 +102,6 @@ collectRoutes.post("/", async (c) => {
       },
       errors: crawl.errors,
     },
-    status,
+    httpStatus,
   );
 });

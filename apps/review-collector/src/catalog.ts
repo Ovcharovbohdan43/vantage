@@ -42,7 +42,10 @@ export async function upsertProduct(ref: ProductRef): Promise<CatalogProduct> {
   };
 }
 
-/** Fast path: count + fetch in one round-trip when cache is warm. */
+/**
+ * Fresh cache is served even when partial (< maxReviews) or empty (negative cache).
+ * Empty + fresh means we already crawled recently and found nothing — skip recrawl.
+ */
 export async function getCachedReviews(
   productId: string,
   opts: { maxReviews: number; maxRating: number },
@@ -70,8 +73,13 @@ export async function getCachedReviews(
   );
   const count = Number.parseInt(countResult.rows[0]?.count ?? "0", 10);
 
-  if (!fresh || count < maxReviews) {
-    return { count, reviews: [], fresh };
+  if (!fresh) {
+    return { count, reviews: [], fresh: false };
+  }
+
+  // Fresh empty = negative cache (do not recrawl within TTL).
+  if (count === 0) {
+    return { count: 0, reviews: [], fresh: true };
   }
 
   const rows = await pool.query<{
@@ -93,7 +101,7 @@ export async function getCachedReviews(
 
   return {
     count,
-    fresh,
+    fresh: true,
     reviews: rows.rows.map((r) => ({
       source: product.source,
       text: r.text,
@@ -110,38 +118,53 @@ export async function saveReviews(
   product: CatalogProduct,
   reviews: ScrapedReview[],
 ): Promise<number> {
-  if (reviews.length === 0) return 0;
   const pool = getPool();
   const client = await pool.connect();
   let inserted = 0;
   try {
     await client.query("BEGIN");
-    for (const review of reviews) {
-      const text = review.text.trim();
-      if (text.length < config.minReviewLength) continue;
-      const hash = computeContentHash(product.productKey, product.source, text);
-      const result = await client.query(
-        `INSERT INTO public.catalog_reviews
-           (product_id, content_hash, rating, title, text, language, author, review_date)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-         ON CONFLICT (product_id, content_hash) DO NOTHING`,
-        [
-          product.id,
-          hash,
-          review.rating,
-          review.title,
-          text,
-          review.language,
-          review.author,
-          review.reviewDate,
-        ],
-      );
-      inserted += result.rowCount ?? 0;
+    if (reviews.length > 0) {
+      // Bulk insert via unnest for speed when many reviews land at once.
+      const productIds: string[] = [];
+      const hashes: string[] = [];
+      const ratings: Array<number | null> = [];
+      const titles: Array<string | null> = [];
+      const texts: string[] = [];
+      const languages: Array<string | null> = [];
+      const authors: Array<string | null> = [];
+      const dates: Array<string | null> = [];
+
+      for (const review of reviews) {
+        const text = review.text.trim();
+        if (text.length < config.minReviewLength) continue;
+        productIds.push(product.id);
+        hashes.push(computeContentHash(product.productKey, product.source, text));
+        ratings.push(review.rating);
+        titles.push(review.title);
+        texts.push(text);
+        languages.push(review.language);
+        authors.push(review.author);
+        dates.push(review.reviewDate);
+      }
+
+      if (texts.length > 0) {
+        const result = await client.query(
+          `INSERT INTO public.catalog_reviews
+             (product_id, content_hash, rating, title, text, language, author, review_date)
+           SELECT * FROM UNNEST(
+             $1::uuid[], $2::text[], $3::int[], $4::text[], $5::text[], $6::text[], $7::text[], $8::timestamptz[]
+           )
+           ON CONFLICT (product_id, content_hash) DO NOTHING`,
+          [productIds, hashes, ratings, titles, texts, languages, authors, dates],
+        );
+        inserted = result.rowCount ?? 0;
+      }
     }
-    await client.query(
-      `UPDATE public.review_products SET last_scraped_at = NOW() WHERE id = $1`,
-      [product.id],
-    );
+
+    // Always stamp last_scraped_at — even on empty crawl (negative cache).
+    await client.query(`UPDATE public.review_products SET last_scraped_at = NOW() WHERE id = $1`, [
+      product.id,
+    ]);
     await client.query("COMMIT");
   } catch (err) {
     await client.query("ROLLBACK");

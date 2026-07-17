@@ -23,12 +23,15 @@ import {
   type WebshareCredentials,
 } from "../webshare.js";
 
+export type CrawlStatus = "ok" | "blocked" | "not_found" | "empty" | "error";
+
 export type CrawlResult = {
   reviews: ScrapedReview[];
   pagesFetched: number;
   resolvedUrl: string;
   productKey: string;
   errors: string[];
+  status: CrawlStatus;
 };
 
 type ProxyParts = {
@@ -45,17 +48,46 @@ type Session = {
   attempt: number;
 };
 
-/** Serialize crawls — parallel Camoufox instances thrash Webshare + G2. */
-let crawlLock: Promise<void> = Promise.resolve();
+/**
+ * Bounded concurrency for Camoufox crawls.
+ * Lock(1) serialized everything; semaphore(2) roughly halves wall time without thrashing proxies.
+ */
+class CrawlSemaphore {
+  private active = 0;
+  private readonly waiters: Array<() => void> = [];
 
-function withCrawlLock<T>(fn: () => Promise<T>): Promise<T> {
-  const run = crawlLock.then(fn, fn);
-  crawlLock = run.then(
-    () => undefined,
-    () => undefined,
-  );
-  return run;
+  constructor(private readonly max: number) {}
+
+  async run<T>(fn: () => Promise<T>): Promise<T> {
+    await this.acquire();
+    try {
+      return await fn();
+    } finally {
+      this.release();
+    }
+  }
+
+  private acquire(): Promise<void> {
+    if (this.active < this.max) {
+      this.active += 1;
+      return Promise.resolve();
+    }
+    return new Promise((resolve) => {
+      this.waiters.push(() => {
+        this.active += 1;
+        resolve();
+      });
+    });
+  }
+
+  private release(): void {
+    this.active = Math.max(0, this.active - 1);
+    const next = this.waiters.shift();
+    if (next) next();
+  }
 }
+
+const crawlSemaphore = new CrawlSemaphore(config.crawlConcurrency);
 
 function proxyPartsFromUrl(proxyUrl: string): ProxyParts {
   const u = new URL(proxyUrl);
@@ -433,14 +465,13 @@ async function resolveG2FromSearch(
 }
 
 /**
- * Camoufox + Webshare — one browser session per product, G2 negative filters,
- * rotate IP only when blocked.
+ * Camoufox + Webshare — bounded concurrent crawls (see CRAWL_CONCURRENCY).
  */
 export async function crawlProductReviews(
   ref: ProductRef,
   opts: { maxReviews: number; maxRating: number },
 ): Promise<CrawlResult> {
-  return withCrawlLock(() => crawlProductReviewsUnlocked(ref, opts));
+  return crawlSemaphore.run(() => crawlProductReviewsUnlocked(ref, opts));
 }
 
 async function crawlProductReviewsUnlocked(
@@ -455,7 +486,10 @@ async function crawlProductReviewsUnlocked(
   let resolvedUrl = ref.url;
   let productKey = ref.productKey;
   let session: Session | null = null;
-  const maxSessionAttempts = 4;
+  const maxSessionAttempts = 3;
+  let sawNotFound = false;
+  let sawBlock = false;
+  let sawHardRestriction = false;
 
   const pushReviews = (batch: ScrapedReview[]) => {
     for (const review of batch) {
@@ -491,6 +525,11 @@ async function crawlProductReviewsUnlocked(
             resolved = true;
             break;
           }
+          if (probe.notFound) sawNotFound = true;
+          if (probe.softBlocked || probe.hardRestricted) {
+            sawBlock = true;
+            if (probe.hardRestricted) sawHardRestriction = true;
+          }
           if (probe.notFound || probe.reviews.length === 0) {
             errors.push(`Slug guess miss (${ref.guessedUrl}) — G2 search`);
           }
@@ -515,6 +554,7 @@ async function crawlProductReviewsUnlocked(
           resolvedUrl,
           productKey,
           errors: errors.slice(0, 12),
+          status: sawNotFound ? "not_found" : sawBlock || sawHardRestriction ? "blocked" : "error",
         };
       }
     }
@@ -529,8 +569,10 @@ async function crawlProductReviewsUnlocked(
         const { html, title } = await waitPastChallenge(s.page);
         pagesFetched += 1;
         if (isBlockedContent(html, title) || isHardRestriction(html, title)) {
+          sawBlock = true;
+          if (isHardRestriction(html, title)) sawHardRestriction = true;
           errors.push(`Capterra search blocked (cc=${s.country})`);
-          await sleep(2500 + attempt * 1000);
+          await sleep(2000 + attempt * 800);
           continue;
         }
         const links = await s.page
@@ -579,12 +621,17 @@ async function crawlProductReviewsUnlocked(
         }
 
         if (result.hardRestricted || result.softBlocked) {
+          if (result.notFound) sawNotFound = true;
+          else {
+            sawBlock = true;
+            if (result.hardRestricted) sawHardRestriction = true;
+          }
           errors.push(
-            `${result.hardRestricted ? "G2 restriction" : "Soft block"} on page ${pageNum} (cc=${s.country}) — rotating`,
+            `${result.hardRestricted ? "G2 restriction" : result.notFound ? "Not found" : "Soft block"} on page ${pageNum} (cc=${s.country}) — rotating`,
           );
           await closeSession(session);
           session = null;
-          await sleep(3000 + attempt * 1000);
+          await sleep(2000 + attempt * 800);
           continue;
         }
 
@@ -610,11 +657,21 @@ async function crawlProductReviewsUnlocked(
   }
 
   collected.sort((a, b) => (a.rating ?? 99) - (b.rating ?? 99));
+  const reviews = collected.slice(0, maxReviews);
+  let status: CrawlStatus = "ok";
+  if (reviews.length === 0) {
+    if (sawNotFound) status = "not_found";
+    else if (sawBlock || sawHardRestriction) status = "blocked";
+    else if (pagesFetched > 0) status = "empty";
+    else status = "error";
+  }
+
   return {
-    reviews: collected.slice(0, maxReviews),
+    reviews,
     pagesFetched,
     resolvedUrl: withNegativeReviewFilters(resolvedUrl, ref.source, maxRating),
     productKey,
     errors: errors.slice(0, 12),
+    status,
   };
 }

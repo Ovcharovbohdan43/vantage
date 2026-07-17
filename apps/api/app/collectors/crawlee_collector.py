@@ -117,6 +117,7 @@ class CrawleeReviewCollector:
 
         if response.status_code == 401:
             result.errors.append("review-collector: unauthorized (check REVIEW_COLLECTOR_API_KEY)")
+            result.status = "error"
             return result
         if response.status_code >= 400:
             snippet = response.text[:300]
@@ -127,6 +128,29 @@ class CrawleeReviewCollector:
                 snippet,
             )
             result.errors.append(f"review-collector error {response.status_code}: {snippet}")
+            # Try to parse status from error body when present.
+            try:
+                err_body = response.json()
+                if isinstance(err_body, dict):
+                    status = err_body.get("status")
+                    if isinstance(status, str) and status.strip():
+                        result.status = status.strip().lower()
+                    result.blocked = bool(err_body.get("blocked")) or result.status == "blocked"
+                    remote_errors = err_body.get("errors")
+                    if isinstance(remote_errors, list):
+                        result.errors.extend(str(e) for e in remote_errors[:5])
+                    items = err_body.get("reviews")
+                    if isinstance(items, list):
+                        for item in items:
+                            if isinstance(item, dict):
+                                parsed = _parse_review(item, competitor.source)
+                                if parsed:
+                                    result.reviews.append(parsed)
+            except ValueError:
+                pass
+            if not result.status or result.status == "ok":
+                result.status = "blocked" if response.status_code == 502 else "error"
+                result.blocked = result.status == "blocked"
             return result
 
         try:
@@ -154,15 +178,35 @@ class CrawleeReviewCollector:
         else:
             result.pages_fetched = 0 if data.get("cached") else 1
 
+        status = data.get("status") if isinstance(data, dict) else None
+        if isinstance(status, str) and status.strip():
+            result.status = status.strip().lower()
+        elif response.status_code >= 500:
+            result.status = "error"
+        elif not result.reviews:
+            result.status = "empty"
+        else:
+            result.status = "ok"
+
+        blocked_flag = data.get("blocked") if isinstance(data, dict) else None
+        result.blocked = bool(blocked_flag) or result.status == "blocked"
+
         remote_errors = data.get("errors") if isinstance(data, dict) else None
         if isinstance(remote_errors, list):
             result.errors.extend(str(e) for e in remote_errors[:5])
 
+        # HTTP 502 with empty body used to mean "try Apify" — preserve for blocked/error only.
+        if response.status_code >= 500 and not result.reviews and result.status not in {"blocked", "error"}:
+            result.status = "error"
+            result.blocked = True
+
         logger.info(
-            "review-collector for %s (%s): %s reviews (cached=%s)",
+            "review-collector for %s (%s): %s reviews status=%s blocked=%s (cached=%s)",
             competitor.name,
             competitor.source,
             len(result.reviews),
+            result.status,
+            result.blocked,
             bool(data.get("cached")) if isinstance(data, dict) else False,
         )
         return result

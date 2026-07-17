@@ -43,6 +43,12 @@ class Settings(BaseSettings):
     scraper_request_delay_seconds: float = 1.5
     scraper_max_retries: int = 3
     scraper_stop_on_block: bool = False
+    # How many competitors to scrape in parallel within one research job.
+    collection_concurrency: int = 3
+    # Pause between competitor batches (seconds). Collector already paces pages.
+    collection_batch_pause_seconds: float = 0.5
+    # Parallel HTTP validation when resolving LLM competitor suggestions.
+    discovery_concurrency: int = 4
 
     # Primary: standalone Crawlee/Camoufox collector. Apify is automatic fallback
     # when a competitor returns 0 reviews (requires APIFY_TOKEN).

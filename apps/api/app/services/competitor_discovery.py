@@ -1,4 +1,5 @@
 import logging
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from uuid import UUID
 
@@ -10,13 +11,12 @@ from app.config import settings
 from app.db.models import Competitor, Project
 from app.services.llm_competitors import suggest_competitors_with_llm
 from app.services.page_fetcher import PageFetcher
+from app.services.research_limits import DEPTH_LIMITS as DEPTH_TARGET_COUNTS, get_plan_limits
 from app.services.source_validator import ValidatedCompetitorPage, resolve_competitor_page
 
 logger = logging.getLogger(__name__)
 
 MIN_COMPETITORS = 3
-
-from app.services.research_limits import DEPTH_LIMITS as DEPTH_TARGET_COUNTS, get_plan_limits
 
 
 @dataclass
@@ -61,6 +61,34 @@ def save_competitor(db: Session, project_id: UUID, page: ValidatedCompetitorPage
     return competitor
 
 
+def _validate_suggestion(
+    *,
+    name: str,
+    description: str | None,
+    category: str,
+    sources: list[str],
+) -> ValidatedCompetitorPage | None:
+    """Each worker uses its own HTTP client — PageFetcher is not shared across threads."""
+    timeout = httpx.Timeout(settings.competitor_http_timeout_seconds)
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+            "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+        ),
+        "Accept-Language": "en-US,en;q=0.9",
+    }
+    with httpx.Client(timeout=timeout, follow_redirects=True, headers=headers) as client, PageFetcher(
+        client
+    ) as fetcher:
+        return resolve_competitor_page(
+            fetcher,
+            name=name,
+            sources=sources,
+            description=description,
+            category=category,
+        )
+
+
 def discover_competitors_for_project(
     db: Session,
     project: Project,
@@ -90,7 +118,6 @@ def discover_competitors_for_project(
         )
 
     if len(validated_pages) >= MIN_COMPETITORS and len(validated_pages) >= target // 2:
-        # Enough manually-added competitors to proceed without LLM pass.
         return DiscoveryResult(
             competitors=validated_pages,
             attempted=0,
@@ -115,31 +142,55 @@ def discover_competitors_for_project(
         )
 
     sources = project.sources or ["g2", "capterra"]
+    needed = max(0, target - len(validated_pages))
+    # Over-fetch a few validations in parallel so soft-fails don't stall the pipeline.
+    to_validate = suggestions[: max(needed + 4, needed)]
     attempted = 0
+    concurrency = max(1, min(settings.discovery_concurrency, len(to_validate) or 1))
 
-    timeout = httpx.Timeout(settings.competitor_http_timeout_seconds)
-    with httpx.Client(timeout=timeout, follow_redirects=True, headers={
-        "User-Agent": (
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-            "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
-        ),
-        "Accept-Language": "en-US,en;q=0.9",
-    }) as client, PageFetcher(client) as fetcher:
-        for suggestion in suggestions:
-            if len(validated_pages) >= target:
-                break
+    if not to_validate:
+        return DiscoveryResult(
+            competitors=validated_pages,
+            attempted=0,
+            skipped_existing=len(existing),
+        )
 
-            attempted += 1
-            page = resolve_competitor_page(
-                fetcher,
+    logger.info(
+        "Validating %s competitor suggestions with concurrency=%s (need %s more)",
+        len(to_validate),
+        concurrency,
+        needed,
+    )
+
+    with ThreadPoolExecutor(max_workers=concurrency) as pool:
+        futures = {
+            pool.submit(
+                _validate_suggestion,
                 name=suggestion.name,
-                sources=sources,
                 description=suggestion.description,
                 category=project.category,
-            )
+                sources=sources,
+            ): suggestion
+            for suggestion in to_validate
+        }
+
+        for future in as_completed(futures):
+            if len(validated_pages) >= target:
+                for pending in futures:
+                    pending.cancel()
+                break
+
+            suggestion = futures[future]
+            attempted += 1
+            try:
+                page = future.result()
+            except Exception as exc:  # noqa: BLE001
+                logger.info("Competitor validation failed for %s: %s", suggestion.name, exc)
+                continue
+
             if not page:
                 logger.info(
-                    "Could not live-validate competitor page for %s (likely blocked) — soft-accept if possible",
+                    "Could not live-validate competitor page for %s (likely blocked) — soft-accept skipped",
                     suggestion.name,
                 )
                 continue
