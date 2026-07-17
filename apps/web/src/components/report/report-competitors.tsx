@@ -13,9 +13,13 @@ export function ReportCompetitorsSection({ competitors, isPreview }: ReportCompe
 
   return (
     <section className="mb-8">
-      <h2 className="mb-3 font-landing-mono text-xs uppercase tracking-widest text-v-muted">
+      <h2 className="mb-1 font-landing-mono text-xs uppercase tracking-widest text-v-muted">
         Competitors ({competitors.length})
       </h2>
+      <p className="mb-3 text-xs leading-relaxed text-v-muted">
+        These products were selected as direct rivals for the same job and buyer. If one looks
+        adjacent (wrong audience or category), treat its complaints as weak evidence.
+      </p>
       <div className="grid gap-3 sm:grid-cols-2">
         {competitors.map((competitor) => (
           <div
@@ -137,8 +141,17 @@ export function QuoteCard({
     competitor: string | null
     source: string | null
     category?: string
+    review_date?: string | null
   }
 }) {
+  const dateLabel = quote.review_date
+    ? new Date(quote.review_date).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      })
+    : null
+
   return (
     <blockquote className="p-5">
       {quote.rating != null && (
@@ -148,16 +161,28 @@ export function QuoteCard({
       )}
       <p className="text-sm leading-relaxed text-v-on italic">&ldquo;{quote.text}&rdquo;</p>
       <dl className="mt-4 grid grid-cols-2 gap-2 font-landing-mono text-[10px] uppercase text-v-muted">
-        {quote.category && (
-          <div>
-            <dt className="mb-0.5">Category</dt>
-            <dd className="text-xs normal-case text-v-muted">{quote.category}</dd>
-          </div>
-        )}
         {quote.competitor && (
           <div>
             <dt className="mb-0.5">Competitor</dt>
             <dd className="text-xs normal-case text-v-muted">{quote.competitor}</dd>
+          </div>
+        )}
+        {quote.source && (
+          <div>
+            <dt className="mb-0.5">Source</dt>
+            <dd className="text-xs normal-case text-v-muted">{quote.source.toUpperCase()}</dd>
+          </div>
+        )}
+        {dateLabel && (
+          <div>
+            <dt className="mb-0.5">Review date</dt>
+            <dd className="text-xs normal-case text-v-muted">{dateLabel}</dd>
+          </div>
+        )}
+        {quote.category && (
+          <div>
+            <dt className="mb-0.5">Pain theme</dt>
+            <dd className="text-xs normal-case text-v-muted">{quote.category}</dd>
           </div>
         )}
       </dl>

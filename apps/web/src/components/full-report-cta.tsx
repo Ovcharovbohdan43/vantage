@@ -77,14 +77,17 @@ export function FullReportCta({ projectId, credits }: FullReportCtaProps) {
         <div className="flex flex-col items-stretch justify-between gap-4 sm:flex-row sm:flex-wrap sm:items-start">
           <div className="min-w-0 max-w-xl">
             <p className="mb-2 font-landing-mono text-xs uppercase tracking-widest text-v-muted">
-              Worth building?
+              Unlock opportunity score
             </p>
             <h3 className="mb-2 text-base font-semibold text-v-on">
-              Find out if your idea is worth the next 3 months
+              This free preview is a teaser — not the full verdict
             </h3>
             <p className="mb-4 text-sm leading-relaxed text-v-muted">
-              Full report: user quotes, pain map with severity scores, opportunity direction, and a
-              build / pivot / don&apos;t-build recommendation.
+              You already saw market openness and top pain themes. A full report uses your{' '}
+              <span className="text-v-on">starter credits</span> (not another free idea) and adds:
+              opportunity score /100, severity, customer quotes with G2/Capterra sources, and a
+              build / pivot / don&apos;t-build recommendation. Expect roughly{' '}
+              <span className="text-v-on">20–40 minutes</span> for Standard depth.
             </p>
 
             <p className="mb-2 font-landing-mono text-xs uppercase tracking-widest text-v-muted">

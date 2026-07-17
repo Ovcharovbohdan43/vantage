@@ -156,19 +156,18 @@ describe('NewResearchForm buttons and links', () => {
     expect(screen.getByRole('link', { name: 'Cancel' })).toHaveAttribute('href', '/dashboard')
   })
 
-  it('keeps submit disabled until idea + industry are valid', async () => {
+  it('shows validation errors when required fields are missing', async () => {
     const user = userEvent.setup()
     renderWithQuery(<NewResearchForm />)
     const submit = await screen.findByRole('button', { name: 'Run free preview' })
-    expect(submit).toBeDisabled()
+    expect(submit).toBeEnabled()
 
-    await user.type(
-      screen.getByLabelText(/Startup idea/),
-      'A long enough description of the product idea here',
-    )
-    await user.selectOptions(screen.getByLabelText(/Industry/), 'Fintech')
+    await user.click(submit)
 
-    expect(screen.getByRole('button', { name: 'Run free preview' })).toBeEnabled()
+    expect(await screen.findByRole('alert')).toHaveTextContent(/Fill the required fields/i)
+    expect(screen.getByText(/Describe your startup idea/i)).toBeInTheDocument()
+    expect(screen.getByText(/Select an industry/i)).toBeInTheDocument()
+    expect(mockCreateProject).not.toHaveBeenCalled()
   })
 
   it('submits free preview and navigates to progress', async () => {

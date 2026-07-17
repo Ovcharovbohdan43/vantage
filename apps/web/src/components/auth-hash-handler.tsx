@@ -32,11 +32,7 @@ export function AuthHashHandler() {
         router.replace('/reset-password')
         return
       }
-      if (type === 'signup' || type === 'email' || type === 'invite') {
-        await supabase.auth.signOut()
-        router.replace('/login?confirmed=true')
-        return
-      }
+      // Signup / email confirmation keeps the session — one email, straight into the app.
       router.replace('/dashboard')
     })()
   }, [router])

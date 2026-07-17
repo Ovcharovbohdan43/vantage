@@ -7,8 +7,8 @@ import { createClient } from '@/lib/supabase/server'
  * - PKCE `?code=` (+ optional `flow=recovery|confirm`)
  * - OTP `?token_hash=&type=recovery|signup|email|…` (recommended for custom templates)
  *
- * `type=email` / magiclink = login verification (keep session).
- * `type=signup` / invite = account confirmation (sign out → login banner).
+ * Signup confirmation keeps the session so founders enter the app after one email.
+ * Login magic-link / email OTP also keeps the session.
  */
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
@@ -38,11 +38,7 @@ export async function GET(request: Request) {
       if (type === 'recovery') {
         return NextResponse.redirect(`${origin}/reset-password`)
       }
-      if (isSignupConfirm) {
-        await supabase.auth.signOut()
-        return NextResponse.redirect(`${origin}/login?confirmed=true`)
-      }
-      if (isLoginEmail) {
+      if (isSignupConfirm || isLoginEmail) {
         return NextResponse.redirect(`${origin}${safeNext}`)
       }
       return NextResponse.redirect(`${origin}${safeNext}`)
@@ -64,24 +60,19 @@ export async function GET(request: Request) {
       if (isRecovery) {
         return NextResponse.redirect(`${origin}/reset-password`)
       }
-      if (isSignupConfirm) {
-        await supabase.auth.signOut()
-        return NextResponse.redirect(`${origin}/login?confirmed=true`)
-      }
-      // Login magic-link / PKCE without confirm flow → app.
+      // Signup confirm + login magic-link → keep session and enter the app.
       return NextResponse.redirect(`${origin}${safeNext}`)
     }
 
     if (isRecovery) {
       return NextResponse.redirect(`${origin}/login?error=recovery_failed`)
     }
-    if (flow === 'confirm') {
+    if (flow === 'confirm' || isSignupConfirm) {
       return NextResponse.redirect(`${origin}/login?error=confirmation_failed`)
     }
     return NextResponse.redirect(`${origin}/login?error=login_otp_failed`)
   }
 
-  // No usable token — send users to the right recovery/confirm entry.
   if (isRecovery) {
     return NextResponse.redirect(`${origin}/reset-password`)
   }

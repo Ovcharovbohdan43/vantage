@@ -85,63 +85,48 @@ describe('LoginForm buttons and links', () => {
     expect(hrefOf('Forgot password?')).toBe('/forgot-password')
   })
 
-  it('checks password then sends login OTP instead of navigating', async () => {
+  it('signs in with password and navigates without a second email', async () => {
     const user = userEvent.setup()
     mockSignInWithPassword.mockResolvedValue({ error: null })
-    mockSignOut.mockResolvedValue({})
-    mockSignInWithOtp.mockResolvedValue({ error: null })
 
     render(<LoginForm />)
 
     await user.type(screen.getByLabelText('Email'), 'founder@example.com')
     await user.type(screen.getByLabelText('Password'), 'password123')
-    await user.click(screen.getByRole('button', { name: 'Continue' }))
+    await user.click(screen.getByRole('button', { name: 'Sign in' }))
 
     await waitFor(() => {
       expect(mockSignInWithPassword).toHaveBeenCalledWith({
         email: 'founder@example.com',
         password: 'password123',
       })
-      expect(mockSignOut).toHaveBeenCalled()
-      expect(mockSignInWithOtp).toHaveBeenCalled()
+      expect(mockPush).toHaveBeenCalledWith('/dashboard')
+      expect(mockRefresh).toHaveBeenCalled()
     })
-    expect(await screen.findByText('Check your email')).toBeInTheDocument()
-    expect(mockPush).not.toHaveBeenCalled()
+    expect(mockSignOut).not.toHaveBeenCalled()
+    expect(mockSignInWithOtp).not.toHaveBeenCalled()
   })
 
-  it('verifies login OTP and honors next search param', async () => {
+  it('honors next search param after password sign-in', async () => {
     const user = userEvent.setup()
     searchParams = new URLSearchParams('next=/research/new')
     mockSignInWithPassword.mockResolvedValue({ error: null })
-    mockSignOut.mockResolvedValue({})
-    mockSignInWithOtp.mockResolvedValue({ error: null })
-    mockVerifyOtp.mockResolvedValue({ data: { session: {} }, error: null })
 
     render(<LoginForm />)
 
     await user.type(screen.getByLabelText('Email'), 'a@b.com')
     await user.type(screen.getByLabelText('Password'), 'password123')
-    await user.click(screen.getByRole('button', { name: 'Continue' }))
-
-    expect(await screen.findByRole('button', { name: 'Verify and continue' })).toBeInTheDocument()
-    await user.type(screen.getByLabelText('One-time code'), '482910')
-    await user.click(screen.getByRole('button', { name: 'Verify and continue' }))
+    await user.click(screen.getByRole('button', { name: 'Sign in' }))
 
     await waitFor(() => {
-      expect(mockVerifyOtp).toHaveBeenCalledWith({
-        email: 'a@b.com',
-        token: '482910',
-        type: 'email',
-      })
       expect(mockPush).toHaveBeenCalledWith('/research/new')
       expect(mockRefresh).toHaveBeenCalled()
     })
   })
 
-  it('verifies signup OTP and shows confirmed banner', async () => {
+  it('verifies signup OTP and enters the workspace', async () => {
     const user = userEvent.setup()
     mockVerifyOtp.mockResolvedValue({ data: { session: {} }, error: null })
-    mockSignOut.mockResolvedValue({})
 
     render(<LoginForm />)
 
@@ -156,12 +141,13 @@ describe('LoginForm buttons and links', () => {
         token: '482910',
         type: 'signup',
       })
-      expect(mockSignOut).toHaveBeenCalled()
+      expect(mockPush).toHaveBeenCalledWith('/dashboard')
+      expect(mockRefresh).toHaveBeenCalled()
     })
-    expect(await screen.findByText('Email confirmed successfully')).toBeInTheDocument()
+    expect(mockSignOut).not.toHaveBeenCalled()
   })
 
-  it('shows auth error and keeps Continue enabled after failure', async () => {
+  it('shows auth error and keeps Sign in enabled after failure', async () => {
     const user = userEvent.setup()
     mockSignInWithPassword.mockResolvedValue({ error: { message: 'Invalid login credentials' } })
 
@@ -169,10 +155,10 @@ describe('LoginForm buttons and links', () => {
 
     await user.type(screen.getByLabelText('Email'), 'a@b.com')
     await user.type(screen.getByLabelText('Password'), 'wrong')
-    await user.click(screen.getByRole('button', { name: 'Continue' }))
+    await user.click(screen.getByRole('button', { name: 'Sign in' }))
 
     expect(await screen.findByText('Invalid login credentials')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Continue' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Sign in' })).toBeEnabled()
     expect(mockPush).not.toHaveBeenCalled()
     expect(mockSignInWithOtp).not.toHaveBeenCalled()
   })
@@ -408,7 +394,7 @@ describe('Auth interactive CTA inventory', () => {
 
     const links = screen.getAllByRole('link').map((el) => el.getAttribute('href'))
     expect(links).toEqual(expect.arrayContaining(['/', '/signup', '/forgot-password']))
-    expect(screen.getByRole('button', { name: 'Continue' })).toHaveAttribute('type', 'submit')
+    expect(screen.getByRole('button', { name: 'Sign in' })).toHaveAttribute('type', 'submit')
   })
 
   it('signup form has only expected interactive controls', () => {

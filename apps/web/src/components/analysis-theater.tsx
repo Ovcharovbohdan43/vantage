@@ -318,9 +318,9 @@ export function AnalysisTheater({
       <div className="relative z-10 mx-auto w-full max-w-[1120px] px-5 pt-4 md:px-8">
         <div className="rounded-lg border border-white/[0.08] bg-v-surface px-4 py-3 text-left sm:px-5">
           <p className="text-sm leading-relaxed text-v-muted">
-            Collection usually takes about{' '}
-            <span className="font-medium text-v-on">10 minutes</span>. You don’t need to wait on
-            this page —{' '}
+            Collection typically takes{' '}
+            <span className="font-medium text-v-on">15–40 minutes</span> depending on depth and
+            review-site load. You don’t need to wait on this page —{' '}
             <Link href="/dashboard" className="font-medium text-v-on underline-offset-2 hover:underline">
               return to the dashboard
             </Link>{' '}

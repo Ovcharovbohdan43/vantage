@@ -164,7 +164,17 @@ function OpportunityCard({
               >
                 “{quote.text}”
                 <span className="mt-1 block font-landing-mono text-[10px] text-v-muted">
-                  {[quote.competitor, quote.rating != null ? `${quote.rating}/5` : null, quote.source]
+                  {[
+                    quote.competitor,
+                    quote.rating != null ? `${quote.rating}/5` : null,
+                    quote.source ? String(quote.source).toUpperCase() : null,
+                    quote.review_date
+                      ? new Date(quote.review_date).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'short',
+                        })
+                      : null,
+                  ]
                     .filter(Boolean)
                     .join(' · ')}
                 </span>

@@ -48,12 +48,14 @@ function MetricCard({
   label,
   value,
   sub,
+  hint,
   tone = 'neutral',
   showDot,
 }: {
   label: string
   value: string
   sub?: string
+  hint?: string
   tone?: MetricTone
   showDot?: boolean
 }) {
@@ -63,6 +65,7 @@ function MetricCard({
         'flex min-h-[80px] min-w-0 basis-[calc(50%-0.25rem)] flex-col justify-between rounded-xl border p-3 sm:min-h-[88px] sm:basis-[calc(33.333%-0.35rem)] sm:p-4 md:min-w-[120px] md:flex-1',
         TONE_SURFACE[tone],
       )}
+      title={hint}
     >
       <p className="mb-2 font-landing-mono text-[10px] uppercase tracking-widest text-v-muted">{label}</p>
       <div>
@@ -72,11 +75,23 @@ function MetricCard({
           )}
           {value}
         </p>
-        {sub && <p className="mt-1 text-xs text-v-muted">{sub}</p>}
+        {sub && <p className="mt-1 text-xs leading-snug text-v-muted">{sub}</p>}
       </div>
     </div>
   )
 }
+
+const MARKET_HINT: Record<MarketSaturation, string> = {
+  LOW: 'Open = few dominant tools for this problem. Room to enter if pain is real.',
+  MEDIUM: 'Moderate = some competition. Differentiate on a sharp pain, not a broad feature set.',
+  HIGH: 'Saturated = crowded category. Prefer a narrow wedge or pivot unless pain is severe.',
+}
+
+const COMPETITION_HINT = {
+  Low: 'Few direct rivals in the sample — validate demand before building broadly.',
+  Medium: 'Several rivals — win by solving one painful gap better than they do.',
+  High: 'Crowded field — only pursue if you have a clear, evidence-backed wedge.',
+} as const
 
 export function ReportTimeSavedBanner({ report }: { report: ResearchReport }) {
   const { stats } = report
@@ -121,40 +136,106 @@ export function ReportExecutiveSummary({
   const opportunityTone: MetricTone =
     scores.market_score >= 70 ? 'good' : scores.market_score >= 45 ? 'caution' : 'bad'
 
+  const opportunitySub = isPreview
+    ? 'Unlock with credits for a scored verdict'
+    : scores.market_score >= 70
+      ? 'Strong — worth deeper exploration'
+      : scores.market_score >= 45
+        ? 'Mixed — dig into pain themes before deciding'
+        : 'Weak — lean don’t-build unless a niche wedge is clear'
+
   return (
     <section className="mb-8">
-      <h2 className="mb-3 font-landing-mono text-xs uppercase tracking-widest text-v-muted">
-        Market snapshot
-      </h2>
+      <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
+        <h2 className="font-landing-mono text-xs uppercase tracking-widest text-v-muted">
+          Market snapshot
+        </h2>
+        <p className="max-w-xl text-xs leading-relaxed text-v-muted">
+          Green = favorable for builders · amber = dig deeper · red = caution. Hover a card for
+          guidance.
+        </p>
+      </div>
       <div className="flex flex-wrap gap-2">
         <MetricCard
           label="Market"
           value={SATURATION_LABEL[scores.market_saturation]}
+          sub={
+            scores.market_saturation === 'LOW'
+              ? 'Few incumbents for this problem'
+              : scores.market_saturation === 'MEDIUM'
+                ? 'Some competition — need a wedge'
+                : 'Crowded — narrow wedge required'
+          }
+          hint={MARKET_HINT[scores.market_saturation]}
           tone={saturationTone(scores.market_saturation)}
           showDot
         />
-        <MetricCard label="Competition" value={competition} tone={competitionTone(competition)} />
+        <MetricCard
+          label="Competition"
+          value={competition}
+          sub={COMPETITION_HINT[competition]}
+          hint={COMPETITION_HINT[competition]}
+          tone={competitionTone(competition)}
+        />
         <MetricCard
           label="Pain signals"
           value={stats.pain_signals.toLocaleString()}
+          sub={
+            stats.pain_signals >= 80
+              ? 'Strong complaint volume — good for builders'
+              : stats.pain_signals >= 30
+                ? 'Moderate signal — check themes below'
+                : 'Thin signal — evidence may be weak'
+          }
+          hint="Count of negative review mentions grouped into pain themes. Higher usually means clearer customer problems to solve."
           tone={painTone}
         />
         <MetricCard
           label="Reviews analyzed"
           value={stats.reviews_analyzed.toLocaleString()}
+          sub={
+            stats.reviews_analyzed >= 150
+              ? 'Solid sample size'
+              : stats.reviews_analyzed >= 50
+                ? 'OK sample — treat outliers carefully'
+                : 'Small sample — low confidence'
+          }
+          hint="How many G2/Capterra reviews we actually read. More reviews = more trustworthy patterns."
           tone={coverageTone}
         />
         <MetricCard
           label="Products analyzed"
           value={String(stats.products_analyzed)}
+          sub={
+            stats.products_analyzed >= 10
+              ? 'Broad competitor sample'
+              : stats.products_analyzed >= 5
+                ? 'Decent competitor sample'
+                : 'Narrow sample — check relevance'
+          }
+          hint="Number of competitor products whose reviews we scanned. Verify they match your audience."
           tone={productsTone}
         />
         <MetricCard
           label="Opportunity"
           value={isPreview ? 'Locked' : `${Math.round(scores.market_score)}/100`}
+          sub={opportunitySub}
+          hint={
+            isPreview
+              ? 'This free preview shows market openness only. Opportunity /100 is part of the full report and uses credits — it is not a second free idea.'
+              : '0–100 score from saturation, pain severity, and review coverage. 70+ = explore; under 45 = lean abandon unless you have a sharp niche.'
+          }
           tone={isPreview ? 'neutral' : opportunityTone}
         />
       </div>
+      {isPreview && (
+        <p className="mt-3 rounded-lg border border-white/[0.08] bg-v-surface/80 px-3 py-2.5 text-xs leading-relaxed text-v-muted">
+          <span className="font-medium text-v-on">How to read this teaser:</span> “Market — Open”
+          means low saturation in the sample. “Opportunity — Locked” means the scored verdict,
+          quotes, and raw evidence need a full report (uses your starter credits). The free preview
+          is intentionally a market teaser, not a complete go / no-go.
+        </p>
+      )}
     </section>
   )
 }

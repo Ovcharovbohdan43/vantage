@@ -42,6 +42,7 @@ const DEPTH_OPTIONS: {
   desc: string
   competitors: number
   reviews: number
+  eta: string
 }[] = [
   {
     id: 'shallow',
@@ -49,6 +50,7 @@ const DEPTH_OPTIONS: {
     desc: 'Quick scan — enough to spot obvious red flags',
     competitors: 5,
     reviews: 50,
+    eta: '10–20 min',
   },
   {
     id: 'standard',
@@ -56,6 +58,7 @@ const DEPTH_OPTIONS: {
     desc: 'Balanced depth for most validation decisions',
     competitors: 10,
     reviews: 100,
+    eta: '20–40 min',
   },
   {
     id: 'deep',
@@ -63,6 +66,7 @@ const DEPTH_OPTIONS: {
     desc: 'Maximum coverage when the stakes are high',
     competitors: 15,
     reviews: 200,
+    eta: '30–60 min',
   },
 ]
 
@@ -78,8 +82,10 @@ type FormValues = {
 
 const fieldClass =
   'mt-2 w-full rounded-lg border border-white/12 bg-v-surface px-3 py-2.5 text-sm text-v-on placeholder:text-v-muted outline-none transition-colors focus:border-v-primary/45 focus:ring-1 focus:ring-v-primary/20'
+const fieldErrorClass = 'border-v-error/50 focus:border-v-error/60 focus:ring-v-error/20'
 const labelClass = 'text-sm font-medium text-v-muted'
 const hintClass = 'font-normal text-v-muted'
+const errorClass = 'mt-1.5 text-xs text-v-error'
 
 function depthCost(credits: { depth_credit_costs?: Record<string, number> }, depth: ResearchDepth) {
   return credits.depth_credit_costs?.[depth] ?? (depth === 'shallow' ? 1 : depth === 'standard' ? 2 : 3)
@@ -111,8 +117,11 @@ export function NewResearchForm() {
     handleSubmit,
     watch,
     setValue,
-    formState: { isSubmitting },
+    setFocus,
+    formState: { isSubmitting, errors, isSubmitted },
   } = useForm<FormValues>({
+    mode: 'onSubmit',
+    reValidateMode: 'onChange',
     defaultValues: {
       title: '',
       description: '',
@@ -138,18 +147,18 @@ export function NewResearchForm() {
     }
   }, [credits, setValue])
 
-  const canSubmit = description.trim().length > 20 && category.length > 0
   const selectedDepth = DEPTH_OPTIONS.find((d) => d.id === depth) ?? DEPTH_OPTIONS[0]!
   const selectedCost = credits ? depthCost(credits, depth) : 1
 
   const estimate = useMemo(() => {
     if (isFirstResearch) {
       return {
-        mode: 'Free preview',
+        mode: 'Free preview (teaser)',
         cost: '0 credits',
         competitors: 3,
         reviewsEach: 5,
-        note: 'Teaser only — top themes, no full quotes.',
+        eta: '5–15 min',
+        note: 'Shows market openness + top pain themes. Opportunity score and raw quotes unlock with a full report (uses your starter credits).',
       }
     }
     return {
@@ -157,6 +166,7 @@ export function NewResearchForm() {
       cost: `${selectedCost} credit${selectedCost === 1 ? '' : 's'}`,
       competitors: selectedDepth.competitors,
       reviewsEach: selectedDepth.reviews,
+      eta: selectedDepth.eta,
       note: selectedDepth.desc,
     }
   }, [isFirstResearch, selectedCost, selectedDepth])
@@ -178,8 +188,23 @@ export function NewResearchForm() {
     setValue('depth', next)
   }
 
+  function onInvalid() {
+    if (!description.trim() || description.trim().length <= 20) {
+      setFocus('description')
+      return
+    }
+    if (!category) {
+      setFocus('category')
+    }
+  }
+
   async function onSubmit(data: FormValues) {
     setSubmitError(null)
+
+    if (sources.length === 0) {
+      setSubmitError('Select at least one data source (G2 or Capterra).')
+      return
+    }
 
     if (isFirstResearch) {
       if (!credits?.can_run_preview) {
@@ -229,8 +254,8 @@ export function NewResearchForm() {
         </h1>
         <p className="text-sm leading-relaxed text-v-muted">
           {isFirstResearch
-            ? 'Your first analysis is free — a quick teaser of the market before you spend credits.'
-            : 'Choose how deep to go. More reviews and competitors cost more credits, but give stronger evidence.'}
+            ? 'Your free preview is a teaser: market openness + top pain themes. A full opportunity score and customer quotes use credits (you already have starter credits after signup).'
+            : 'Choose how deep to go. More reviews and competitors cost more credits — and take longer — but give stronger evidence.'}
         </p>
       </div>
 
@@ -245,10 +270,22 @@ export function NewResearchForm() {
       <PricingModal open={pricingOpen} onClose={() => setPricingOpen(false)} />
 
       <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-start">
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="space-y-6" noValidate>
+          {(isSubmitted && (errors.description || errors.category)) && (
+            <div
+              role="alert"
+              className="rounded-lg border border-v-error/35 bg-v-error/10 px-4 py-3 text-sm text-v-error"
+            >
+              Fill the required fields below before starting
+              {errors.description ? ' — startup idea' : ''}
+              {errors.description && errors.category ? ' and' : ''}
+              {errors.category ? ' — industry' : ''}.
+            </div>
+          )}
+
           <div>
             <label htmlFor="title" className={labelClass}>
-              Project title
+              Project title <span className={hintClass}>(optional)</span>
             </label>
             <input
               id="title"
@@ -260,22 +297,34 @@ export function NewResearchForm() {
 
           <div>
             <label htmlFor="description" className={labelClass}>
-              Startup idea <span className={hintClass}>(required)</span>
+              Startup idea <span className="text-v-error">*</span>
             </label>
             <textarea
               id="description"
               rows={4}
               placeholder="Describe your product idea and what problem it solves..."
-              className={cn(fieldClass, 'resize-none leading-relaxed')}
-              {...register('description', { required: true, minLength: 21 })}
+              aria-invalid={!!errors.description}
+              aria-describedby={errors.description ? 'description-error' : undefined}
+              className={cn(fieldClass, 'resize-none leading-relaxed', errors.description && fieldErrorClass)}
+              {...register('description', {
+                required: 'Describe your startup idea (required).',
+                validate: (value) =>
+                  value.trim().length > 20 || 'Write at least 21 characters so we can research the market.',
+              })}
             />
-            <p className="mt-2 text-xs text-v-muted">{description.length} chars · aim for 80+</p>
+            {errors.description ? (
+              <p id="description-error" className={errorClass}>
+                {errors.description.message}
+              </p>
+            ) : (
+              <p className="mt-2 text-xs text-v-muted">{description.length} chars · aim for 80+</p>
+            )}
           </div>
 
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             <div>
               <label htmlFor="targetAudience" className={labelClass}>
-                Target audience <span className={hintClass}>(optional)</span>
+                Target audience <span className={hintClass}>(recommended)</span>
               </label>
               <input
                 id="targetAudience"
@@ -283,15 +332,20 @@ export function NewResearchForm() {
                 placeholder="e.g. solo founders, remote engineering teams"
                 {...register('targetAudience')}
               />
+              <p className="mt-1.5 text-xs text-v-muted">
+                Helps us pick closer competitors and ignore adjacent tools.
+              </p>
             </div>
             <div>
               <label htmlFor="category" className={labelClass}>
-                Industry <span className={hintClass}>(required)</span>
+                Industry <span className="text-v-error">*</span>
               </label>
               <select
                 id="category"
-                className={cn(fieldClass, 'appearance-none')}
-                {...register('category', { required: true })}
+                aria-invalid={!!errors.category}
+                aria-describedby={errors.category ? 'category-error' : undefined}
+                className={cn(fieldClass, 'appearance-none', errors.category && fieldErrorClass)}
+                {...register('category', { required: 'Select an industry to continue.' })}
               >
                 <option value="">Select industry...</option>
                 {INDUSTRIES.map((i) => (
@@ -300,6 +354,11 @@ export function NewResearchForm() {
                   </option>
                 ))}
               </select>
+              {errors.category && (
+                <p id="category-error" className={errorClass}>
+                  {errors.category.message}
+                </p>
+              )}
             </div>
           </div>
 
@@ -334,23 +393,33 @@ export function NewResearchForm() {
 
           {isFirstResearch ? (
             <div>
-              <p className={labelClass}>Your first analysis</p>
+              <p className={labelClass}>What “free preview” includes</p>
               <div className="mt-3 rounded-lg border border-v-tertiary/25 bg-v-tertiary/8 p-4">
                 <div className="mb-1 flex items-center justify-between">
-                  <span className="text-sm font-medium text-v-on">Free preview</span>
+                  <span className="text-sm font-medium text-v-on">Free market teaser</span>
                   <span className="font-landing-mono text-xs text-v-tertiary">$0 · once</span>
                 </div>
-                <p className="text-xs leading-relaxed text-v-muted">
-                  3 competitors, 5 reviews each, top 3 pain themes. No quotes or full complaint
-                  breakdowns. After this, all research uses credits.
-                </p>
+                <ul className="mt-2 space-y-1.5 text-xs leading-relaxed text-v-muted">
+                  <li>
+                    <span className="text-v-on">Included:</span> ~3 competitors, sample reviews, market
+                    openness, top 3 pain themes.
+                  </li>
+                  <li>
+                    <span className="text-v-on">Locked until full report:</span> opportunity score /100,
+                    severity, quotes, and raw customer-voice evidence.
+                  </li>
+                  <li>
+                    Full reports use your <span className="text-v-on">starter credits</span> (not another
+                    “free idea”) — typically 1–2 credits depending on depth.
+                  </li>
+                </ul>
               </div>
             </div>
           ) : (
             <div>
               <p className={labelClass}>Research depth</p>
               <p className="mb-3 mt-1 text-xs text-v-muted">
-                Deeper runs read more reviews — better signal, higher credit cost
+                Deeper runs read more reviews — better signal, higher credit cost, longer wait
               </p>
               <div
                 className="grid grid-cols-1 gap-px overflow-hidden rounded-lg border border-white/[0.08] bg-white/[0.06] sm:grid-cols-3"
@@ -382,7 +451,7 @@ export function NewResearchForm() {
                       </div>
                       <p className="mb-2 text-xs leading-relaxed text-v-muted">{option.desc}</p>
                       <p className="font-landing-mono text-[10px] text-v-muted">
-                        {option.competitors} competitors · {option.reviews} reviews each
+                        {option.competitors} competitors · {option.reviews} reviews each · {option.eta}
                       </p>
                     </button>
                   )
@@ -396,17 +465,18 @@ export function NewResearchForm() {
               <p className="text-sm leading-relaxed text-v-muted">
                 Before you start: you may need to complete a{' '}
                 <span className="font-medium text-v-on">captcha once</span> while we reach review
-                sources. After that, collection continues automatically — usually about 10 minutes.
-                You don’t have to stay on this screen; return to the dashboard anytime, and we’ll
-                email you when the results are ready.
+                sources. Collection typically takes{' '}
+                <span className="font-medium text-v-on">{estimate.eta}</span> depending on depth and
+                site load. You don’t have to stay on this screen — return to the dashboard anytime;
+                we’ll email you when results are ready.
               </p>
             </div>
             {submitError && <p className="mb-4 text-sm text-v-error">{submitError}</p>}
             <div className="flex flex-wrap items-center gap-3">
               <button
                 type="submit"
-                disabled={!canSubmit || isSubmitting}
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-v-on px-6 text-sm font-medium text-v-bg transition-opacity hover:opacity-90 disabled:pointer-events-none disabled:opacity-45"
+                disabled={isSubmitting}
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-v-on px-6 text-sm font-medium text-v-bg transition-opacity hover:opacity-90 disabled:opacity-45"
               >
                 {isSubmitting ? (
                   <>
@@ -444,11 +514,15 @@ export function NewResearchForm() {
             <dl className="space-y-3 text-sm">
               <div className="flex justify-between gap-3">
                 <dt className="text-v-muted">Mode</dt>
-                <dd className="font-medium text-v-on">{estimate.mode}</dd>
+                <dd className="text-right font-medium text-v-on">{estimate.mode}</dd>
               </div>
               <div className="flex justify-between gap-3">
                 <dt className="text-v-muted">Cost</dt>
                 <dd className="font-landing-mono tabular-nums text-v-primary">{estimate.cost}</dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt className="text-v-muted">Typical wait</dt>
+                <dd className="font-landing-mono tabular-nums text-v-on">{estimate.eta}</dd>
               </div>
               <div className="flex justify-between gap-3">
                 <dt className="text-v-muted">Competitors</dt>

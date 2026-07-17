@@ -13,11 +13,8 @@ import {
   authLinkClass,
   authMutedLinkClass,
   authPrimaryBtnClass,
-  authSecondaryBtnClass,
 } from '@/components/auth-styles'
 import { createClient } from '@/lib/supabase/client'
-
-type LoginStep = 'credentials' | 'otp'
 
 export function LoginForm() {
   const router = useRouter()
@@ -28,7 +25,6 @@ export function LoginForm() {
   const authError = searchParams.get('error')
   const showOtpByDefault = authError === 'confirmation_failed'
 
-  const [step, setStep] = useState<LoginStep>('credentials')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -62,18 +58,6 @@ export function LoginForm() {
     )
   }, [confirmed, authError, resetDone])
 
-  async function sendLoginOtp(targetEmail: string) {
-    const supabase = createClient()
-    const safeNext = next.startsWith('/') ? next : '/dashboard'
-    return supabase.auth.signInWithOtp({
-      email: targetEmail,
-      options: {
-        shouldCreateUser: false,
-        emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(safeNext)}`,
-      },
-    })
-  }
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
@@ -92,73 +76,8 @@ export function LoginForm() {
       return
     }
 
-    // Password ok — drop this session until the email code is verified.
-    await supabase.auth.signOut()
-
-    const { error: otpError } = await sendLoginOtp(trimmedEmail)
-    if (otpError) {
-      setError(otpError.message || 'Could not send the verification code. Try again.')
-      setLoading(false)
-      return
-    }
-
-    setPassword('')
-    setStep('otp')
-    setLoading(false)
-  }
-
-  if (step === 'otp') {
-    return (
-      <AuthPageShell
-        title="Check your email"
-        subtitle="Enter the one-time code we sent to finish signing in"
-        footer={
-          <p className="mt-6 text-center text-sm text-v-muted">
-            Wrong account?{' '}
-            <button
-              type="button"
-              onClick={() => {
-                setStep('credentials')
-                setError(null)
-              }}
-              className={authLinkClass}
-            >
-              Back to sign in
-            </button>
-          </p>
-        }
-      >
-        <AuthAlert
-          variant="success"
-          title="Code sent"
-          description={`We emailed a 6-digit code to ${email.trim()}. Enter it below to access your workspace.`}
-          className="mb-6"
-        />
-
-        <AuthOtpForm
-          type="email"
-          defaultEmail={email.trim()}
-          emailReadOnly
-          allowResend
-          submitLabel="Verify and continue"
-          onVerified={async () => {
-            router.push(next.startsWith('/') ? next : '/dashboard')
-            router.refresh()
-          }}
-        />
-
-        <button
-          type="button"
-          onClick={() => {
-            setStep('credentials')
-            setError(null)
-          }}
-          className={`${authSecondaryBtnClass} mt-3`}
-        >
-          Use a different email
-        </button>
-      </AuthPageShell>
-    )
+    router.push(next.startsWith('/') ? next : '/dashboard')
+    router.refresh()
   }
 
   return (
@@ -178,7 +97,7 @@ export function LoginForm() {
         <AuthAlert
           variant="success"
           title="Email confirmed successfully"
-          description="Your email address has been verified. Sign in with your account credentials to continue."
+          description="Your email is verified. Sign in with your password to open the workspace."
           className="mb-6"
         />
       )}
@@ -214,7 +133,7 @@ export function LoginForm() {
         <AuthAlert
           variant="error"
           title="Sign-in link invalid or expired"
-          description="Sign in again with your password — we will email a fresh one-time code."
+          description="Sign in with your email and password instead."
           className="mb-6"
         />
       )}
@@ -258,12 +177,8 @@ export function LoginForm() {
         {error && <p className={authErrorClass}>{error}</p>}
 
         <button type="submit" disabled={loading} className={authPrimaryBtnClass}>
-          {loading ? 'Sending code…' : 'Continue'}
+          {loading ? 'Signing in…' : 'Sign in'}
         </button>
-        <p className="text-xs leading-relaxed text-v-muted">
-          After your password is checked, we email a one-time code. You need that code to finish
-          signing in.
-        </p>
       </form>
 
       <div className="mt-8 border-t border-white/[0.08] pt-6">
@@ -280,18 +195,15 @@ export function LoginForm() {
             <h2 className="mb-1 text-sm font-semibold text-v-on">Confirm signup with email code</h2>
             <p className="mb-4 text-xs leading-relaxed text-v-muted">
               If the signup confirmation link expired, enter the email and one-time code from that
-              message.
+              message. After confirmation you enter the workspace immediately.
             </p>
             <AuthOtpForm
               type="signup"
               defaultEmail={email}
               submitLabel="Confirm email"
               onVerified={async () => {
-                const supabase = createClient()
-                await supabase.auth.signOut()
-                setShowConfirmOtp(false)
-                setShowConfirmedBanner(true)
-                setShowResetBanner(false)
+                router.push(next.startsWith('/') ? next : '/dashboard')
+                router.refresh()
               }}
             />
             <button

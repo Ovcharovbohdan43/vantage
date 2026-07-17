@@ -211,6 +211,7 @@ export function ProjectEvidence({
               competitor: review.product,
               source: review.source,
               category: clusterTitle,
+              review_date: review.review_date,
             }}
           />
         ))}
